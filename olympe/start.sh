@@ -4,7 +4,7 @@ GREEN='\033[0;32m'
 NC='\033[0m'
 
 source "$HOME/code/parrot-groundsdk/out/olympe-linux/final/native-wrapper.sh"
-source /opt/ros/eloquent/setup.bash
+source /opt/ros/melodic/setup.bash
 
 echo -e "${GREEN}========== Started Parrot Olympe environment ==========${NC}"
 

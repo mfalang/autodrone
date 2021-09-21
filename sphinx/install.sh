@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Script to install Parrot Sphinx simulator
+# Commands taken from https://developer.parrot.com/docs/sphinx/installation.html
+
 GREEN='\033[0;32m'
 NC='\033[0m'
 

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Script to install Olympe SDK
+# Commands taken from https://developer.parrot.com/docs/olympe/installation.html
+# with some modifications which were found to be needed
+
 GREEN='\033[0;32m'
 NC='\033[0m'
 
@@ -33,7 +37,7 @@ echo -e "${GREEN}\nFixing Python path in Olympe navtive wrapper script${NC}"
 sed -i '/# Update python path/!b;n;c\PYTHONPATH=${PYTHONPATH}:${SYSROOT}/usr/lib/python/site-packages' ./out/olympe-linux/final/native-wrapper.sh
 
 echo -e "${GREEN}\nInstalling Olympe requirements in current Python environment${NC}"
-pip3 install -r "./packages/olympe/requirements.txt"
+pip install -r "./packages/olympe/requirements.txt"
 
 echo -e "${GREEN}\nRemoving Repo tool${NC}"
 rm -rf ~/.bin
