@@ -1,3 +1,8 @@
+# ROS1
 build
+devel
+.catkin_workspace
+logs
+# ROS2
 install
 log
