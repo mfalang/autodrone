@@ -1,4 +1,21 @@
 #!/bin/bash
 
-sudo systemctl start firmwared.service
-sphinx /opt/parrot-sphinx/usr/share/sphinx/drones/anafi4k.drone::stolen_interface=""
+usage="Usage: $(basename "$0") <world (land/ocean)>"
+
+declare -a worlds=("land" "ocean")
+
+if [ $# -ne 1 ]
+  then
+    echo $usage
+    exit
+fi
+
+world=$1
+
+if [[ " ${worlds[*]} " =~ " $world " ]]; then
+    script_dir=$(dirname "$(realpath $0)")
+    sudo systemctl start firmwared.service
+    sphinx $script_dir/worlds/$world.world
+else
+    echo $usage
+fi

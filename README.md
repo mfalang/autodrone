@@ -7,7 +7,7 @@ platform.
 To start the Sphinx simulator run
 
 ```
-./sphinx/start.sh
+./sphinx/start.sh land
 ```
 
 To run a program in the simulator, first start the Olympe environment in a 
