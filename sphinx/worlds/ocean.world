@@ -34,7 +34,10 @@ Original source: https://developer.parrot.com/docs/sphinx/worldfile.html# -->
       <real_time_factor>1.0</real_time_factor>
       <max_contacts>20</max_contacts>
       <gravity>0 0 -9.81</gravity>
-      <magnetic_field>0.1062e-6 20.8038e-6 -43.2881e-6</magnetic_field>
+      <!-- Magnetic field for Trondheim 24.09.2021 (found from 
+      https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml#igrfwmm)
+      NB: Format is ENU (east comp, north comp, negative vertical comp) -->
+      <magnetic_field>1.0068e-6 13.5438e-6 -50.2880e-6</magnetic_field>
       <ode>
         <solver>
           <type>world</type>

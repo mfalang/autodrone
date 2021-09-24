@@ -19,6 +19,7 @@ if [[ $reply != "n" ]]; then
     sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 508B1AE5
     sudo apt update
     sudo apt install -y parrot-sphinx    
+    sudo systemctl enable firmwared
 fi
 
 read -p "Install UUV Simulator? [Y/n] " -n 1 -r reply

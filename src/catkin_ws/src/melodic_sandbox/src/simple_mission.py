@@ -13,6 +13,7 @@ class SimpleMission():
         rospy.loginfo("Starting mission")
         
         drone = olympe.Drone(DRONE_IP)
+        drone.logger.setLevel(30)
         drone.connect()
         assert drone(TakeOff()).wait().success()
         time.sleep(5)
@@ -20,9 +21,9 @@ class SimpleMission():
         drone.disconnect()
 
         rospy.loginfo("Mission finished")
-        rospy.shutdown()
 
 def main():
+    rospy.init_node("simple_mission_test", anonymous=False)
     mission = SimpleMission()
     mission.run_mission()
 

@@ -14,7 +14,6 @@ world=$1
 
 if [[ " ${worlds[*]} " =~ " $world " ]]; then
     script_dir=$(dirname "$(realpath $0)")
-    sudo systemctl start firmwared.service
     sphinx $script_dir/worlds/$world.world
 else
     echo $usage
