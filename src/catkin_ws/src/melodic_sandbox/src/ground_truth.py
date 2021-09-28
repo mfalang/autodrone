@@ -2,15 +2,21 @@
 
 from subprocess import PIPE, Popen
 import sys
+import rospy
+import geometry_msgs.msg
 
-def publish_data(data):
-    print(data)
-    print()
-    print()
+class SphinxRosBridge():
 
-if __name__ == "__main__":
+    def __init__(self):
+        rospy.init_node("sphinx_ros_bridge", anonymous=False)
+        self.anafi_pose_publisher = rospy.Publisher(
+            "sphinx/anafi_pose", geometry_msgs.msg.PoseStamped, queue_size=10
+        )
+        self.helipad_pose_publisher = rospy.Publisher(
+            "sphinx/helipad_pose", geometry_msgs.msg.PoseStamped, queue_size=10
+        )
 
-    entry = {
+        self.data = {
         "timestamp": {
             "sec": None,
             "nsec": None
@@ -43,98 +49,136 @@ if __name__ == "__main__":
         }
     }
 
-    ON_POSIX = 'posix' in sys.builtin_module_names
-    command = "parrot-gz topic -e /gazebo/land/pose/info | grep -E -A 12 " \
-        "'time" \
-        "|name: \"helipad\"" \
-        "|name: \"anafi4k\"'" 
-    p = Popen(command, stdout=PIPE, bufsize=1, close_fds=ON_POSIX, shell=True)
-    
-    timestamp_data_gather_done = False
-    anafi_data_gather_done = False
-    helipad_data_gather_done = False
-
-    timestamp_index = 0
-    anafi_index = 0
-    helipad_index = 0
-
-    for line in iter(p.stdout.readline, b''):
-        line = line.decode("utf-8")
-
-        # First find timestamp as this will be the first value
-        if timestamp_index > 0 and timestamp_index <= 3:
-            # Gather data
-            if timestamp_index < 3:
-                line = line.split()
-                entry["timestamp"][line[0][:-1]] = int(line[1])
-                timestamp_index += 1
-            # Timestamp index is 3 and there is no more data to gather
-            else:
-                timestamp_index = 0
-                timestamp_data_gather_done = True
-        elif "time" in line:
-            timestamp_index = 1
-
-        # Make sure to only search for data after a timestamp is found to make
-        # sure that the data belong to the correct timestamp
-        if timestamp_data_gather_done == False:
-            continue
-
-        # Find Anafi data
-        if anafi_index > 0 and anafi_index <= 12:
-            # Skip over two first entries before position data
-            if anafi_index < 3:
-                anafi_index += 1
-            # Parse anafi position
-            elif anafi_index >= 3 and anafi_index <= 5:
-                line = line.split()
-                entry["anafi"]["position"][line[0][0]] = float(line[1])
-                anafi_index += 1
-            # Skip over two first entries before orientation data
-            elif anafi_index < 8:
-                anafi_index += 1
-            # Parse anafi orientation
-            elif anafi_index >= 8 and anafi_index <= 11:
-                line = line.split()
-                entry["anafi"]["orientation"][line[0][0]] = float(line[1])
-                anafi_index += 1
-            # Anafi index is 12 and there is no more data to gather
-            else:
-                anafi_index = 0
-                anafi_data_gather_done = True
-        elif "anafi" in line:
-            anafi_index = 1
+    def start(self):
         
-        # Find helipad data
-        if helipad_index > 0 and helipad_index <= 12:
-            # Skip over two first entries before position data
-            if helipad_index < 3:
-                helipad_index += 1
-            # Parse helipad position
-            elif helipad_index >= 3 and helipad_index <= 5:
-                line = line.split()
-                entry["helipad"]["position"][line[0][0]] = float(line[1])
-                helipad_index += 1
-            # Skip over two first entries before orientation data
-            elif helipad_index < 8:
-                helipad_index += 1
-            # Parse helipad orientation
-            elif helipad_index >= 8 and helipad_index <= 11:
-                line = line.split()
-                entry["helipad"]["orientation"][line[0][0]] = float(line[1])
-                helipad_index += 1
-            # helipad index is 12 and there is no more data to gather
-            else:
-                helipad_index = 0
-                helipad_data_gather_done = True
-        elif "helipad" in line:
-            helipad_index = 1
-        
-        if timestamp_data_gather_done and anafi_data_gather_done and helipad_data_gather_done:
-            publish_data(entry)
+        rospy.loginfo("Starting Sphinx-Ros-Bridge")
+
+        while not rospy.is_shutdown():
+            ON_POSIX = 'posix' in sys.builtin_module_names
+            command = "parrot-gz topic -e /gazebo/land/pose/info | grep -E -A 12 " \
+                "'time" \
+                "|name: \"helipad\"" \
+                "|name: \"anafi4k\"'" 
+            p = Popen(command, stdout=PIPE, bufsize=1, close_fds=ON_POSIX, shell=True)
+            
             timestamp_data_gather_done = False
             anafi_data_gather_done = False
             helipad_data_gather_done = False
+
+            timestamp_index = 0
+            anafi_index = 0
+            helipad_index = 0
+
+            # Parse output
+            for line in iter(p.stdout.readline, b''):
+                line = line.decode("utf-8")
+
+                # First find timestamp as this will be the first value
+                if timestamp_index > 0 and timestamp_index <= 3:
+                    # Gather data
+                    if timestamp_index < 3:
+                        line = line.split()
+                        self.data["timestamp"][line[0][:-1]] = int(line[1])
+                        timestamp_index += 1
+                    # Timestamp index is 3 and there is no more data to gather
+                    else:
+                        timestamp_index = 0
+                        timestamp_data_gather_done = True
+                elif "time" in line:
+                    timestamp_index = 1
+
+                # Make sure to only search for data after a timestamp is found to make
+                # sure that the data belong to the correct timestamp
+                if timestamp_data_gather_done == False:
+                    continue
+
+                # Find Anafi data
+                if anafi_index > 0 and anafi_index <= 12:
+                    # Skip over two first entries before position data
+                    if anafi_index < 3:
+                        anafi_index += 1
+                    # Parse anafi position
+                    elif anafi_index >= 3 and anafi_index <= 5:
+                        line = line.split()
+                        self.data["anafi"]["position"][line[0][0]] = float(line[1])
+                        anafi_index += 1
+                    # Skip over two first entries before orientation data
+                    elif anafi_index < 8:
+                        anafi_index += 1
+                    # Parse anafi orientation
+                    elif anafi_index >= 8 and anafi_index <= 11:
+                        line = line.split()
+                        self.data["anafi"]["orientation"][line[0][0]] = float(line[1])
+                        anafi_index += 1
+                    # Anafi index is 12 and there is no more data to gather
+                    else:
+                        anafi_index = 0
+                        anafi_data_gather_done = True
+                elif "anafi" in line:
+                    anafi_index = 1
+                
+                # Find helipad data
+                if helipad_index > 0 and helipad_index <= 12:
+                    # Skip over two first entries before position data
+                    if helipad_index < 3:
+                        helipad_index += 1
+                    # Parse helipad position
+                    elif helipad_index >= 3 and helipad_index <= 5:
+                        line = line.split()
+                        self.data["helipad"]["position"][line[0][0]] = float(line[1])
+                        helipad_index += 1
+                    # Skip over two first entries before orientation data
+                    elif helipad_index < 8:
+                        helipad_index += 1
+                    # Parse helipad orientation
+                    elif helipad_index >= 8 and helipad_index <= 11:
+                        line = line.split()
+                        self.data["helipad"]["orientation"][line[0][0]] = float(line[1])
+                        helipad_index += 1
+                    # helipad index is 12 and there is no more data to gather
+                    else:
+                        helipad_index = 0
+                        helipad_data_gather_done = True
+                elif "helipad" in line:
+                    helipad_index = 1
+                
+                if timestamp_data_gather_done and anafi_data_gather_done and helipad_data_gather_done:
+                    self._publish_poses()
+                    timestamp_data_gather_done = False
+                    anafi_data_gather_done = False
+                    helipad_data_gather_done = False
+
+    def _publish_poses(self):
+        anafi_pose = self._pack_message("anafi")
+        helipad_pose = self._pack_message("helipad")
+        self.anafi_pose_publisher.publish(anafi_pose)
+        self.helipad_pose_publisher.publish(helipad_pose)
+
+    def _pack_message(self, model):
+        model_pose = geometry_msgs.msg.PoseStamped()
+        model_pose.header.stamp.secs = self.data["timestamp"]["sec"]
+        model_pose.header.stamp.nsecs = self.data["timestamp"]["nsec"]
+        model_pose.pose.position.x = self.data[model]["position"]["x"]
+        model_pose.pose.position.y = self.data[model]["position"]["y"]
+        model_pose.pose.position.z = self.data[model]["position"]["z"]
+        model_pose.pose.orientation.x = self.data[model]["orientation"]["x"]
+        model_pose.pose.orientation.y = self.data[model]["orientation"]["y"]
+        model_pose.pose.orientation.z = self.data[model]["orientation"]["z"]
+        model_pose.pose.orientation.w = self.data[model]["orientation"]["w"]
+
+        return model_pose
+
+def main():
+    bridge = SphinxRosBridge()
+    bridge.start()
+
+if __name__ == "__main__":
+    main()
+    
+
+    
+
+    
     
     
 
