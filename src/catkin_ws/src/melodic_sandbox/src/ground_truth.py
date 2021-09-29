@@ -54,6 +54,7 @@ class SphinxRosBridge():
         rospy.loginfo("Starting Sphinx-Ros-Bridge")
 
         while not rospy.is_shutdown():
+            
             ON_POSIX = 'posix' in sys.builtin_module_names
             command = "parrot-gz topic -e /gazebo/land/pose/info | grep -E -A 12 " \
                 "'time" \
@@ -68,7 +69,7 @@ class SphinxRosBridge():
             timestamp_index = 0
             anafi_index = 0
             helipad_index = 0
-
+            
             # Parse output
             for line in iter(p.stdout.readline, b''):
                 line = line.decode("utf-8")
@@ -84,6 +85,7 @@ class SphinxRosBridge():
                     else:
                         timestamp_index = 0
                         timestamp_data_gather_done = True
+
                 elif "time" in line:
                     timestamp_index = 1
 
@@ -116,44 +118,36 @@ class SphinxRosBridge():
                         anafi_data_gather_done = True
                 elif "anafi" in line:
                     anafi_index = 1
-                
-                # Find helipad data
-                if helipad_index > 0 and helipad_index <= 12:
-                    # Skip over two first entries before position data
-                    if helipad_index < 3:
-                        helipad_index += 1
-                    # Parse helipad position
-                    elif helipad_index >= 3 and helipad_index <= 5:
-                        line = line.split()
-                        self.data["helipad"]["position"][line[0][0]] = float(line[1])
-                        helipad_index += 1
-                    # Skip over two first entries before orientation data
-                    elif helipad_index < 8:
-                        helipad_index += 1
-                    # Parse helipad orientation
-                    elif helipad_index >= 8 and helipad_index <= 11:
-                        line = line.split()
-                        self.data["helipad"]["orientation"][line[0][0]] = float(line[1])
-                        helipad_index += 1
-                    # helipad index is 12 and there is no more data to gather
-                    else:
-                        helipad_index = 0
-                        helipad_data_gather_done = True
-                elif "helipad" in line:
-                    helipad_index = 1
-                
-                if timestamp_data_gather_done and anafi_data_gather_done and helipad_data_gather_done:
-                    self._publish_poses()
+
+                if timestamp_data_gather_done and anafi_data_gather_done:
+                    anafi_pose = self._pack_message("anafi")
+                    self.anafi_pose_publisher.publish(anafi_pose)
                     timestamp_data_gather_done = False
                     anafi_data_gather_done = False
-                    helipad_data_gather_done = False
+                    # TODO: Find out if there is a faster way to publish the 
+                    # helipad pose as this method is too slow. Unfortunately, 
+                    # the helipad pose is not available in the pose topic when
+                    # the helipad is not in contact with the drone, so that is
+                    # why this workaround was tried.
+                    # self._get_helipad_pose()
+                    # helipad_pose = self._pack_message("helipad")
+                    # self.helipad_pose_publisher.publish(helipad_pose)
 
-    def _publish_poses(self):
-        anafi_pose = self._pack_message("anafi")
-        helipad_pose = self._pack_message("helipad")
-        self.anafi_pose_publisher.publish(anafi_pose)
-        self.helipad_pose_publisher.publish(helipad_pose)
+    def _get_helipad_pose(self):
+        command = "parrot-gz model -m helipad -i | head -14 | tail -9"
+        
+        p = Popen(command, stdout=PIPE, shell=True)
 
+        self.data["helipad"]["position"]["x"] = float(p.stdout.readline().decode("utf-8").split()[1])
+        self.data["helipad"]["position"]["y"] = float(p.stdout.readline().decode("utf-8").split()[1])
+        self.data["helipad"]["position"]["z"] = float(p.stdout.readline().decode("utf-8").split()[1])
+        p.stdout.readline()
+        p.stdout.readline()
+        self.data["helipad"]["orientation"]["x"] = float(p.stdout.readline().decode("utf-8").split()[1])
+        self.data["helipad"]["orientation"]["y"] = float(p.stdout.readline().decode("utf-8").split()[1])
+        self.data["helipad"]["orientation"]["z"] = float(p.stdout.readline().decode("utf-8").split()[1])
+        self.data["helipad"]["orientation"]["w"] = float(p.stdout.readline().decode("utf-8").split()[1])
+        
     def _pack_message(self, model):
         model_pose = geometry_msgs.msg.PoseStamped()
         model_pose.header.stamp.secs = self.data["timestamp"]["sec"]
@@ -174,12 +168,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
-
-    
-
-    
-    
-    
-
-    
