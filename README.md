@@ -15,5 +15,6 @@ terminal
 
 ```
 source olympe/start.sh
-python3 src/simple_test.py
+source src/catkin_ws/devel/setup.bash
+rosrun melodic_sandbox simple_mission.py
 ```
