@@ -95,29 +95,30 @@ class StateMonitor():
         return velocity_body
 
     def get_gps_data(self):
+        """
+        GPS data. 
+        Return format: [gps_fix (1/0), latitude, longitude, altitude,
+        latitude_accuracy, longitude_accuracy, altitude_accuracy]
+        """
+        gps_fix = self.drone.get_state(
+            ardrone3_msgs.GPSSettingsState.GPSFixStateChanged
+        )["fixed"]
 
-        gps_fix = self.drone.get_state(ardrone3_msgs.GPSSettingsState.GPSFixStateChanged)
-
-        gps_pos = self.drone.get_state(ardrone3_msgs.PilotingState.GpsLocationChanged)
+        gps_pos = self.drone.get_state(
+            ardrone3_msgs.PilotingState.GpsLocationChanged
+        )
 
         ret = [
             gps_fix, gps_pos["latitude"], gps_pos["longitude"], gps_pos["altitude"],
             gps_pos["latitude_accuracy"], gps_pos["longitude_accuracy"], gps_pos["altitude_accuracy"]
         ]
 
-        # TODO: Verify that gps_fix is fix/no and remove
-        print(gps_fix)
-
-        # TODO: Verify and remove
-        print(gps_pos)
-
         return ret
 
     def get_flying_state(self):
-        flying_state = self.drone.get_state(ardrone3_msgs.PilotingState.FlyingStateChanged)
-
-        # TODO: Verify format and remove
-        print(flying_state)
+        flying_state = self.drone.get_state(
+            ardrone3_msgs.PilotingState.FlyingStateChanged
+        )["state"].name
 
         return flying_state
 
@@ -148,6 +149,8 @@ class TelemetryPublisher():
     def publish(self):
         self._publish_attitude()
         self._publish_velocity()
+        self._publish_gps()
+        self._publish_flying_state()
 
     def _publish_attitude(self):
         attitude = geometry_msgs.msg.Quaternion()
@@ -210,7 +213,7 @@ class OlympeRosBridge():
         # queue or something, and then this queue is continuously checked in order
         # and any elements in it executed. These elements would then be added in
         # a callback function for the subscribed topic
-
+        rospy.sleep(1)
         while not rospy.is_shutdown():
             self.telemetry_publisher.publish()
             rospy.sleep(0.2)
