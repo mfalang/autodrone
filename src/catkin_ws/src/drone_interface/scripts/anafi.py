@@ -127,11 +127,11 @@ class TelemetryPublisher():
 
     def __init__(self, drone):
         self.attitude_publisher = rospy.Publisher(
-            "anafi/attitude", geometry_msgs.msg.Quaternion, queue_size=10
+            "anafi/attitude", geometry_msgs.msg.QuaternionStamped, queue_size=10
         )
 
         self.velocity_publisher = rospy.Publisher(
-            "anafi/velocity_body", geometry_msgs.msg.Point, queue_size=10
+            "anafi/velocity_body", geometry_msgs.msg.PointStamped, queue_size=10
         )
 
         self.gps_data_publisher = rospy.Publisher(
@@ -153,19 +153,33 @@ class TelemetryPublisher():
         self._publish_flying_state()
 
     def _publish_attitude(self):
-        attitude = geometry_msgs.msg.Quaternion()
-        [attitude.x, attitude.y, attitude.z, attitude.w] = self.state_monitor.get_attitude_quat()
+        attitude = geometry_msgs.msg.QuaternionStamped()
+        attitude.header.stamp = rospy.Time.now()
+        [
+            attitude.quaternion.x, 
+            attitude.quaternion.y, 
+            attitude.quaternion.z, 
+            attitude.quaternion.w
+        ] = self.state_monitor.get_attitude_quat()
+
         self.attitude_publisher.publish(attitude)
 
     def _publish_velocity(self):
-        velocity = geometry_msgs.msg.Point()
-        [velocity.x, velocity.y, velocity.z] = self.state_monitor.get_velocity()
+        velocity = geometry_msgs.msg.PointStamped()
+        velocity.header.stamp = rospy.Time.now()
+        [
+            velocity.point.x, 
+            velocity.point.y, 
+            velocity.point.z
+        ] = self.state_monitor.get_velocity()
+
         self.velocity_publisher.publish(velocity)
 
     def _publish_gps(self):
         gps_data_msg = sensor_msgs.msg.NavSatFix()
+        gps_data_msg.header.stamp = rospy.Time.now()
         gps_data = self.state_monitor.get_gps_data()
-        
+
         gps_data_msg.status.status = gps_data[0]
         gps_data_msg.status.service = sensor_msgs.msg.NavSatStatus.SERVICE_GPS
         gps_data_msg.latitude = gps_data[1]
@@ -184,6 +198,7 @@ class TelemetryPublisher():
 
     def _publish_flying_state(self):
         flying_state_msg = diagnostic_msgs.msg.DiagnosticArray()
+        flying_state_msg.header.stamp = rospy.Time.now()
         flying_state = self.state_monitor.get_flying_state()
         flying_status = diagnostic_msgs.msg.DiagnosticStatus()
         flying_status.name = "Anafi"
