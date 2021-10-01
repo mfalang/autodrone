@@ -2,19 +2,23 @@
 
 # Script for interfacing to the Anafi-drone through ROS topics.
 
-
-from numpy.lib.twodim_base import diag
 import rospy
 import geometry_msgs.msg
 import sensor_msgs.msg
 import diagnostic_msgs.msg
 import olympe
-import olympe.messages.ardrone3 as ardrone3_msgs
+import olympe.messages as olympe_msgs
 import olympe.enums.ardrone3 as ardrone3_enums
 from scipy.spatial.transform import Rotation
 import numpy as np
+import os
+import pathlib
+import time
+import cv2 as cv
+import cv_bridge
 
-
+# TODO: Must have an init drone command. There must also be a topic that 
+# published when the init is done
 class MotionController():
 
     TAKINGOFF_STATE = ardrone3_enums.PilotingState.FlyingStateChanged_State.takingoff
@@ -26,19 +30,19 @@ class MotionController():
 
     def _get_flying_state(self):
         return self.drone.get_state(
-            ardrone3_msgs.PilotingState.FlyingStateChanged
+            olympe_msgs.ardrone3.PilotingState.FlyingStateChanged
         )["state"]
 
     def takeoff(self):
         rospy.loginfo("Taking off")
-        self.drone(ardrone3_msgs.Piloting.TakeOff())
+        self.drone(olympe_msgs.ardrone3.Piloting.TakeOff())
 
     def takeoff_complete(self):
         return self._get_flying_state() == self.HOVERING_STATE
 
     def land(self):
         rospy.loginfo("Landing")
-        self.drone(ardrone3_msgs.Piloting.Landing())
+        self.drone(olympe_msgs.ardrone3.Piloting.Landing())
 
     def land_complete(self):
         return self._get_flying_state() == self.LANDED_STATE
@@ -46,7 +50,7 @@ class MotionController():
     # TODO: Update these to use movebyextended
     def move(self, dx, dy, dz, dpsi):
         rospy.loginfo(f"Moving dx: {dx} dy: {dy} dz: {dz} dpsi: {dpsi}")
-        self.drone(ardrone3_msgs.Piloting.moveBy(dx, dy, dz, dpsi))
+        self.drone(olympe_msgs.ardrone3.Piloting.moveBy(dx, dy, dz, dpsi))
 
     def move_complete(self):
         return self._get_flying_state() == self.HOVERING_STATE
@@ -55,18 +59,17 @@ class MotionController():
 # TODO: Include the rest of the stuff from the drone, like gimbal information,
 # state information, images from the camera, etc.
 
-
 class StateMonitor():
 
     def __init__(self, drone):
         self.drone = drone
 
     def get_attitude_euler(self):
-        attitude = self.drone.get_state(ardrone3_msgs.PilotingState.AttitudeChanged)
+        attitude = self.drone.get_state(olympe_msgs.ardrone3.PilotingState.AttitudeChanged)
         return [attitude["roll"], attitude["pitch"], attitude["yaw"]]
 
     def get_attitude_quat(self):
-        attitude = self.drone.get_state(ardrone3_msgs.PilotingState.AttitudeChanged)
+        attitude = self.drone.get_state(olympe_msgs.ardrone3.PilotingState.AttitudeChanged)
 
         return Rotation.from_euler(
             "XYZ",
@@ -86,7 +89,7 @@ class StateMonitor():
             degrees=False
         ).as_matrix().T
 
-        speed = self.drone.get_state(ardrone3_msgs.PilotingState.SpeedChanged)
+        speed = self.drone.get_state(olympe_msgs.ardrone3.PilotingState.SpeedChanged)
 
         velocity_ned = np.array([speed["speedX"], speed["speedY"], speed["speedZ"]])
 
@@ -101,28 +104,59 @@ class StateMonitor():
         latitude_accuracy, longitude_accuracy, altitude_accuracy]
         """
         gps_fix = self.drone.get_state(
-            ardrone3_msgs.GPSSettingsState.GPSFixStateChanged
+            olympe_msgs.ardrone3.GPSSettingsState.GPSFixStateChanged
         )["fixed"]
 
         gps_pos = self.drone.get_state(
-            ardrone3_msgs.PilotingState.GpsLocationChanged
+            olympe_msgs.ardrone3.PilotingState.GpsLocationChanged
         )
 
-        ret = [
+        return [
             gps_fix, gps_pos["latitude"], gps_pos["longitude"], gps_pos["altitude"],
             gps_pos["latitude_accuracy"], gps_pos["longitude_accuracy"], gps_pos["altitude_accuracy"]
         ]
 
-        return ret
-
     def get_flying_state(self):
         flying_state = self.drone.get_state(
-            ardrone3_msgs.PilotingState.FlyingStateChanged
+            olympe_msgs.ardrone3.PilotingState.FlyingStateChanged
         )["state"].name
 
         return flying_state
 
+    def get_gimbal_attitude(self):
+        gimbal_attitude = self.drone.get_state(
+            olympe_msgs.gimbal.attitude
+        )
 
+        return [
+            gimbal_attitude[0]["roll_relative"], 
+            gimbal_attitude[0]["pitch_relative"],
+            gimbal_attitude[0]["yaw_relative"]
+        ]
+
+    def get_image(self, image_dir):
+        self.drone(olympe_msgs.camera.take_photo(cam_id=0))
+        photo_saved = self.drone(
+            olympe_msgs.camera.photo_progress(result="photo_saved")
+        ).wait()
+
+        media_id = photo_saved.received_events().last().args["media_id"]
+        media_download = self.drone(olympe.media.download_media(
+            media_id,
+            integrity_check=False
+        ))
+        resources = media_download.as_completed()
+        
+        for resource in resources:
+            resource_id = resource.received_events().last()._resource_id
+            if not resource.success():
+                rospy.logerr("Failed to download image")
+        
+        image = cv.imread(f"{image_dir}/{resource_id}")
+        
+        return image
+        
+        
 class TelemetryPublisher():
 
     def __init__(self, drone):
@@ -142,15 +176,55 @@ class TelemetryPublisher():
             "anafi/flying_state", diagnostic_msgs.msg.DiagnosticArray, queue_size=10
         )
 
+        self.gimbal_attitude_publisher = rospy.Publisher(
+            "anafi/gimbal_attitude", geometry_msgs.msg.PointStamped, queue_size=10
+        )
+
+        self.image_publisher = rospy.Publisher(
+            "anafi/image_rect_color", sensor_msgs.msg.Image, queue_size=10
+        )
+
         self.drone = drone
 
         self.state_monitor = StateMonitor(self.drone)
 
+    # TODO: Add arguments for e.g. gimbal attitude if needed (or just leave it
+    # hard-coded)
+    def init(self):
+        # Make directory for images
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+        today = time.localtime()
+        self.image_dir = f"{script_dir}/../../../images" \
+            f"/{today.tm_year}-{today.tm_mon}-{today.tm_mday}" \
+            f"/{today.tm_hour}-{today.tm_min}-{today.tm_sec}"
+        pathlib.Path(self.image_dir).mkdir(parents=True, exist_ok=True)
+
+        self.drone.media.download_dir = self.image_dir
+
+        # Init camera
+        self.drone(olympe_msgs.camera.set_camera_mode(cam_id=0, value="photo")).wait()
+        self.drone(
+            olympe_msgs.camera.set_photo_mode(
+                cam_id=0,
+                mode="single",
+                format="rectilinear",
+                file_format="jpeg",
+                burst="burst_14_over_1s", # ignored in singel mode
+                bracketing="preset_1ev", # ignored in single mode
+                capture_interval=1 # ignored in single mode
+            )
+        ).wait().success()
+        rospy.loginfo("Initialized camera")
+
     def publish(self):
+        start = time.time()
         self._publish_attitude()
         self._publish_velocity()
         self._publish_gps()
         self._publish_flying_state()
+        self._publish_gimbal_attitude()
+        self._publish_image()
+        rospy.loginfo(f"Publishing took {time.time() - start} seconds")
 
     def _publish_attitude(self):
         attitude = geometry_msgs.msg.QuaternionStamped()
@@ -208,6 +282,24 @@ class TelemetryPublisher():
 
         self.flying_state_publisher.publish(flying_state_msg)
 
+    def _publish_gimbal_attitude(self):
+        gimbal_attitude_msgs = geometry_msgs.msg.PointStamped()
+        gimbal_attitude_msgs.header.stamp = rospy.Time.now()
+        [
+            gimbal_attitude_msgs.point.x,
+            gimbal_attitude_msgs.point.y,
+            gimbal_attitude_msgs.point.z
+        ] = self.state_monitor.get_gimbal_attitude()
+
+        self.gimbal_attitude_publisher.publish(gimbal_attitude_msgs)
+
+    def _publish_image(self):
+        image_msg = cv_bridge.CvBridge().cv2_to_imgmsg(
+            self.state_monitor.get_image(self.image_dir)
+        )
+        image_msg.header.stamp = rospy.Time.now()
+        self.image_publisher.publish(image_msg)
+
 class OlympeRosBridge():
 
     def __init__(self, drone_ip):
@@ -228,10 +320,14 @@ class OlympeRosBridge():
         # queue or something, and then this queue is continuously checked in order
         # and any elements in it executed. These elements would then be added in
         # a callback function for the subscribed topic
+        
         rospy.sleep(1)
+        self.telemetry_publisher.init()
+        rospy.sleep(1)
+
         while not rospy.is_shutdown():
             self.telemetry_publisher.publish()
-            rospy.sleep(0.2)
+            # rospy.sleep(0.2)
 
         # self.motion_controller.takeoff()
         # while not self.motion_controller.takeoff_complete():
