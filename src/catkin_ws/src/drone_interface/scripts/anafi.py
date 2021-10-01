@@ -19,7 +19,7 @@ import cv_bridge
 
 # TODO: Must have an init drone command. There must also be a topic that 
 # published when the init is done
-class MotionController():
+class Controller():
 
     TAKINGOFF_STATE = ardrone3_enums.PilotingState.FlyingStateChanged_State.takingoff
     HOVERING_STATE = ardrone3_enums.PilotingState.FlyingStateChanged_State.hovering
@@ -27,6 +27,42 @@ class MotionController():
 
     def __init__(self, drone):
         self.drone = drone
+
+    def init(self, camera_angle):
+        # Init gimbal
+        max_speed = 90 # Max speeds: Pitch 180, Roll/Yaw 0.
+
+        self.drone(olympe_msgs.gimbal.set_max_speed(
+            gimbal_id=0,
+            yaw=0,
+            pitch=max_speed,
+            roll=0,
+        ))
+
+        assert self.drone(olympe_msgs.gimbal.max_speed(
+            gimbal_id=0,
+            current_yaw=0,
+            current_pitch=max_speed,
+            current_roll=0,
+        )).wait().success(), "Failed to set max gimbal speed"
+
+        self.drone(olympe_msgs.gimbal.set_target(
+            gimbal_id=0,
+            control_mode="position",
+            pitch_frame_of_reference="relative",
+            pitch=camera_angle,
+            roll_frame_of_reference="relative",
+            roll=0,
+            yaw_frame_of_reference="relative",
+            yaw=0
+        ))
+
+        assert self.drone(olympe_msgs.gimbal.attitude(
+            gimbal_id=0,
+            pitch_relative=camera_angle,
+        )).wait(5).success(), "Failed to pitch camera"
+        
+        rospy.loginfo(f"Initialized gimbal at {camera_angle}")
 
     def _get_flying_state(self):
         return self.drone.get_state(
@@ -56,8 +92,6 @@ class MotionController():
         return self._get_flying_state() == self.HOVERING_STATE
 
 # TODO: Consider merging this class with the TelemetryPublisher class
-# TODO: Include the rest of the stuff from the drone, like gimbal information,
-# state information, images from the camera, etc.
 
 class StateMonitor():
 
@@ -188,8 +222,6 @@ class TelemetryPublisher():
 
         self.state_monitor = StateMonitor(self.drone)
 
-    # TODO: Add arguments for e.g. gimbal attitude if needed (or just leave it
-    # hard-coded)
     def init(self):
         # Make directory for images
         script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -309,7 +341,7 @@ class OlympeRosBridge():
         self.drone.logger.setLevel(40)
         self.drone.connect()
 
-        self.motion_controller = MotionController(self.drone)
+        self.controller = Controller(self.drone)
         self.telemetry_publisher = TelemetryPublisher(self.drone)
 
     def start(self):
@@ -323,11 +355,12 @@ class OlympeRosBridge():
         
         rospy.sleep(1)
         self.telemetry_publisher.init()
+        self.controller.init(camera_angle=-90)
         rospy.sleep(1)
 
         while not rospy.is_shutdown():
             self.telemetry_publisher.publish()
-            # rospy.sleep(0.2)
+            rospy.sleep(0.2)
 
         # self.motion_controller.takeoff()
         # while not self.motion_controller.takeoff_complete():
