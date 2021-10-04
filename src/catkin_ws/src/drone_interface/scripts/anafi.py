@@ -16,6 +16,7 @@ import pathlib
 import time
 import cv2 as cv
 import cv_bridge
+import queue
 
 # TODO: Must have an init drone command. There must also be a topic that 
 # published when the init is done
@@ -189,11 +190,19 @@ class StateMonitor():
         image = cv.imread(f"{image_dir}/{resource_id}")
         
         return image
-        
+
+class RosMsg():
+
+    def __init__(self, msg, type):
+        self.msg = msg
+        self.type = type
         
 class TelemetryPublisher():
 
     def __init__(self, drone):
+        
+        self.publish_queue = queue.Queue()
+
         self.attitude_publisher = rospy.Publisher(
             "anafi/attitude", geometry_msgs.msg.QuaternionStamped, queue_size=10
         )
@@ -249,14 +258,36 @@ class TelemetryPublisher():
         rospy.loginfo("Initialized camera")
 
     def publish(self):
-        start = time.time()
+        while not self.publish_queue.empty():
+            msg = self.publish_queue.get()
+            if msg.type == "attitude":
+                self.attitude_publisher.publish(msg.msg)
+            elif msg.type == "velocity":
+                self.velocity_publisher.publish(msg.msg)
+            elif msg.type == "gps_data":
+                self.gps_data_publisher.publish(msg.msg)
+            elif msg.type == "flying_state":
+                self.flying_state_publisher.publish(msg.msg)
+            elif msg.type == "gimbal_attitude":
+                self.gimbal_attitude_publisher.publish(msg.msg)
+            elif msg.type == "image":
+                self.image_publisher.publish(msg.msg)
+            else:
+                rospy.logerr("Invalid message type")
+
+    def collect_data(self):
+        # start = time.time()
         self._publish_attitude()
         self._publish_velocity()
         self._publish_gps()
         self._publish_flying_state()
         self._publish_gimbal_attitude()
+        # self._publish_image()
+        # rospy.loginfo(f"Publishing took {time.time() - start} seconds")
+
+    def collect_image(self):
         self._publish_image()
-        rospy.loginfo(f"Publishing took {time.time() - start} seconds")
+
 
     def _publish_attitude(self):
         attitude = geometry_msgs.msg.QuaternionStamped()
@@ -268,7 +299,8 @@ class TelemetryPublisher():
             attitude.quaternion.w
         ] = self.state_monitor.get_attitude_quat()
 
-        self.attitude_publisher.publish(attitude)
+        # self.attitude_publisher.publish(attitude)
+        self.publish_queue.put(RosMsg(attitude, "attitude"))
 
     def _publish_velocity(self):
         velocity = geometry_msgs.msg.PointStamped()
@@ -279,7 +311,8 @@ class TelemetryPublisher():
             velocity.point.z
         ] = self.state_monitor.get_velocity()
 
-        self.velocity_publisher.publish(velocity)
+        # self.velocity_publisher.publish(velocity)
+        self.publish_queue.put(RosMsg(velocity, "velocity"))
 
     def _publish_gps(self):
         gps_data_msg = sensor_msgs.msg.NavSatFix()
@@ -300,7 +333,8 @@ class TelemetryPublisher():
 
         gps_data_msg.position_covariance_type = sensor_msgs.msg.NavSatFix.COVARIANCE_TYPE_DIAGONAL_KNOWN
 
-        self.gps_data_publisher.publish(gps_data_msg)
+        # self.gps_data_publisher.publish(gps_data_msg)
+        self.publish_queue.put(RosMsg(gps_data_msg, "gps_data"))
 
     def _publish_flying_state(self):
         flying_state_msg = diagnostic_msgs.msg.DiagnosticArray()
@@ -312,7 +346,8 @@ class TelemetryPublisher():
         flying_status.message = flying_state
         flying_state_msg.status = [flying_status]
 
-        self.flying_state_publisher.publish(flying_state_msg)
+        # self.flying_state_publisher.publish(flying_state_msg)
+        self.publish_queue.put(RosMsg(flying_state_msg, "flying_state"))
 
     def _publish_gimbal_attitude(self):
         gimbal_attitude_msgs = geometry_msgs.msg.PointStamped()
@@ -323,14 +358,16 @@ class TelemetryPublisher():
             gimbal_attitude_msgs.point.z
         ] = self.state_monitor.get_gimbal_attitude()
 
-        self.gimbal_attitude_publisher.publish(gimbal_attitude_msgs)
+        # self.gimbal_attitude_publisher.publish(gimbal_attitude_msgs)
+        self.publish_queue.put(RosMsg(gimbal_attitude_msgs, "gimbal_attitude"))
 
     def _publish_image(self):
         image_msg = cv_bridge.CvBridge().cv2_to_imgmsg(
             self.state_monitor.get_image(self.image_dir)
         )
         image_msg.header.stamp = rospy.Time.now()
-        self.image_publisher.publish(image_msg)
+        # self.image_publisher.publish(image_msg)
+        self.publish_queue.put(RosMsg(image_msg, "image"))
 
 class OlympeRosBridge():
 
@@ -359,8 +396,12 @@ class OlympeRosBridge():
         rospy.sleep(1)
 
         while not rospy.is_shutdown():
+            start = time.time()
+            self.telemetry_publisher.collect_data()
+            self.telemetry_publisher.collect_image()
             self.telemetry_publisher.publish()
-            rospy.sleep(0.2)
+            rospy.loginfo(f"Publishing took {time.time() - start} seconds")
+            # rospy.sleep(0.2)
 
         # self.motion_controller.takeoff()
         # while not self.motion_controller.takeoff_complete():
