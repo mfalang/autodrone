@@ -17,6 +17,7 @@ import time
 import cv2 as cv
 import cv_bridge
 import queue
+import threading
 
 # TODO: Must have an init drone command. There must also be a topic that 
 # published when the init is done
@@ -277,16 +278,18 @@ class TelemetryPublisher():
 
     def collect_data(self):
         # start = time.time()
-        self._publish_attitude()
-        self._publish_velocity()
-        self._publish_gps()
-        self._publish_flying_state()
-        self._publish_gimbal_attitude()
+        while not rospy.is_shutdown():
+            self._publish_attitude()
+            self._publish_velocity()
+            self._publish_gps()
+            self._publish_flying_state()
+            self._publish_gimbal_attitude()
         # self._publish_image()
         # rospy.loginfo(f"Publishing took {time.time() - start} seconds")
 
     def collect_image(self):
-        self._publish_image()
+        while not rospy.is_shutdown():
+            self._publish_image()
 
 
     def _publish_attitude(self):
@@ -394,13 +397,14 @@ class OlympeRosBridge():
         self.telemetry_publisher.init()
         self.controller.init(camera_angle=-90)
         rospy.sleep(1)
+        
+        threading.Thread(target=self.telemetry_publisher.collect_data, args=(), daemon=True).start()
+        threading.Thread(target=self.telemetry_publisher.collect_image, args=(), daemon=True).start()
 
         while not rospy.is_shutdown():
-            start = time.time()
-            self.telemetry_publisher.collect_data()
-            self.telemetry_publisher.collect_image()
+            #start = time.time()
             self.telemetry_publisher.publish()
-            rospy.loginfo(f"Publishing took {time.time() - start} seconds")
+            #rospy.loginfo(f"Publishing took {time.time() - start} seconds")
             # rospy.sleep(0.2)
 
         # self.motion_controller.takeoff()
