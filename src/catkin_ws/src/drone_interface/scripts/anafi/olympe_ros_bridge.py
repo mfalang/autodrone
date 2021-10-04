@@ -10,7 +10,7 @@ import threading
 
 import publisher
 
-# TODO: Must have an init drone command. There must also be a topic that 
+# TODO: Must have an init drone command. There must also be a topic that
 # published when the init is done
 class Controller():
 
@@ -54,7 +54,7 @@ class Controller():
             gimbal_id=0,
             pitch_relative=camera_angle,
         )).wait(5).success(), "Failed to pitch camera"
-        
+
         rospy.loginfo(f"Initialized gimbal at {camera_angle}")
 
     def _get_flying_state(self):
@@ -96,7 +96,7 @@ class OlympeRosBridge():
         self.drone.connect()
 
         self.controller = Controller(self.drone)
-        self.telemetry_publisher = publisher.TelemetryPublisher(self.drone)
+        self.telemetry_publisher = publisher.Publisher(self.drone)
 
     def start(self):
 
@@ -106,13 +106,13 @@ class OlympeRosBridge():
         # queue or something, and then this queue is continuously checked in order
         # and any elements in it executed. These elements would then be added in
         # a callback function for the subscribed topic
-        
+
         rospy.sleep(1)
         self.telemetry_publisher.init()
         self.controller.init(camera_angle=-90)
         rospy.sleep(1)
-        
-        threading.Thread(target=self.telemetry_publisher.collect_data, args=(), daemon=True).start()
+
+        threading.Thread(target=self.telemetry_publisher.collect_telemetry, args=(), daemon=True).start()
         threading.Thread(target=self.telemetry_publisher.collect_image, args=(), daemon=True).start()
 
         while not rospy.is_shutdown():

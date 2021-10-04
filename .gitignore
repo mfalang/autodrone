@@ -8,3 +8,5 @@ install
 log
 # Ouput
 images
+# Python
+__pycache__
