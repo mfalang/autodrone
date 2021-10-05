@@ -11,6 +11,7 @@ import diagnostic_msgs.msg
 
 import olympe
 import olympe.messages as olympe_msgs
+import olympe.enums as olympe_enums
 
 import cv2 as cv
 import cv_bridge
@@ -43,6 +44,9 @@ class Publisher():
         )
         self.gimbal_attitude_publisher = rospy.Publisher(
             "anafi/gimbal_attitude", geometry_msgs.msg.PointStamped, queue_size=10
+        )
+        self.battery_data_publisher = rospy.Publisher(
+            "anafi/battery_data", sensor_msgs.msg.BatteryState, queue_size=10
         )
         self.image_publisher = rospy.Publisher(
             "anafi/image_rect_color", sensor_msgs.msg.Image, queue_size=10
@@ -91,6 +95,8 @@ class Publisher():
                 self.flying_state_publisher.publish(element["msg"])
             elif element["type"] == "gimbal_attitude":
                 self.gimbal_attitude_publisher.publish(element["msg"])
+            elif element["type"] == "battery_data":
+                self.battery_data_publisher.publish(element["msg"])
             elif element["type"] == "image":
                 self.image_publisher.publish(element["msg"])
             else:
@@ -106,6 +112,7 @@ class Publisher():
             self._collect_gps_data()
             self._collect_flying_state()
             self._collect_gimbal_attitude()
+            self._collect_battery_data()
 
     def collect_image(self):
         """
@@ -224,6 +231,40 @@ class Publisher():
         gimbal_attitude_msgs.point.z = gimbal_attitude[0]["yaw_relative"]
 
         self._add_msg_to_queue(gimbal_attitude_msgs, "gimbal_attitude")
+
+    def _collect_battery_data(self):
+        battery_msg = sensor_msgs.msg.BatteryState()
+        battery_msg.header.stamp = rospy.Time.now()
+
+        battery_msg.voltage = self.drone.get_state(
+            olympe_msgs.battery.voltage
+        )["voltage"]
+
+        battery_msg.percentage = self.drone.get_state(
+            olympe_msgs.common.CommonState.BatteryStateChanged
+        )["percent"]/100
+
+        battery_msg.power_supply_status = sensor_msgs.msg.BatteryState.POWER_SUPPLY_STATUS_DISCHARGING
+
+        battery_alert = self.drone.get_state(
+            olympe_msgs.battery.alert
+        )
+
+        no_alert = olympe_enums.battery.alert_level.none
+        if battery_alert[olympe_enums.battery.alert.power_level]["level"] != no_alert:
+            battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_DEAD
+        elif battery_alert[olympe_enums.battery.alert.too_hot]["level"] != no_alert:
+            battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_OVERHEAT
+        elif battery_alert[olympe_enums.battery.alert.too_cold]["level"] != no_alert:
+            battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_COLD
+        else:
+            battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_GOOD
+
+        battery_msg.present = True
+
+        battery_msg.serial_number = self.drone.get_state(olympe_msgs.battery.serial)["serial"]
+
+        self._add_msg_to_queue(battery_msg, "battery_data")
 
     def _collect_image(self):
         self.drone(olympe_msgs.camera.take_photo(cam_id=0))
