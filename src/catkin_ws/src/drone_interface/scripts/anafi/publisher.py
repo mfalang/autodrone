@@ -18,8 +18,31 @@ import cv_bridge
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-
 class Publisher():
+
+    def __init__(self, topic_name, msg_type, collect_function, publish_rate):
+        self.publisher = rospy.Publisher(
+            topic_name, msg_type, queue_size=10
+        )
+        self.rate = publish_rate
+        self.prev_publish_time = None
+        self.collect_function = collect_function
+
+    def set_rate(self, rate):
+        self.rate = rate
+
+    def publish(self):
+        self.prev_publish_time = rospy.Time.now()
+        self.publisher.publish(self.collect_function())
+
+    def should_publish(self):
+        if self.prev_publish_time is None or self.rate == -1:
+            return True
+        else:
+            return rospy.Time.now().to_time() >= self.prev_publish_time.to_time() + 1/self.rate
+
+
+class AnafiDataPublisher():
 
     def __init__(self, drone):
 
@@ -29,37 +52,61 @@ class Publisher():
         # Queue for storing messages ready for publishing
         self.publish_queue = queue.Queue()
 
+        # List of all telemetry publishers
+        self.telemetry_publishers = []
+
         # Topics to publish to
-        self.attitude_publisher = rospy.Publisher(
-            "anafi/attitude", geometry_msgs.msg.QuaternionStamped, queue_size=10
+        self.telemetry_publishers.append(Publisher(
+            "anafi/attitude", geometry_msgs.msg.QuaternionStamped,
+            self._collect_attitude, publish_rate=500
+        ))
+        self.attitude_publish_rate = 0
+
+        self.telemetry_publishers.append(Publisher(
+            "anafi/velocity_body", geometry_msgs.msg.PointStamped,
+            self._collect_velocity, publish_rate=500
+        ))
+        self.velocity_publish_rate = 0
+
+        self.telemetry_publishers.append(Publisher(
+            "anafi/gps_data", sensor_msgs.msg.NavSatFix,
+            self._collect_gps_data, publish_rate=10
+        ))
+        self.gps_data_publish_rate = 0
+
+        self.telemetry_publishers.append(Publisher(
+            "anafi/flying_state", diagnostic_msgs.msg.DiagnosticArray,
+            self._collect_flying_state, publish_rate=10
+        ))
+        self.flying_state_publish_rate = 0
+
+        self.telemetry_publishers.append(Publisher(
+            "anafi/gimbal_attitude", geometry_msgs.msg.PointStamped,
+            self._collect_gimbal_attitude, publish_rate=10
+        ))
+        self.gimbal_attitude_publish_rate = 0
+
+        self.telemetry_publishers.append(Publisher(
+            "anafi/battery_data", sensor_msgs.msg.BatteryState,
+            self._collect_battery_data, publish_rate=0.2
+        ))
+        self.battery_data_publish_rate = 0
+
+        self.image_publisher = Publisher(
+            "anafi/image_rect_color", sensor_msgs.msg.Image,
+            self._collect_image, publish_rate=5
         )
-        self.velocity_publisher = rospy.Publisher(
-            "anafi/velocity_body", geometry_msgs.msg.PointStamped, queue_size=10
-        )
-        self.gps_data_publisher = rospy.Publisher(
-            "anafi/gps_data", sensor_msgs.msg.NavSatFix, queue_size=10
-        )
-        self.flying_state_publisher = rospy.Publisher(
-            "anafi/flying_state", diagnostic_msgs.msg.DiagnosticArray, queue_size=10
-        )
-        self.gimbal_attitude_publisher = rospy.Publisher(
-            "anafi/gimbal_attitude", geometry_msgs.msg.PointStamped, queue_size=10
-        )
-        self.battery_data_publisher = rospy.Publisher(
-            "anafi/battery_data", sensor_msgs.msg.BatteryState, queue_size=10
-        )
-        self.image_publisher = rospy.Publisher(
-            "anafi/image_rect_color", sensor_msgs.msg.Image, queue_size=10
-        )
+        self.image_publish_rate = 0
 
     def init(self):
         # Make directory for images
         script_dir = os.path.dirname(os.path.realpath(__file__))
         today = time.localtime()
-        self.image_dir = f"{script_dir}/../../../images" \
+        self.image_dir = f"{script_dir}/../../../../images" \
             f"/{today.tm_year}-{today.tm_mon}-{today.tm_mday}" \
             f"/{today.tm_hour}-{today.tm_min}-{today.tm_sec}"
         pathlib.Path(self.image_dir).mkdir(parents=True, exist_ok=True)
+        rospy.loginfo(f"Saving images to {self.image_dir}")
 
         self.drone.media.download_dir = self.image_dir
 
@@ -79,48 +126,23 @@ class Publisher():
         rospy.loginfo("Initialized camera")
         rospy.loginfo("Initialized Anafi publisher")
 
-    def publish(self):
-        """
-        Publish all messages currently residing in the publishing queue.
-        """
-        while not self.publish_queue.empty():
-            element = self.publish_queue.get()
-            if element["type"] == "attitude":
-                self.attitude_publisher.publish(element["msg"])
-            elif element["type"] == "velocity":
-                self.velocity_publisher.publish(element["msg"])
-            elif element["type"] == "gps_data":
-                self.gps_data_publisher.publish(element["msg"])
-            elif element["type"] == "flying_state":
-                self.flying_state_publisher.publish(element["msg"])
-            elif element["type"] == "gimbal_attitude":
-                self.gimbal_attitude_publisher.publish(element["msg"])
-            elif element["type"] == "battery_data":
-                self.battery_data_publisher.publish(element["msg"])
-            elif element["type"] == "image":
-                self.image_publisher.publish(element["msg"])
-            else:
-                rospy.logerr("Invalid message type")
-
-    def collect_telemetry(self):
+    def publish_telemetry(self):
         """
         Collect telemetry data from drone. This should be run in its own thread.
         """
         while not rospy.is_shutdown():
-            self._collect_attitude()
-            self._collect_velocity()
-            self._collect_gps_data()
-            self._collect_flying_state()
-            self._collect_gimbal_attitude()
-            self._collect_battery_data()
+            for publisher in self.telemetry_publishers:
+                if publisher.should_publish():
+                    publisher.publish()
 
-    def collect_image(self):
+    def publish_image(self):
         """
         Collect an image from the camera on the drone. This should be run in its
         own thread.
         """
         while not rospy.is_shutdown():
-            self._collect_image()
+            if self.image_publisher.should_publish():
+                self.image_publisher.publish()
 
     def _add_msg_to_queue(self, msg, msg_type):
         self.publish_queue.put({"msg": msg, "type": msg_type})
@@ -144,7 +166,7 @@ class Publisher():
             degrees=False
         ).as_quat()
 
-        self._add_msg_to_queue(attitude_msg, "attitude")
+        return attitude_msg
 
     def _collect_velocity(self):
         velocity_msg = geometry_msgs.msg.PointStamped()
@@ -174,7 +196,7 @@ class Publisher():
             velocity_msg.point.z
         ] = velocity_body
 
-        self._add_msg_to_queue(velocity_msg, "velocity")
+        return velocity_msg
 
     def _collect_gps_data(self):
         gps_data_msg = sensor_msgs.msg.NavSatFix()
@@ -202,7 +224,7 @@ class Publisher():
 
         gps_data_msg.position_covariance_type = sensor_msgs.msg.NavSatFix.COVARIANCE_TYPE_DIAGONAL_KNOWN
 
-        self._add_msg_to_queue(gps_data_msg, "gps_data")
+        return gps_data_msg
 
     def _collect_flying_state(self):
         flying_state_msg = diagnostic_msgs.msg.DiagnosticArray()
@@ -216,21 +238,21 @@ class Publisher():
         flying_status.message = flying_state
         flying_state_msg.status = [flying_status]
 
-        self._add_msg_to_queue(flying_state_msg, "flying_state")
+        return flying_state_msg
 
     def _collect_gimbal_attitude(self):
-        gimbal_attitude_msgs = geometry_msgs.msg.PointStamped()
-        gimbal_attitude_msgs.header.stamp = rospy.Time.now()
+        gimbal_attitude_msg = geometry_msgs.msg.PointStamped()
+        gimbal_attitude_msg.header.stamp = rospy.Time.now()
 
         gimbal_attitude = self.drone.get_state(
             olympe_msgs.gimbal.attitude
         )
 
-        gimbal_attitude_msgs.point.x = gimbal_attitude[0]["roll_relative"]
-        gimbal_attitude_msgs.point.y = gimbal_attitude[0]["pitch_relative"]
-        gimbal_attitude_msgs.point.z = gimbal_attitude[0]["yaw_relative"]
+        gimbal_attitude_msg.point.x = gimbal_attitude[0]["roll_relative"]
+        gimbal_attitude_msg.point.y = gimbal_attitude[0]["pitch_relative"]
+        gimbal_attitude_msg.point.z = gimbal_attitude[0]["yaw_relative"]
 
-        self._add_msg_to_queue(gimbal_attitude_msgs, "gimbal_attitude")
+        return gimbal_attitude_msg
 
     def _collect_battery_data(self):
         battery_msg = sensor_msgs.msg.BatteryState()
@@ -264,7 +286,7 @@ class Publisher():
 
         battery_msg.serial_number = self.drone.get_state(olympe_msgs.battery.serial)["serial"]
 
-        self._add_msg_to_queue(battery_msg, "battery_data")
+        return battery_msg
 
     def _collect_image(self):
         self.drone(olympe_msgs.camera.take_photo(cam_id=0))
@@ -289,4 +311,4 @@ class Publisher():
         image_msg = cv_bridge.CvBridge().cv2_to_imgmsg(image)
         image_msg.header.stamp = rospy.Time.now()
 
-        self._add_msg_to_queue(image_msg, "image")
+        return image_msg

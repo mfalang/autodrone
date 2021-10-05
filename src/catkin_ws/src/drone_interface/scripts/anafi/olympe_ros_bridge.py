@@ -96,7 +96,7 @@ class OlympeRosBridge():
         self.drone.connect()
 
         self.controller = Controller(self.drone)
-        self.telemetry_publisher = publisher.Publisher(self.drone)
+        self.telemetry_publisher = publisher.AnafiDataPublisher(self.drone)
 
     def start(self):
 
@@ -112,12 +112,14 @@ class OlympeRosBridge():
         self.controller.init(camera_angle=-90)
         rospy.sleep(1)
 
-        threading.Thread(target=self.telemetry_publisher.collect_telemetry, args=(), daemon=True).start()
-        threading.Thread(target=self.telemetry_publisher.collect_image, args=(), daemon=True).start()
+        threading.Thread(target=self.telemetry_publisher.publish_telemetry, args=(), daemon=True).start()
+        threading.Thread(target=self.telemetry_publisher.publish_image, args=(), daemon=True).start()
 
-        while not rospy.is_shutdown():
+        rospy.spin()
+        # while not rospy.is_shutdown():
+        #     pass
             #start = time.time()
-            self.telemetry_publisher.publish()
+            # self.telemetry_publisher.publish_telemetry()
             #rospy.loginfo(f"Publishing took {time.time() - start} seconds")
             # rospy.sleep(0.2)
 
