@@ -6,7 +6,7 @@ Header header
 float64 dx # forward [m]
 float64 dy # right [m]
 float64 dz # down [m]
-float64 dpsi # heading angle relative to north [rad]
+float64 dpsi # heading angle relative to current angle (positive clockwise)
 
 # Constraints
 float64 max_horizontal_speed # [m/s]
