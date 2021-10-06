@@ -36,7 +36,7 @@ echo
 if [[ $reply != "n" ]]; then
     echo -e "${GREEN}Installing custom models${NC}"
 
-    cp -r $SCRIPT_DIR/models $HOME/.gazebo
+    cp -r $SCRIPT_DIR/models/ $HOME/.gazebo
 fi
 
 echo -e "${GREEN}========== Done ==========${NC}"
