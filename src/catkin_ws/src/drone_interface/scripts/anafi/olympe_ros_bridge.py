@@ -8,83 +8,8 @@ import olympe.messages as olympe_msgs
 import olympe.enums.ardrone3 as ardrone3_enums
 import threading
 
-import publisher
-
-# TODO: Must have an init drone command. There must also be a topic that
-# published when the init is done
-class Controller():
-
-    TAKINGOFF_STATE = ardrone3_enums.PilotingState.FlyingStateChanged_State.takingoff
-    HOVERING_STATE = ardrone3_enums.PilotingState.FlyingStateChanged_State.hovering
-    LANDED_STATE = ardrone3_enums.PilotingState.FlyingStateChanged_State.landed
-
-    def __init__(self, drone):
-        self.drone = drone
-
-    def init(self, camera_angle):
-        # Init gimbal
-        max_speed = 90 # Max speeds: Pitch 180, Roll/Yaw 0.
-
-        self.drone(olympe_msgs.gimbal.set_max_speed(
-            gimbal_id=0,
-            yaw=0,
-            pitch=max_speed,
-            roll=0,
-        ))
-
-        assert self.drone(olympe_msgs.gimbal.max_speed(
-            gimbal_id=0,
-            current_yaw=0,
-            current_pitch=max_speed,
-            current_roll=0,
-        )).wait().success(), "Failed to set max gimbal speed"
-
-        self.drone(olympe_msgs.gimbal.set_target(
-            gimbal_id=0,
-            control_mode="position",
-            pitch_frame_of_reference="relative",
-            pitch=camera_angle,
-            roll_frame_of_reference="relative",
-            roll=0,
-            yaw_frame_of_reference="relative",
-            yaw=0
-        ))
-
-        assert self.drone(olympe_msgs.gimbal.attitude(
-            gimbal_id=0,
-            pitch_relative=camera_angle,
-        )).wait(5).success(), "Failed to pitch camera"
-
-        rospy.loginfo(f"Initialized gimbal at {camera_angle}")
-
-    def _get_flying_state(self):
-        return self.drone.get_state(
-            olympe_msgs.ardrone3.PilotingState.FlyingStateChanged
-        )["state"]
-
-    def takeoff(self):
-        rospy.loginfo("Taking off")
-        self.drone(olympe_msgs.ardrone3.Piloting.TakeOff())
-
-    def takeoff_complete(self):
-        return self._get_flying_state() == self.HOVERING_STATE
-
-    def land(self):
-        rospy.loginfo("Landing")
-        self.drone(olympe_msgs.ardrone3.Piloting.Landing())
-
-    def land_complete(self):
-        return self._get_flying_state() == self.LANDED_STATE
-
-    # TODO: Update these to use movebyextended
-    def move(self, dx, dy, dz, dpsi):
-        rospy.loginfo(f"Moving dx: {dx} dy: {dy} dz: {dz} dpsi: {dpsi}")
-        self.drone(olympe_msgs.ardrone3.Piloting.moveBy(dx, dy, dz, dpsi))
-
-    def move_complete(self):
-        return self._get_flying_state() == self.HOVERING_STATE
-
-
+from anafi_data_publisher import AnafiDataPublisher
+from command_listener import CommandListener
 
 class OlympeRosBridge():
 
@@ -95,8 +20,8 @@ class OlympeRosBridge():
         self.drone.logger.setLevel(40)
         self.drone.connect()
 
-        self.controller = Controller(self.drone)
-        self.telemetry_publisher = publisher.AnafiDataPublisher(self.drone)
+        self.command_listener = CommandListener(self.drone)
+        self.telemetry_publisher = AnafiDataPublisher(self.drone)
 
     def start(self):
 
@@ -109,7 +34,7 @@ class OlympeRosBridge():
 
         rospy.sleep(1)
         self.telemetry_publisher.init()
-        self.controller.init(camera_angle=-90)
+        self.command_listener.init(camera_angle=-90)
         rospy.sleep(1)
 
         threading.Thread(target=self.telemetry_publisher.publish_telemetry, args=(), daemon=True).start()

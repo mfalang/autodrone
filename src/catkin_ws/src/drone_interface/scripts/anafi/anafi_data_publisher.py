@@ -124,7 +124,7 @@ class AnafiDataPublisher():
             )
         ).wait().success()
         rospy.loginfo("Initialized camera")
-        rospy.loginfo("Initialized Anafi publisher")
+        rospy.loginfo("Initialized Anafi data publisher")
 
     def publish_telemetry(self):
         """
