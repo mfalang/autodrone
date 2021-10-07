@@ -30,12 +30,13 @@ class CommandListener():
             roll=0,
         ))
 
-        assert self.drone(olympe_msgs.gimbal.max_speed(
-            gimbal_id=0,
-            current_yaw=0,
-            current_pitch=max_speed,
-            current_roll=0,
-        )).wait().success(), "Failed to set max gimbal speed"
+        # TODO: Find out why this does not work with physical drone
+        # assert self.drone(olympe_msgs.gimbal.max_speed(
+        #     gimbal_id=0,
+        #     current_yaw=0,
+        #     current_pitch=max_speed,
+        #     current_roll=0,
+        # )).wait(_timeout=5).success(), "Failed to set max gimbal speed"
 
         self.drone(olympe_msgs.gimbal.set_target(
             gimbal_id=0,
