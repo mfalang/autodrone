@@ -56,7 +56,7 @@ class Mission():
         ans = ""
         while ans != expected_ans:
             ans = input(f"{display_msg}").lower()
-            if ans == "abort":
+            if ans == "abort" or ans == "a":
                 self._abort()
 
 class TakeoffLand(Mission):

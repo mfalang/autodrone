@@ -2,6 +2,7 @@
 
 # Script for interfacing to the Anafi-drone through ROS topics.
 
+import sys
 import rospy
 import olympe
 import olympe.messages as olympe_msgs
@@ -36,7 +37,14 @@ class OlympeRosBridge():
         rospy.spin()
 
 def main():
-    drone_ip = "10.202.0.1"
+    args = sys.argv[1:]
+    if len(args) != 1:
+        print(f"Incorrect number of arguments, should be 1 was {len(args)}")
+    if args[0] == "physical":
+        drone_ip = "192.168.42.1"
+    elif args[0] == "simulation":
+        drone_ip = "10.202.0.1"
+        
     anafi_interface = OlympeRosBridge(drone_ip)
     anafi_interface.start()
 

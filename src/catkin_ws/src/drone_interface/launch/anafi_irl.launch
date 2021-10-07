@@ -1,0 +1,3 @@
+<launch>
+    <node name="anafi_interface" pkg="drone_interface" type="olympe_ros_bridge.py" args="physical" output="screen" />
+</launch>

@@ -3,6 +3,8 @@
 # Script to install ROS Melodic
 # Commands taken from http://wiki.ros.org/melodic/Installation/Ubuntu
 
+SCRIPT_DIR=$(dirname "$(realpath $0)")
+
 GREEN='\033[0;32m'
 NC='\033[0m'
 
@@ -23,5 +25,12 @@ sudo apt install -y python-rosdep
 
 sudo rosdep init
 rosdep update
+
+echo -e "${GREEN}Building catkin workspace and updating ~/.bashrc${NC}"
+
+cd $SCRIPT_DIR/../../src/catkin_ws
+catkin_make
+
+echo "source `pwd`/devel/setup.bash" >> ~/.bashrc
 
 echo -e "${GREEN}Done. Remember to source ~/.bashrc${NC}"
