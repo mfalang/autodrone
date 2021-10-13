@@ -5,12 +5,11 @@ import time
 import queue
 import pathlib
 import threading
-import traceback
 
 import rospy
 import sensor_msgs.msg
 import geometry_msgs.msg
-import diagnostic_msgs.msg
+import drone_interface.msg
 
 import olympe
 import olympe.messages as olympe_msgs
@@ -21,9 +20,26 @@ import cv_bridge
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-class Publisher():
+class GenericMessagePublisher():
+    """
+    Helper class which expands on the functionality of the ROS Publisher class.
+    """
 
     def __init__(self, topic_name, msg_type, collect_function, publish_rate):
+        """
+
+        Parameters
+        ----------
+        topic_name : string
+            Name of the topic this publisher should publish to
+        msg_type : ROS message
+            message type this publisher should publish
+        collect_function : func
+            Function where this publisher can get message to be published
+        publish_rate : int
+            Rate at which this publisher should publish data (in Hz). If rate is
+            -1 the publisher will publish as often as possible
+        """
         self.publisher = rospy.Publisher(
             topic_name, msg_type, queue_size=10
         )
@@ -31,22 +47,35 @@ class Publisher():
         self.prev_publish_time = None
         self.collect_function = collect_function
 
-    def set_rate(self, rate):
-        self.rate = rate
-
     def publish(self):
+        """
+        Publish data on this publisher's topic.
+        """
         self.prev_publish_time = rospy.Time.now()
-        self.publisher.publish(self.collect_function())
+        msg = self.collect_function()
+        if msg is not None:
+            self.publisher.publish(msg)
 
     def should_publish(self):
+        """
+        Check if this publisher is ready to publish yet (i.e. if more than
+        1/rate time has passed since it last published).
+
+        Returns
+        -------
+        bool
+            True if more than 1/rate has passed, false if not
+        """
         if self.prev_publish_time is None or self.rate == -1:
             return True
         else:
             return rospy.Time.now().to_time() >= self.prev_publish_time.to_time() + 1/self.rate
 
 
-class AnafiDataPublisher():
-
+class TelemetryPublisher():
+    """
+    Class to publish telemetry data from Anafi drone
+    """
     def __init__(self, drone):
 
         self.drone = drone
@@ -59,52 +88,58 @@ class AnafiDataPublisher():
         self.telemetry_publishers = []
 
         # Topics to publish to
-        self.telemetry_publishers.append(Publisher(
+        self.telemetry_publishers.append(GenericMessagePublisher(
             "anafi/attitude", geometry_msgs.msg.QuaternionStamped,
             self._collect_attitude, publish_rate=500
         ))
 
-        self.telemetry_publishers.append(Publisher(
+        self.telemetry_publishers.append(GenericMessagePublisher(
             "anafi/velocity_body", geometry_msgs.msg.PointStamped,
             self._collect_velocity, publish_rate=500
         ))
 
-        self.telemetry_publishers.append(Publisher(
+        self.telemetry_publishers.append(GenericMessagePublisher(
             "anafi/gps_data", sensor_msgs.msg.NavSatFix,
             self._collect_gps_data, publish_rate=10
         ))
 
-        self.telemetry_publishers.append(Publisher(
-            "anafi/flying_state", diagnostic_msgs.msg.DiagnosticArray,
+        self.telemetry_publishers.append(GenericMessagePublisher(
+            "anafi/flying_state", drone_interface.msg.FlyingState,
             self._collect_flying_state, publish_rate=10
         ))
 
-        self.telemetry_publishers.append(Publisher(
-            "anafi/gimbal_attitude", geometry_msgs.msg.PointStamped,
+        self.telemetry_publishers.append(GenericMessagePublisher(
+            "anafi/gimbal_attitude", drone_interface.msg.GimbalAttitude,
             self._collect_gimbal_attitude, publish_rate=10
         ))
 
-        self.telemetry_publishers.append(Publisher(
+        self.telemetry_publishers.append(GenericMessagePublisher(
             "anafi/battery_data", sensor_msgs.msg.BatteryState,
             self._collect_battery_data, publish_rate=0.2
         ))
 
-    def init(self):
-        rospy.loginfo("Initialized Anafi data publisher")
+        rospy.loginfo("Initialized telemetry publisher")
 
-    def publish_telemetry(self):
+    def publish(self):
         """
-        Collect telemetry data from drone. This should be run in its own thread.
+        Publish telemetry data from the Anafi drone. This function blocks so it
+        should be run in its own thread.
         """
         while not rospy.is_shutdown():
             for publisher in self.telemetry_publishers:
                 if publisher.should_publish():
                     publisher.publish()
 
-    def _add_msg_to_queue(self, msg, msg_type):
-        self.publish_queue.put({"msg": msg, "type": msg_type})
-
     def _collect_attitude(self):
+        """
+        Get the attitude of the drone in Euler angles and convert a quaternion
+        used in the ROS message for attitude.
+
+        Returns
+        -------
+        geometry_msgs.msg.QuaternionStamped
+            ROS message with drone attitude
+        """
         attitude_msg = geometry_msgs.msg.QuaternionStamped()
         attitude_msg.header.stamp = rospy.Time.now()
 
@@ -126,6 +161,19 @@ class AnafiDataPublisher():
         return attitude_msg
 
     def _collect_velocity(self):
+        """
+        Get the body velocity of the the drone and put this in a ROS message.
+        The format for the velocity is
+
+        x = forward velocity
+        y = left velocity
+        z = down velocity
+
+        Returns
+        -------
+        geometry_msgs.msg.PointStamped
+            ROS message with drone body velocity
+        """
         velocity_msg = geometry_msgs.msg.PointStamped()
         velocity_msg.header.stamp = rospy.Time.now()
 
@@ -156,6 +204,15 @@ class AnafiDataPublisher():
         return velocity_msg
 
     def _collect_gps_data(self):
+        """
+        Get drone GPS position and other data and store this in a ROS message.
+
+        Returns
+        -------
+        sensor_msgs.msg.NavSatFix
+            ROS message containing drone location as well as other GPS related
+            data
+        """
         gps_data_msg = sensor_msgs.msg.NavSatFix()
         gps_data_msg.header.stamp = rospy.Time.now()
 
@@ -184,34 +241,58 @@ class AnafiDataPublisher():
         return gps_data_msg
 
     def _collect_flying_state(self):
-        flying_state_msg = diagnostic_msgs.msg.DiagnosticArray()
+        """
+        Get the flying state of the Anafi and store this in a ROS message.
+
+        Returns
+        -------
+        drone_interface.msg.PositionSetpointRelative
+            ROS message containing the flying state of the drone
+        """
+
+        flying_state_msg = drone_interface.msg.FlyingState()
         flying_state_msg.header.stamp = rospy.Time.now()
         flying_state = self.drone.get_state(
             olympe_msgs.ardrone3.PilotingState.FlyingStateChanged
         )["state"].name
-        flying_status = diagnostic_msgs.msg.DiagnosticStatus()
-        flying_status.name = "Anafi"
-        flying_status.level = diagnostic_msgs.msg.DiagnosticStatus.OK
-        flying_status.message = flying_state
-        flying_state_msg.status = [flying_status]
+        flying_state_msg.flying_state = flying_state
 
         return flying_state_msg
 
     def _collect_gimbal_attitude(self):
-        gimbal_attitude_msg = geometry_msgs.msg.PointStamped()
+        """
+        Get the gimbal attitude of the drone. Attitude is relative to the
+        drone body frame (roll axis forward, pitch axis left, yaw-axis down).
+        Counter clockwise angle positive. All angles zero when camera is
+        pointing straight ahead.
+
+        Returns
+        -------
+        drone_interface.msg.GimbalAttitude
+            ROS message containing the gimbal attitude
+        """
+        gimbal_attitude_msg = drone_interface.msg.GimbalAttitude()
         gimbal_attitude_msg.header.stamp = rospy.Time.now()
 
         gimbal_attitude = self.drone.get_state(
             olympe_msgs.gimbal.attitude
         )
 
-        gimbal_attitude_msg.point.x = gimbal_attitude[0]["roll_relative"]
-        gimbal_attitude_msg.point.y = gimbal_attitude[0]["pitch_relative"]
-        gimbal_attitude_msg.point.z = gimbal_attitude[0]["yaw_relative"]
+        gimbal_attitude_msg.roll = gimbal_attitude[0]["roll_relative"]
+        gimbal_attitude_msg.pitch = gimbal_attitude[0]["pitch_relative"]
+        gimbal_attitude_msg.yaw = gimbal_attitude[0]["yaw_relative"]
 
         return gimbal_attitude_msg
 
     def _collect_battery_data(self):
+        """
+        Get battery information about the drone and store this in a ROS message.
+
+        Returns
+        -------
+        sensor_msgs.msg.BatteryState
+            ROS message containing information about the drone battery
+        """
         battery_msg = sensor_msgs.msg.BatteryState()
         battery_msg.header.stamp = rospy.Time.now()
 
@@ -245,53 +326,31 @@ class AnafiDataPublisher():
 
         return battery_msg
 
-class CameraStreamer():
+class CameraPublisher():
+    """
+    Class to publish front camera of Anafi drone.
+    """
 
     def __init__(self, drone):
         self.drone = drone
 
-        # self.image_publisher = Publisher(
-        #     "anafi/image_rect_color", sensor_msgs.msg.Image,
-        #     self._collect_image, publish_rate=5
-        # )
-
-    def init(self):
-        # Make directory for images
+        # Make directory for data
         script_dir = os.path.dirname(os.path.realpath(__file__))
         today = time.localtime()
         self.image_dir = f"{script_dir}/../../../../../../out/images" \
             f"/{today.tm_year}-{today.tm_mon}-{today.tm_mday}" \
             f"/{today.tm_hour}-{today.tm_min}-{today.tm_sec}"
         pathlib.Path(self.image_dir).mkdir(parents=True, exist_ok=True)
-        rospy.loginfo(f"Saving images to {self.image_dir}")
+        rospy.loginfo(f"Video stream to {self.image_dir}")
 
-        self.drone.media.download_dir = self.image_dir
-
-        # Init camera
-        self.drone(olympe_msgs.camera.set_camera_mode(cam_id=0, value="photo")).wait()
-        self.drone(
-            olympe_msgs.camera.set_photo_mode(
-                cam_id=0,
-                mode="single",
-                format="rectilinear",
-                file_format="jpeg",
-                burst="burst_14_over_1s", # ignored in singel mode
-                bracketing="preset_1ev", # ignored in single mode
-                capture_interval=1 # ignored in single mode
-            )
-        ).wait().success()
-
-        # Delete all media currently on drone
-        self.drone(olympe.media.delete_all_media()).wait().success()
-
-        # Set up streaming stuff
+        # Set up video streaming
         self.h264_frame_stats = []
         self.h264_stats_file = open(
             os.path.join(self.image_dir, 'h264_stats.csv'), 'w+')
         self.h264_stats_writer = csv.DictWriter(
             self.h264_stats_file, ['fps', 'bitrate'])
         self.h264_stats_writer.writeheader()
-        self.frame_queue = queue.Queue()
+        self.image_queue = queue.Queue()
         self.flush_queue_lock = threading.Lock()
 
         self.drone.set_streaming_output_files(
@@ -299,153 +358,85 @@ class CameraStreamer():
             h264_meta_file=os.path.join(self.image_dir, 'h264_metadata.json'),
         )
 
-        # Callbacks for live processing
+        # Callbacks for live processing of frames
         self.drone.set_streaming_callbacks(
             raw_cb=self.yuv_frame_cb,
-            h264_cb=self.h264_frame_cb,
-            start_cb=self.start_cb,
-            end_cb=self.end_cb,
             flush_raw_cb=self.flush_cb,
         )
 
-        rospy.loginfo("Initialized camera streamer")
+        # Channel to publish to
+        self.publisher = GenericMessagePublisher(
+            "anafi/image_rect_color", sensor_msgs.msg.Image,
+            self._collect_image, publish_rate=-1
+        )
+
+        rospy.loginfo("Initialized camera publisher")
 
     def yuv_frame_cb(self, yuv_frame):
         """
         This function will be called by Olympe for each decoded YUV frame.
-            :type yuv_frame: olympe.VideoFrame
+
+        Parameters
+        ----------
+        yuv_frame : olympe.VideoFrame
+            Video frame
         """
         yuv_frame.ref()
-        self.frame_queue.put_nowait(yuv_frame)
+        self.image_queue.put_nowait(yuv_frame)
 
     def flush_cb(self):
+        """
+        Function called by Olympe to flush the queue of frames.
+
+        Returns
+        -------
+        bool
+            True when flushing is finished
+        """
         with self.flush_queue_lock:
-            while not self.frame_queue.empty():
-                self.frame_queue.get_nowait().unref()
+            while not self.image_queue.empty():
+                self.image_queue.get_nowait().unref()
         return True
 
-    # TODO: Find out if this function is needed
-    def start_cb(self):
-        pass
-
-    # TODO: Find out if this function is needed
-    def end_cb(self):
-        pass
-
-    def h264_frame_cb(self, h264_frame):
+    def publish(self):
         """
-        This function will be called by Olympe for each new h264 frame.
-            :type yuv_frame: olympe.VideoFrame
+        Publishes video stream from Anafi front camera. Blocks, so this function
+        Should be run in a separate thread.
         """
 
-        # Get a ctypes pointer and size for this h264 frame
-        frame_pointer, frame_size = h264_frame.as_ctypes_pointer()
-
-        # For this example we will just compute some basic video stream stats
-        # (bitrate and FPS) but we could choose to resend it over an another
-        # interface or to decode it with our preferred hardware decoder..
-
-        # Compute some stats and dump them in a csv file
-        info = h264_frame.info()
-        frame_ts = info["ntp_raw_timestamp"]
-        if not bool(info["h264"]["is_sync"]):
-            if len(self.h264_frame_stats) > 0:
-                while True:
-                    start_ts, _ = self.h264_frame_stats[0]
-                    if (start_ts + 1e6) < frame_ts:
-                        self.h264_frame_stats.pop(0)
-                    else:
-                        break
-            self.h264_frame_stats.append((frame_ts, frame_size))
-            h264_fps = len(self.h264_frame_stats)
-            h264_bitrate = (
-                8 * sum(map(lambda t: t[1], self.h264_frame_stats)))
-            self.h264_stats_writer.writerow(
-                {'fps': h264_fps, 'bitrate': h264_bitrate})
-
-    def show_yuv_frame(self, window_name, yuv_frame):
-        # the VideoFrame.info() dictionary contains some useful information
-        # such as the video resolution
-        info = yuv_frame.info()
-        height, width = info["yuv"]["height"], info["yuv"]["width"]
-
-        # yuv_frame.vmeta() returns a dictionary that contains additional
-        # metadata from the drone (GPS coordinates, battery percentage, ...)
-
-        # convert pdraw YUV flag to OpenCV YUV flag
-        cv2_cvt_color_flag = {
-            olympe.PDRAW_YUV_FORMAT_I420: cv.COLOR_YUV2BGR_I420,
-            olympe.PDRAW_YUV_FORMAT_NV12: cv.COLOR_YUV2BGR_NV12,
-        }[info["yuv"]["format"]]
-
-        # yuv_frame.as_ndarray() is a 2D numpy array with the proper "shape"
-        # i.e (3 * height / 2, width) because it's a YUV I420 or NV12 frame
-
-        # Use OpenCV to convert the yuv frame to RGB
-        cv2frame = cv.cvtColor(yuv_frame.as_ndarray(), cv2_cvt_color_flag)
-        # Use OpenCV to show this frame
-        cv.imshow(window_name, cv2frame)
-        cv.waitKey(1)  # please OpenCV for 1 ms...
-
-    def run(self):
-
-        # Start video streaming
         self.drone.start_video_streaming()
 
-        window_name = "Olympe Streaming Example"
-        cv.namedWindow(window_name, cv.WINDOW_NORMAL)
-        main_thread = next(
-            filter(lambda t: t.name == "MainThread", threading.enumerate())
-        )
-        while main_thread.is_alive():
-            with self.flush_queue_lock:
-                try:
-                    yuv_frame = self.frame_queue.get(timeout=0.01)
-                except queue.Empty:
-                    continue
-                try:
-                    self.show_yuv_frame(window_name, yuv_frame)
-                except Exception:
-                    # We have to continue popping frame from the queue even if
-                    # we fail to show one frame
-                    traceback.print_exc()
-                finally:
-                    # Don't forget to unref the yuv frame. We don't want to
-                    # starve the video buffer pool
-                    yuv_frame.unref()
-        cv.destroyWindow(window_name)
+        while not rospy.is_shutdown():
+            if self.publisher.should_publish():
+                self.publisher.publish()
 
-    # def publish_image(self):
-    #     """
-    #     Collect an image from the camera on the drone. This should be run in its
-    #     own thread.
-    #     """
-    #     while not rospy.is_shutdown():
-    #         if self.image_publisher.should_publish():
-    #             self.image_publisher.publish()
+    def _collect_image(self):
+        """
+        Gets the current image stored in the image queue. If there is no image,
+        then this function returns None.
 
-    # def _collect_image(self):
-    #     self.drone(olympe_msgs.camera.take_photo(cam_id=0))
-    #     photo_saved = self.drone(
-    #         olympe_msgs.camera.photo_progress(result="photo_saved")
-    #     ).wait()
+        Returns
+        -------
+        sensor_msgs.msg.Image
+            ROS message containing the image and associated data
+        """
+        with self.flush_queue_lock:
+            if not self.image_queue.empty():
+                yuv_frame = self.image_queue.get()
 
-    #     media_id = photo_saved.received_events().last().args["media_id"]
-    #     media_download = self.drone(olympe.media.download_media(
-    #         media_id,
-    #         integrity_check=False
-    #     ))
-    #     resources = media_download.as_completed()
+                # Convert yuv frame to OpenCV compatible image array
+                info = yuv_frame.info()
+                cv_cvt_color_flag = {
+                    olympe.PDRAW_YUV_FORMAT_I420: cv.COLOR_YUV2BGR_I420,
+                    olympe.PDRAW_YUV_FORMAT_NV12: cv.COLOR_YUV2BGR_NV12,
+                }[info["yuv"]["format"]]
+                cv_frame = cv.cvtColor(yuv_frame.as_ndarray(), cv_cvt_color_flag)
 
-    #     for resource in resources:
-    #         resource_id = resource.received_events().last()._resource_id
-    #         if not resource.success():
-    #             rospy.logerr("Failed to download image")
-    #         self.drone(olympe.media.delete_media(media_id))
+                # Create ros message
+                image_msg = cv_bridge.CvBridge().cv2_to_imgmsg(cv_frame)
+                image_msg.header.stamp = rospy.Time.now()
 
-    #     image = cv.imread(f"{self.image_dir}/{resource_id}")
-
-    #     image_msg = cv_bridge.CvBridge().cv2_to_imgmsg(image)
-    #     image_msg.header.stamp = rospy.Time.now()
-
-    #     return image_msg
+                yuv_frame.unref()
+                return image_msg
+            else:
+                return None

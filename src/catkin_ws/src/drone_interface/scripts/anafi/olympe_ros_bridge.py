@@ -5,15 +5,19 @@
 import sys
 import rospy
 import olympe
-import olympe.messages as olympe_msgs
-import olympe.enums.ardrone3 as ardrone3_enums
 import threading
 
-from anafi_data_publisher import AnafiDataPublisher, CameraStreamer
+from anafi_data_publisher import TelemetryPublisher, CameraPublisher
 from command_listener import CommandListener
 
-class OlympeRosBridge():
+olympe.log.update_config({"loggers": {"olympe": {"level": "WARNING"}}})
 
+class OlympeRosBridge():
+    """
+    Class which bridges Olympe and ROS, making it possible to receive the data
+    from the Anafi drone via ROS topics as well as sending commands to the
+    drone via ROS topics.
+    """
     def __init__(self, drone_ip):
         rospy.init_node("anafi_interface", anonymous=False)
 
@@ -22,19 +26,20 @@ class OlympeRosBridge():
         self.drone.connect()
 
         self.command_listener = CommandListener(self.drone)
-        self.telemetry_publisher = AnafiDataPublisher(self.drone)
-        self.camera_streamer = CameraStreamer(self.drone)
+        self.telemetry_publisher = TelemetryPublisher(self.drone)
+        self.camera_streamer = CameraPublisher(self.drone)
 
     def start(self):
+        """
+        Start the interface.
+        """
 
         rospy.sleep(1)
-        self.telemetry_publisher.init()
-        self.camera_streamer.init()
         self.command_listener.init(camera_angle=-90)
         rospy.sleep(1)
 
-        # threading.Thread(target=self.telemetry_publisher.publish_telemetry, args=(), daemon=True).start()
-        threading.Thread(target=self.camera_streamer.run, args=(), daemon=True).start()
+        threading.Thread(target=self.telemetry_publisher.publish, args=(), daemon=True).start()
+        threading.Thread(target=self.camera_streamer.publish, args=(), daemon=True).start()
 
         rospy.spin()
 

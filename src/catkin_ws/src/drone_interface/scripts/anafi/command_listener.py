@@ -55,7 +55,7 @@ class CommandListener():
         )).wait(5).success(), "Failed to pitch camera"
 
         rospy.loginfo(f"Initialized gimbal at {camera_angle}")
-        rospy.loginfo("Intitialized drone")
+        rospy.loginfo("Initialized drone")
 
     def _takeoff_cb(self, msg):
         rospy.loginfo("Taking off")

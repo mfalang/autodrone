@@ -50,6 +50,8 @@ catkin_python_setup()
 add_message_files(
   FILES
   PositionSetpointRelative.msg
+  FlyingState.msg
+  GimbalAttitude.msg
 )
 
 ## Generate services in the 'srv' folder
