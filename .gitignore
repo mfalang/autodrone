@@ -11,3 +11,5 @@ images
 out
 # Python
 __pycache__
+# Misc
+.vscode

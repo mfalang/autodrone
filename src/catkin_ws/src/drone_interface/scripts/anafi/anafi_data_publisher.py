@@ -1,8 +1,11 @@
 
 import os
+import csv
 import time
 import queue
 import pathlib
+import threading
+import traceback
 
 import rospy
 import sensor_msgs.msg
@@ -60,70 +63,33 @@ class AnafiDataPublisher():
             "anafi/attitude", geometry_msgs.msg.QuaternionStamped,
             self._collect_attitude, publish_rate=500
         ))
-        self.attitude_publish_rate = 0
 
         self.telemetry_publishers.append(Publisher(
             "anafi/velocity_body", geometry_msgs.msg.PointStamped,
             self._collect_velocity, publish_rate=500
         ))
-        self.velocity_publish_rate = 0
 
         self.telemetry_publishers.append(Publisher(
             "anafi/gps_data", sensor_msgs.msg.NavSatFix,
             self._collect_gps_data, publish_rate=10
         ))
-        self.gps_data_publish_rate = 0
 
         self.telemetry_publishers.append(Publisher(
             "anafi/flying_state", diagnostic_msgs.msg.DiagnosticArray,
             self._collect_flying_state, publish_rate=10
         ))
-        self.flying_state_publish_rate = 0
 
         self.telemetry_publishers.append(Publisher(
             "anafi/gimbal_attitude", geometry_msgs.msg.PointStamped,
             self._collect_gimbal_attitude, publish_rate=10
         ))
-        self.gimbal_attitude_publish_rate = 0
 
         self.telemetry_publishers.append(Publisher(
             "anafi/battery_data", sensor_msgs.msg.BatteryState,
             self._collect_battery_data, publish_rate=0.2
         ))
-        self.battery_data_publish_rate = 0
-
-        self.image_publisher = Publisher(
-            "anafi/image_rect_color", sensor_msgs.msg.Image,
-            self._collect_image, publish_rate=5
-        )
-        self.image_publish_rate = 0
 
     def init(self):
-        # Make directory for images
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-        today = time.localtime()
-        self.image_dir = f"{script_dir}/../../../../images" \
-            f"/{today.tm_year}-{today.tm_mon}-{today.tm_mday}" \
-            f"/{today.tm_hour}-{today.tm_min}-{today.tm_sec}"
-        pathlib.Path(self.image_dir).mkdir(parents=True, exist_ok=True)
-        rospy.loginfo(f"Saving images to {self.image_dir}")
-
-        self.drone.media.download_dir = self.image_dir
-
-        # Init camera
-        self.drone(olympe_msgs.camera.set_camera_mode(cam_id=0, value="photo")).wait()
-        self.drone(
-            olympe_msgs.camera.set_photo_mode(
-                cam_id=0,
-                mode="single",
-                format="rectilinear",
-                file_format="jpeg",
-                burst="burst_14_over_1s", # ignored in singel mode
-                bracketing="preset_1ev", # ignored in single mode
-                capture_interval=1 # ignored in single mode
-            )
-        ).wait().success()
-        rospy.loginfo("Initialized camera")
         rospy.loginfo("Initialized Anafi data publisher")
 
     def publish_telemetry(self):
@@ -134,15 +100,6 @@ class AnafiDataPublisher():
             for publisher in self.telemetry_publishers:
                 if publisher.should_publish():
                     publisher.publish()
-
-    def publish_image(self):
-        """
-        Collect an image from the camera on the drone. This should be run in its
-        own thread.
-        """
-        while not rospy.is_shutdown():
-            if self.image_publisher.should_publish():
-                self.image_publisher.publish()
 
     def _add_msg_to_queue(self, msg, msg_type):
         self.publish_queue.put({"msg": msg, "type": msg_type})
@@ -288,27 +245,207 @@ class AnafiDataPublisher():
 
         return battery_msg
 
-    def _collect_image(self):
-        self.drone(olympe_msgs.camera.take_photo(cam_id=0))
-        photo_saved = self.drone(
-            olympe_msgs.camera.photo_progress(result="photo_saved")
-        ).wait()
+class CameraStreamer():
 
-        media_id = photo_saved.received_events().last().args["media_id"]
-        media_download = self.drone(olympe.media.download_media(
-            media_id,
-            integrity_check=False
-        ))
-        resources = media_download.as_completed()
+    def __init__(self, drone):
+        self.drone = drone
 
-        for resource in resources:
-            resource_id = resource.received_events().last()._resource_id
-            if not resource.success():
-                rospy.logerr("Failed to download image")
+        # self.image_publisher = Publisher(
+        #     "anafi/image_rect_color", sensor_msgs.msg.Image,
+        #     self._collect_image, publish_rate=5
+        # )
 
-        image = cv.imread(f"{self.image_dir}/{resource_id}")
+    def init(self):
+        # Make directory for images
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+        today = time.localtime()
+        self.image_dir = f"{script_dir}/../../../../../../out/images" \
+            f"/{today.tm_year}-{today.tm_mon}-{today.tm_mday}" \
+            f"/{today.tm_hour}-{today.tm_min}-{today.tm_sec}"
+        pathlib.Path(self.image_dir).mkdir(parents=True, exist_ok=True)
+        rospy.loginfo(f"Saving images to {self.image_dir}")
 
-        image_msg = cv_bridge.CvBridge().cv2_to_imgmsg(image)
-        image_msg.header.stamp = rospy.Time.now()
+        self.drone.media.download_dir = self.image_dir
 
-        return image_msg
+        # Init camera
+        self.drone(olympe_msgs.camera.set_camera_mode(cam_id=0, value="photo")).wait()
+        self.drone(
+            olympe_msgs.camera.set_photo_mode(
+                cam_id=0,
+                mode="single",
+                format="rectilinear",
+                file_format="jpeg",
+                burst="burst_14_over_1s", # ignored in singel mode
+                bracketing="preset_1ev", # ignored in single mode
+                capture_interval=1 # ignored in single mode
+            )
+        ).wait().success()
+
+        # Delete all media currently on drone
+        self.drone(olympe.media.delete_all_media()).wait().success()
+
+        # Set up streaming stuff
+        self.h264_frame_stats = []
+        self.h264_stats_file = open(
+            os.path.join(self.image_dir, 'h264_stats.csv'), 'w+')
+        self.h264_stats_writer = csv.DictWriter(
+            self.h264_stats_file, ['fps', 'bitrate'])
+        self.h264_stats_writer.writeheader()
+        self.frame_queue = queue.Queue()
+        self.flush_queue_lock = threading.Lock()
+
+        self.drone.set_streaming_output_files(
+            h264_data_file=os.path.join(self.image_dir, 'h264_data.264'),
+            h264_meta_file=os.path.join(self.image_dir, 'h264_metadata.json'),
+        )
+
+        # Callbacks for live processing
+        self.drone.set_streaming_callbacks(
+            raw_cb=self.yuv_frame_cb,
+            h264_cb=self.h264_frame_cb,
+            start_cb=self.start_cb,
+            end_cb=self.end_cb,
+            flush_raw_cb=self.flush_cb,
+        )
+
+        rospy.loginfo("Initialized camera streamer")
+
+    def yuv_frame_cb(self, yuv_frame):
+        """
+        This function will be called by Olympe for each decoded YUV frame.
+            :type yuv_frame: olympe.VideoFrame
+        """
+        yuv_frame.ref()
+        self.frame_queue.put_nowait(yuv_frame)
+
+    def flush_cb(self):
+        with self.flush_queue_lock:
+            while not self.frame_queue.empty():
+                self.frame_queue.get_nowait().unref()
+        return True
+
+    # TODO: Find out if this function is needed
+    def start_cb(self):
+        pass
+
+    # TODO: Find out if this function is needed
+    def end_cb(self):
+        pass
+
+    def h264_frame_cb(self, h264_frame):
+        """
+        This function will be called by Olympe for each new h264 frame.
+            :type yuv_frame: olympe.VideoFrame
+        """
+
+        # Get a ctypes pointer and size for this h264 frame
+        frame_pointer, frame_size = h264_frame.as_ctypes_pointer()
+
+        # For this example we will just compute some basic video stream stats
+        # (bitrate and FPS) but we could choose to resend it over an another
+        # interface or to decode it with our preferred hardware decoder..
+
+        # Compute some stats and dump them in a csv file
+        info = h264_frame.info()
+        frame_ts = info["ntp_raw_timestamp"]
+        if not bool(info["h264"]["is_sync"]):
+            if len(self.h264_frame_stats) > 0:
+                while True:
+                    start_ts, _ = self.h264_frame_stats[0]
+                    if (start_ts + 1e6) < frame_ts:
+                        self.h264_frame_stats.pop(0)
+                    else:
+                        break
+            self.h264_frame_stats.append((frame_ts, frame_size))
+            h264_fps = len(self.h264_frame_stats)
+            h264_bitrate = (
+                8 * sum(map(lambda t: t[1], self.h264_frame_stats)))
+            self.h264_stats_writer.writerow(
+                {'fps': h264_fps, 'bitrate': h264_bitrate})
+
+    def show_yuv_frame(self, window_name, yuv_frame):
+        # the VideoFrame.info() dictionary contains some useful information
+        # such as the video resolution
+        info = yuv_frame.info()
+        height, width = info["yuv"]["height"], info["yuv"]["width"]
+
+        # yuv_frame.vmeta() returns a dictionary that contains additional
+        # metadata from the drone (GPS coordinates, battery percentage, ...)
+
+        # convert pdraw YUV flag to OpenCV YUV flag
+        cv2_cvt_color_flag = {
+            olympe.PDRAW_YUV_FORMAT_I420: cv.COLOR_YUV2BGR_I420,
+            olympe.PDRAW_YUV_FORMAT_NV12: cv.COLOR_YUV2BGR_NV12,
+        }[info["yuv"]["format"]]
+
+        # yuv_frame.as_ndarray() is a 2D numpy array with the proper "shape"
+        # i.e (3 * height / 2, width) because it's a YUV I420 or NV12 frame
+
+        # Use OpenCV to convert the yuv frame to RGB
+        cv2frame = cv.cvtColor(yuv_frame.as_ndarray(), cv2_cvt_color_flag)
+        # Use OpenCV to show this frame
+        cv.imshow(window_name, cv2frame)
+        cv.waitKey(1)  # please OpenCV for 1 ms...
+
+    def run(self):
+
+        # Start video streaming
+        self.drone.start_video_streaming()
+
+        window_name = "Olympe Streaming Example"
+        cv.namedWindow(window_name, cv.WINDOW_NORMAL)
+        main_thread = next(
+            filter(lambda t: t.name == "MainThread", threading.enumerate())
+        )
+        while main_thread.is_alive():
+            with self.flush_queue_lock:
+                try:
+                    yuv_frame = self.frame_queue.get(timeout=0.01)
+                except queue.Empty:
+                    continue
+                try:
+                    self.show_yuv_frame(window_name, yuv_frame)
+                except Exception:
+                    # We have to continue popping frame from the queue even if
+                    # we fail to show one frame
+                    traceback.print_exc()
+                finally:
+                    # Don't forget to unref the yuv frame. We don't want to
+                    # starve the video buffer pool
+                    yuv_frame.unref()
+        cv.destroyWindow(window_name)
+
+    # def publish_image(self):
+    #     """
+    #     Collect an image from the camera on the drone. This should be run in its
+    #     own thread.
+    #     """
+    #     while not rospy.is_shutdown():
+    #         if self.image_publisher.should_publish():
+    #             self.image_publisher.publish()
+
+    # def _collect_image(self):
+    #     self.drone(olympe_msgs.camera.take_photo(cam_id=0))
+    #     photo_saved = self.drone(
+    #         olympe_msgs.camera.photo_progress(result="photo_saved")
+    #     ).wait()
+
+    #     media_id = photo_saved.received_events().last().args["media_id"]
+    #     media_download = self.drone(olympe.media.download_media(
+    #         media_id,
+    #         integrity_check=False
+    #     ))
+    #     resources = media_download.as_completed()
+
+    #     for resource in resources:
+    #         resource_id = resource.received_events().last()._resource_id
+    #         if not resource.success():
+    #             rospy.logerr("Failed to download image")
+    #         self.drone(olympe.media.delete_media(media_id))
+
+    #     image = cv.imread(f"{self.image_dir}/{resource_id}")
+
+    #     image_msg = cv_bridge.CvBridge().cv2_to_imgmsg(image)
+    #     image_msg.header.stamp = rospy.Time.now()
+
+    #     return image_msg

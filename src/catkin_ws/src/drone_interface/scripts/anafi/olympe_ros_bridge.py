@@ -9,7 +9,7 @@ import olympe.messages as olympe_msgs
 import olympe.enums.ardrone3 as ardrone3_enums
 import threading
 
-from anafi_data_publisher import AnafiDataPublisher
+from anafi_data_publisher import AnafiDataPublisher, CameraStreamer
 from command_listener import CommandListener
 
 class OlympeRosBridge():
@@ -23,28 +23,32 @@ class OlympeRosBridge():
 
         self.command_listener = CommandListener(self.drone)
         self.telemetry_publisher = AnafiDataPublisher(self.drone)
+        self.camera_streamer = CameraStreamer(self.drone)
 
     def start(self):
 
         rospy.sleep(1)
         self.telemetry_publisher.init()
+        self.camera_streamer.init()
         self.command_listener.init(camera_angle=-90)
         rospy.sleep(1)
 
-        threading.Thread(target=self.telemetry_publisher.publish_telemetry, args=(), daemon=True).start()
-        # threading.Thread(target=self.telemetry_publisher.publish_image, args=(), daemon=True).start()
+        # threading.Thread(target=self.telemetry_publisher.publish_telemetry, args=(), daemon=True).start()
+        threading.Thread(target=self.camera_streamer.run, args=(), daemon=True).start()
 
         rospy.spin()
 
 def main():
     args = sys.argv[1:]
-    if len(args) != 1:
-        print(f"Incorrect number of arguments, should be 1 was {len(args)}")
+
     if args[0] == "physical":
         drone_ip = "192.168.42.1"
     elif args[0] == "simulation":
         drone_ip = "10.202.0.1"
-        
+    else:
+        rospy.logerr("Incorrect argument, must be <physical/simulator>")
+        sys.exit()
+
     anafi_interface = OlympeRosBridge(drone_ip)
     anafi_interface.start()
 
