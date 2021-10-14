@@ -52,6 +52,8 @@ add_message_files(
   PositionSetpointRelative.msg
   FlyingState.msg
   GimbalAttitude.msg
+  AttitudeSetpoint.msg
+  SaturationLimits.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -118,6 +118,11 @@ class TelemetryPublisher():
             self._collect_battery_data, publish_rate=0.2
         ))
 
+        self.telemetry_publishers.append(GenericMessagePublisher(
+            "anafi/saturation_limits", drone_interface.msg.SaturationLimits,
+            self._collect_saturation_limits, publish_rate=2
+        ))
+
         rospy.loginfo("Initialized telemetry publisher")
 
     def publish(self):
@@ -325,6 +330,41 @@ class TelemetryPublisher():
         battery_msg.serial_number = self.drone.get_state(olympe_msgs.battery.serial)["serial"]
 
         return battery_msg
+
+    def _collect_saturation_limits(self):
+        """
+        Get the saturation limits for the different parameters attributed to
+        control of the drone.
+
+        Returns
+        -------
+        drone_interface.msg.SaturationLimits
+            Message containing saturation limits
+        """
+        max_tilt = self.drone.get_state(
+            olympe_msgs.ardrone3.PilotingSettingsState.MaxTiltChanged
+        )["current"]
+
+        max_yaw_rot_speed = self.drone.get_state(
+            olympe_msgs.ardrone3.SpeedSettingsState.MaxRotationSpeedChanged
+        )["current"]
+
+        max_roll_pitch_rot_speed = self.drone.get_state(
+            olympe_msgs.ardrone3.SpeedSettingsState.MaxPitchRollRotationSpeedChanged
+        )["current"]
+
+        max_vertical_speed = self.drone.get_state(
+            olympe_msgs.ardrone3.SpeedSettingsState.MaxVerticalSpeedChanged
+        )["current"]
+
+        saturation_limits_msg = drone_interface.msg.SaturationLimits()
+        saturation_limits_msg.header.stamp = rospy.Time.now()
+        saturation_limits_msg.max_tilt_angle = max_tilt
+        saturation_limits_msg.max_yaw_rotation_speed = max_yaw_rot_speed
+        saturation_limits_msg.max_roll_pitch_rotation_speed = max_roll_pitch_rot_speed
+        saturation_limits_msg.max_vertical_speed = max_vertical_speed
+
+        return saturation_limits_msg
 
 class CameraPublisher():
     """
