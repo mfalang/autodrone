@@ -11,15 +11,15 @@ class Mission():
         rospy.init_node("lab_test_control", anonymous=False)
 
         self.setpoint_publisher = rospy.Publisher(
-            "anafi/cmd/set_position_relative", PositionSetpointRelative, queue_size=10
+            "drone/cmd/set_position_relative", PositionSetpointRelative, queue_size=10
         )
 
         self.takeoff_publisher = rospy.Publisher(
-            "anafi/cmd/takeoff", std_msgs.msg.Empty, queue_size=10
+            "drone/cmd/takeoff", std_msgs.msg.Empty, queue_size=10
         )
 
         self.land_publisher = rospy.Publisher(
-            "anafi/cmd/land", std_msgs.msg.Empty, queue_size=10
+            "drone/cmd/land", std_msgs.msg.Empty, queue_size=10
         )
 
     def _takeoff(self):

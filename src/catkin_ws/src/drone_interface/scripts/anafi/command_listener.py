@@ -14,15 +14,15 @@ class CommandListener():
 
         self.drone = drone
 
-        rospy.Subscriber("anafi/cmd/takeoff", std_msgs.msg.Empty, self._takeoff_cb)
-        rospy.Subscriber("anafi/cmd/land", std_msgs.msg.Empty, self._land_cb)
-        rospy.Subscriber("anafi/cmd/set_position_relative",
+        rospy.Subscriber("drone/cmd/takeoff", std_msgs.msg.Empty, self._takeoff_cb)
+        rospy.Subscriber("drone/cmd/land", std_msgs.msg.Empty, self._land_cb)
+        rospy.Subscriber("drone/cmd/set_position_relative",
             drone_interface.msg.PositionSetpointRelative, self._move_cb
         )
-        rospy.Subscriber("anafi/cmd/set_attitude",
+        rospy.Subscriber("drone/cmd/set_attitude",
             drone_interface.msg.AttitudeSetpoint, self._set_attitude_cb
         )
-        rospy.Subscriber("anafi/cmd/set_saturation_limits",
+        rospy.Subscriber("drone/cmd/set_saturation_limits",
             drone_interface.msg.SaturationLimits, self._set_saturation_limits_cb
         )
 

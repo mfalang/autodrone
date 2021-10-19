@@ -89,37 +89,37 @@ class TelemetryPublisher():
 
         # Topics to publish to
         self.telemetry_publishers.append(GenericMessagePublisher(
-            "anafi/attitude", geometry_msgs.msg.QuaternionStamped,
+            "drone/out/attitude", geometry_msgs.msg.QuaternionStamped,
             self._collect_attitude, publish_rate=500
         ))
 
         self.telemetry_publishers.append(GenericMessagePublisher(
-            "anafi/velocity_body", geometry_msgs.msg.PointStamped,
+            "drone/out/velocity_body", geometry_msgs.msg.PointStamped,
             self._collect_velocity, publish_rate=500
         ))
 
         self.telemetry_publishers.append(GenericMessagePublisher(
-            "anafi/gps_data", sensor_msgs.msg.NavSatFix,
+            "drone/out/gps_data", sensor_msgs.msg.NavSatFix,
             self._collect_gps_data, publish_rate=10
         ))
 
         self.telemetry_publishers.append(GenericMessagePublisher(
-            "anafi/flying_state", drone_interface.msg.FlyingState,
+            "drone/out/flying_state", drone_interface.msg.FlyingState,
             self._collect_flying_state, publish_rate=10
         ))
 
         self.telemetry_publishers.append(GenericMessagePublisher(
-            "anafi/gimbal_attitude", drone_interface.msg.GimbalAttitude,
+            "drone/out/gimbal_attitude", drone_interface.msg.GimbalAttitude,
             self._collect_gimbal_attitude, publish_rate=10
         ))
 
         self.telemetry_publishers.append(GenericMessagePublisher(
-            "anafi/battery_data", sensor_msgs.msg.BatteryState,
+            "drone/out/battery_data", sensor_msgs.msg.BatteryState,
             self._collect_battery_data, publish_rate=0.2
         ))
 
         self.telemetry_publishers.append(GenericMessagePublisher(
-            "anafi/saturation_limits", drone_interface.msg.SaturationLimits,
+            "drone/out/saturation_limits", drone_interface.msg.SaturationLimits,
             self._collect_saturation_limits, publish_rate=2
         ))
 
@@ -406,7 +406,7 @@ class CameraPublisher():
 
         # Channel to publish to
         self.publisher = GenericMessagePublisher(
-            "anafi/image_rect_color", sensor_msgs.msg.Image,
+            "drone/out/image_rect_color", sensor_msgs.msg.Image,
             self._collect_image, publish_rate=-1
         )
 
