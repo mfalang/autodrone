@@ -371,8 +371,13 @@ class CameraPublisher():
     Class to publish front camera of Anafi drone.
     """
 
-    def __init__(self, drone):
+    def __init__(self, drone, visualize=True):
         self.drone = drone
+
+        self.visualize = visualize
+        if self.visualize:
+            self.window_name = "Anafi camera"
+            #cv.namedWindow(self.window_name, cv.WINDOW_NORMAL)
 
         # Make directory for data
         script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -446,6 +451,9 @@ class CameraPublisher():
 
         self.drone.start_video_streaming()
 
+        if self.visualize:
+            cv.namedWindow(self.window_name, cv.WINDOW_NORMAL)
+
         while not rospy.is_shutdown():
             if self.publisher.should_publish():
                 self.publisher.publish()
@@ -475,6 +483,10 @@ class CameraPublisher():
                 # Create ros message
                 image_msg = cv_bridge.CvBridge().cv2_to_imgmsg(cv_frame)
                 image_msg.header.stamp = rospy.Time.now()
+
+                if self.visualize:
+                    cv.imshow(self.window_name, cv_frame)
+                    cv.waitKey(1)
 
                 yuv_frame.unref()
                 return image_msg
