@@ -377,7 +377,6 @@ class CameraPublisher():
         self.visualize = visualize
         if self.visualize:
             self.window_name = "Anafi camera"
-            #cv.namedWindow(self.window_name, cv.WINDOW_NORMAL)
 
         # Make directory for data
         script_dir = os.path.dirname(os.path.realpath(__file__))
