@@ -25,7 +25,8 @@ class GenericMessagePublisher():
     Helper class which expands on the functionality of the ROS Publisher class.
     """
 
-    def __init__(self, topic_name, msg_type, collect_function, publish_rate):
+    def __init__(self, topic_name, msg_type, collect_function, publish_rate,
+                 queue_size=10):
         """
 
         Parameters
@@ -41,7 +42,7 @@ class GenericMessagePublisher():
             -1 the publisher will publish as often as possible
         """
         self.publisher = rospy.Publisher(
-            topic_name, msg_type, queue_size=10
+            topic_name, msg_type, queue_size=queue_size
         )
         self.rate = publish_rate
         self.prev_publish_time = None
@@ -411,7 +412,7 @@ class CameraPublisher():
         # Channel to publish to
         self.publisher = GenericMessagePublisher(
             "drone/out/image_rect_color", sensor_msgs.msg.Image,
-            self._collect_image, publish_rate=-1
+            self._collect_image, publish_rate=-1, queue_size=1
         )
 
         rospy.loginfo("Initialized camera publisher")
@@ -481,6 +482,7 @@ class CameraPublisher():
 
                 # Create ros message
                 image_msg = cv_bridge.CvBridge().cv2_to_imgmsg(cv_frame)
+                # image_msg.encoding = "bgr8"
                 image_msg.header.stamp = rospy.Time.now()
 
                 if self.visualize:
