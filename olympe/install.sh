@@ -13,6 +13,7 @@ echo -e "${GREEN}\nInstalling script dependencies${NC}"
 sudo apt update
 sudo apt install -y curl python python-pip
 sudo pip3 install --upgrade pip
+sudo pip install --upgrade pip
 
 echo -e "${GREEN}\nInstalling Repo tool${NC}"
 mkdir -p ~/.bin

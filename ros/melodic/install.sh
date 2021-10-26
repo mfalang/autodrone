@@ -28,6 +28,8 @@ rosdep update
 
 echo -e "${GREEN}Building catkin workspace and updating ~/.bashrc${NC}"
 
+source $HOME/.bashrc
+
 cd $SCRIPT_DIR/../../src/catkin_ws
 catkin_make
 

@@ -39,7 +39,7 @@ if [[ $reply != "n" ]]; then
     cp -r $SCRIPT_DIR/models/ $HOME/.gazebo
 fi
 
-echo -e "${GREEN}========== Done ==========${NC}"
+echo -e "${GREEN}Done. Remember to reboot computer in order for changes to take effect.${NC}"
 
 
 
