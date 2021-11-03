@@ -482,7 +482,7 @@ class CameraPublisher():
 
                 # Create ros message
                 image_msg = cv_bridge.CvBridge().cv2_to_imgmsg(cv_frame)
-                # image_msg.encoding = "bgr8"
+                image_msg.encoding = "bgr8"
                 image_msg.header.stamp = rospy.Time.now()
 
                 if self.visualize:
