@@ -43,4 +43,7 @@ pip install -r "./packages/olympe/requirements.txt"
 echo -e "${GREEN}\nRemoving Repo tool${NC}"
 rm -rf ~/.bin
 
+echo -e "${GREEN}\nSetting timezone in ~/.bashrc${NC}"
+echo "export TZ=\"Europe/Oslo\"" >> ~/.bashrc
+
 echo -e "${GREEN}========== Installation finished ==========${NC}"
