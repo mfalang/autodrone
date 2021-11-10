@@ -31,25 +31,22 @@ class Parser():
         pathlib.Path(f"{self.ground_truth_dir}/drone").mkdir(parents=True, exist_ok=True)
         pathlib.Path(f"{self.ground_truth_dir}/helipad").mkdir(parents=True, exist_ok=True)
 
-        # Store values in RAM and then write results to file to avoid opening and closing files often.
+        # Store values in RAM and then write results to file to avoid opening and closing files often
         self.max_values_stored_in_ram = 100
 
-        self.drone_poses = np.zeros((self.max_values_stored_in_ram,6))
-        self.drone_timestamps = np.zeros((self.max_values_stored_in_ram,1))
+        self.drone_poses = np.zeros((self.max_values_stored_in_ram, 6))
+        self.drone_timestamps = np.zeros((self.max_values_stored_in_ram, 1))
         self.drone_data_index = 0
 
-        self.helipad_poses = np.zeros((self.max_values_stored_in_ram,1))
-        self.helipad_timestamps = np.zeros((self.max_values_stored_in_ram,1))
+        self.helipad_poses = np.zeros((self.max_values_stored_in_ram, 6))
+        self.helipad_timestamps = np.zeros((self.max_values_stored_in_ram, 1))
         self.helipad_data_index = 0
 
         self.drone_pose_filename = f"{self.ground_truth_dir}/drone/pose.txt"
         self.drone_timestamps_filename = f"{self.ground_truth_dir}/drone/timestamps.txt"
 
-        self.drone_pose_file_desc = self._create_file_descriptor("drone/pose")
-        self.drone_timestamps_file_desc = self._create_file_descriptor("drone/timestamps")
-
-        self.helipad_pose_file_desc = self._create_file_descriptor("helipad/pose")
-        self.helipad_timestamps_file_desc = self._create_file_descriptor("helipad/timestamps")
+        self.helipad_pose_filename = f"{self.ground_truth_dir}/helipad/pose.txt"
+        self.helipad_timestamps_filename = f"{self.ground_truth_dir}/helipad/timestamps.txt"
 
         rospy.Subscriber("ground_truth/pose/drone",
             geometry_msgs.msg.PoseStamped, self._drone_pose_cb
@@ -59,29 +56,30 @@ class Parser():
             geometry_msgs.msg.PoseStamped, self._helipad_pose_cb
         )
 
-    def _create_file_descriptor(self, object_name):
-        filename = f"{self.ground_truth_dir}/{object_name}.txt"
-        file_desc = open(filename, "a+")
-        return file_desc
+    def _get_pose_from_geometry_msg(self, msg):
+
+        res = []
+        res.append(msg.pose.position.x)
+        res.append(msg.pose.position.y)
+        res.append(msg.pose.position.z)
+
+        quat = [msg.pose.orientation.x,
+            msg.pose.orientation.y,
+            msg.pose.orientation.z,
+            msg.pose.orientation.w
+        ]
+        euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
+        res.append(euler[0])
+        res.append(euler[1])
+        res.append(euler[2])
+
+        return res
 
     def _drone_pose_cb(self, msg):
-
         # Store in array if not full, save array if full
         if self.drone_data_index < self.max_values_stored_in_ram:
             self.drone_timestamps[self.drone_data_index] = msg.header.stamp.to_sec()
-            self.drone_poses[self.drone_data_index][0] = msg.pose.position.x
-            self.drone_poses[self.drone_data_index][1] = msg.pose.position.y
-            self.drone_poses[self.drone_data_index][2] = msg.pose.position.z
-
-            quat = [msg.pose.orientation.x,
-                msg.pose.orientation.y,
-                msg.pose.orientation.z,
-                msg.pose.orientation.w
-            ]
-            euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
-            self.drone_poses[self.drone_data_index][3] = euler[0]
-            self.drone_poses[self.drone_data_index][4] = euler[1]
-            self.drone_poses[self.drone_data_index][5] = euler[2]
+            self.drone_poses[self.drone_data_index] = self._get_pose_from_geometry_msg(msg)
 
             self.drone_data_index += 1
         else:
@@ -93,17 +91,23 @@ class Parser():
             self.drone_data_index = 0
 
     def _helipad_pose_cb(self, msg):
-        # print("Got helipad pose")
-        pass
+        # Store in array if not full, save array if full
+        if self.helipad_data_index < self.max_values_stored_in_ram:
+            self.helipad_timestamps[self.helipad_data_index] = msg.header.stamp.to_sec()
+            self.helipad_poses[self.helipad_data_index] = self._get_pose_from_geometry_msg(msg)
+
+            self.helipad_data_index += 1
+        else:
+            with open(self.helipad_timestamps_filename, "a+") as file_desc:
+                np.savetxt(file_desc, self.helipad_timestamps)
+            with open(self.helipad_pose_filename, "a+") as file_desc:
+                np.savetxt(file_desc, self.helipad_poses)
+
+            self.helipad_data_index = 0
 
     def start(self):
+        rospy.loginfo(f"Parsing output from ground truth and saving to {self.ground_truth_dir}")
         rospy.spin()
-        rospy.on_shutdown(self._shutdown)
-
-    def _shutdown(self):
-        # self.drone_pose_file_desc.close()
-        # self.helipad_pose_file_desc.close()
-        rospy.loginfo(f"Ground truth data written to files in {self.ground_truth_dir}")
 
 def main():
     parser = Parser()
