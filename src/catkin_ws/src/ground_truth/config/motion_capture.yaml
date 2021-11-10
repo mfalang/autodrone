@@ -1,0 +1,4 @@
+drone:
+  pose_topic: /anafi_pose
+helipad:
+  pose_topic: /helipad_pose

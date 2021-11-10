@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import time
+import yaml
 import pathlib
+
 import rospy
 import geometry_msgs.msg
+
 import numpy as np
 from scipy.spatial.transform import Rotation
 
@@ -20,14 +24,23 @@ class Parser():
 
         rospy.init_node("ground_truth_parser", anonymous=False)
 
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+
+        config_file = rospy.get_param("~config_file")
+
+        try:
+            with open(f"{script_dir}/../config/{config_file}") as f:
+                self.config = yaml.safe_load(f)
+        except Exception as e:
+            rospy.logerr(f"Failed to load config: {e}")
+            sys.exit()
+
         # TODO: Maybe add this to some separate modules, as this exact same code
         # is used in the drone interface
-        script_dir = os.path.dirname(os.path.realpath(__file__))
         today = time.localtime()
         self.ground_truth_dir = f"{script_dir}/../../../../../out" \
             f"/{today.tm_year}-{today.tm_mon}-{today.tm_mday}" \
             f"/{today.tm_hour}-{today.tm_min}-{today.tm_sec}/ground_truth"
-
         pathlib.Path(f"{self.ground_truth_dir}/drone").mkdir(parents=True, exist_ok=True)
         pathlib.Path(f"{self.ground_truth_dir}/helipad").mkdir(parents=True, exist_ok=True)
 
@@ -55,11 +68,11 @@ class Parser():
         self._write_format_header_to_file(self.helipad_timestamps_filename, "timestamp")
 
 
-        rospy.Subscriber("ground_truth/pose/drone",
+        rospy.Subscriber(self.config["drone"]["pose_topic"],
             geometry_msgs.msg.PoseStamped, self._drone_pose_cb
         )
 
-        rospy.Subscriber("ground_truth/pose/helipad",
+        rospy.Subscriber(self.config["helipad"]["pose_topic"],
             geometry_msgs.msg.PoseStamped, self._helipad_pose_cb
         )
 
