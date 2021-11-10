@@ -10,7 +10,7 @@ class SphinxRosBridge():
     def __init__(self):
         """
         Bridge between Sphinx simulator and ROS, which publishes the ground
-        truth pose of the drone and the helipad .
+        truth pose of the drone and the helipad.
         """
         rospy.init_node("sphinx_ros_bridge", anonymous=False)
         self.anafi_pose_publisher = rospy.Publisher(
