@@ -48,6 +48,13 @@ class Parser():
         self.helipad_pose_filename = f"{self.ground_truth_dir}/helipad/pose.txt"
         self.helipad_timestamps_filename = f"{self.ground_truth_dir}/helipad/timestamps.txt"
 
+        self._write_format_header_to_file(self.drone_pose_filename, "pose")
+        self._write_format_header_to_file(self.drone_timestamps_filename, "timestamp")
+
+        self._write_format_header_to_file(self.helipad_pose_filename, "pose")
+        self._write_format_header_to_file(self.helipad_timestamps_filename, "timestamp")
+
+
         rospy.Subscriber("ground_truth/pose/drone",
             geometry_msgs.msg.PoseStamped, self._drone_pose_cb
         )
@@ -55,6 +62,50 @@ class Parser():
         rospy.Subscriber("ground_truth/pose/helipad",
             geometry_msgs.msg.PoseStamped, self._helipad_pose_cb
         )
+
+    def start(self):
+        rospy.loginfo(f"Parsing output from ground truth and saving to {self.ground_truth_dir}")
+        rospy.spin()
+
+    def _write_format_header_to_file(self, filename, type):
+        if type == "pose":
+            header = "Format: [x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
+        elif type == "timestamp":
+            header = "Format: Timestamp in seconds\n"
+
+        with open(filename, "w+") as file_desc:
+            file_desc.write(header)
+
+
+    def _drone_pose_cb(self, msg):
+        # Store in array if not full, save array if full
+        if self.drone_data_index < self.max_values_stored_in_ram:
+            self.drone_timestamps[self.drone_data_index] = msg.header.stamp.to_sec()
+            self.drone_poses[self.drone_data_index] = self._get_pose_from_geometry_msg(msg)
+
+            self.drone_data_index += 1
+        else:
+            with open(self.drone_timestamps_filename, "a") as file_desc:
+                np.savetxt(file_desc, self.drone_timestamps)
+            with open(self.drone_pose_filename, "a") as file_desc:
+                np.savetxt(file_desc, self.drone_poses)
+
+            self.drone_data_index = 0
+
+    def _helipad_pose_cb(self, msg):
+        # Store in array if not full, save array if full
+        if self.helipad_data_index < self.max_values_stored_in_ram:
+            self.helipad_timestamps[self.helipad_data_index] = msg.header.stamp.to_sec()
+            self.helipad_poses[self.helipad_data_index] = self._get_pose_from_geometry_msg(msg)
+
+            self.helipad_data_index += 1
+        else:
+            with open(self.helipad_timestamps_filename, "a") as file_desc:
+                np.savetxt(file_desc, self.helipad_timestamps)
+            with open(self.helipad_pose_filename, "a") as file_desc:
+                np.savetxt(file_desc, self.helipad_poses)
+
+            self.helipad_data_index = 0
 
     def _get_pose_from_geometry_msg(self, msg):
 
@@ -74,40 +125,6 @@ class Parser():
         res.append(euler[2])
 
         return res
-
-    def _drone_pose_cb(self, msg):
-        # Store in array if not full, save array if full
-        if self.drone_data_index < self.max_values_stored_in_ram:
-            self.drone_timestamps[self.drone_data_index] = msg.header.stamp.to_sec()
-            self.drone_poses[self.drone_data_index] = self._get_pose_from_geometry_msg(msg)
-
-            self.drone_data_index += 1
-        else:
-            with open(self.drone_timestamps_filename, "a+") as file_desc:
-                np.savetxt(file_desc, self.drone_timestamps)
-            with open(self.drone_pose_filename, "a+") as file_desc:
-                np.savetxt(file_desc, self.drone_poses)
-
-            self.drone_data_index = 0
-
-    def _helipad_pose_cb(self, msg):
-        # Store in array if not full, save array if full
-        if self.helipad_data_index < self.max_values_stored_in_ram:
-            self.helipad_timestamps[self.helipad_data_index] = msg.header.stamp.to_sec()
-            self.helipad_poses[self.helipad_data_index] = self._get_pose_from_geometry_msg(msg)
-
-            self.helipad_data_index += 1
-        else:
-            with open(self.helipad_timestamps_filename, "a+") as file_desc:
-                np.savetxt(file_desc, self.helipad_timestamps)
-            with open(self.helipad_pose_filename, "a+") as file_desc:
-                np.savetxt(file_desc, self.helipad_poses)
-
-            self.helipad_data_index = 0
-
-    def start(self):
-        rospy.loginfo(f"Parsing output from ground truth and saving to {self.ground_truth_dir}")
-        rospy.spin()
 
 def main():
     parser = Parser()
