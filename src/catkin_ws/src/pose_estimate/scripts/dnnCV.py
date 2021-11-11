@@ -25,11 +25,11 @@ class DNNPoseEstimator():
 
         self.latest_orientation = None # Format: [roll, deg, yaw] all in rad
 
-        rospy.Subscriber("/darknet_ros/bounding_boxes",
+        rospy.Subscriber("darknet_ros/bounding_boxes",
             darknet_ros_msgs.msg.BoundingBoxes, self._get_bounding_box_cb
         )
 
-        rospy.Subscriber("/drone/out/atittude",
+        rospy.Subscriber("drone/out/attitude",
             geometry_msgs.msg.QuaternionStamped, self._get_attitude_cb
         )
 
@@ -45,7 +45,9 @@ class DNNPoseEstimator():
         while not rospy.is_shutdown():
 
             # Only perform estimation if we have a valid bounding box different from the last one
-            if self.latest_bounding_boxes is None or self.new_bounding_boxes_available == False:
+            if self.latest_bounding_boxes is None \
+                or self.new_bounding_boxes_available == False \
+                or self.latest_orientation is None:
                 rate.sleep()
                 continue
 
@@ -76,12 +78,7 @@ class DNNPoseEstimator():
         ]
         euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
 
-        res.append(euler[0])
-        res.append(euler[1])
-        res.append(euler[2])
-
-        return res
-
+        self.latest_orientation = [euler[0], euler[1], euler[2]]
 
     def _estimate_center_rotation_and_radius(self, bounding_boxes):
         """
@@ -113,10 +110,10 @@ class DNNPoseEstimator():
 
         # downscale_bb = 0.97 if not cfg.is_simulator else 1 # TODO: Check if needed
         if Helipad != None:
-            center = self._est_center_of_bb(self, Helipad)
+            center = self._est_center_of_bb(Helipad)
             radius = 0.97*self._est_radius_of_bb(Helipad)
             if Arrow != None:
-                rotation = self._est_rotation(center, self._est_center_of_bb(self, Arrow))
+                rotation = self._est_rotation(center, self._est_center_of_bb(Arrow))
         return center, radius, rotation
 
 
