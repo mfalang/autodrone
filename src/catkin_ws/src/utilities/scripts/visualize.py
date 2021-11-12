@@ -22,26 +22,26 @@ class Plotter():
 
     def plot_drone_ground_truth(self):
         print("Plotting drone ground truth")
-        pose = np.loadtxt(f"{self.data_dir}/ground_truth/drone/pose.txt", skiprows=1)
-        self.ax.plot3D(pose[:,0], pose[:,1], pose[:,2], label="Drone ground truth")
+        pose = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose.txt", skiprows=1)
+        self.ax.plot3D(pose[:,1], pose[:,2], pose[:,3], label="Drone ground truth")
         plt.legend()
 
     def plot_helipad_ground_truth(self):
         print("Plotting helipad ground truth")
-        pose = np.loadtxt(f"{self.data_dir}/ground_truth/helipad/pose.txt", skiprows=1)
-        self.ax.plot3D(pose[:,0], pose[:,1], pose[:,2], label="Helipad ground truth")
+        pose = np.loadtxt(f"{self.data_dir}/ground_truths/helipad_pose.txt", skiprows=1)
+        self.ax.plot3D(pose[:,1], pose[:,2], pose[:,3], label="Helipad ground truth")
         plt.legend()
 
     def plot_drone_estimate(self):
         print("Plotting drone estimate raw from DNN CV")
-        pose = np.loadtxt(f"{self.data_dir}/estimate/drone/pose_dnn_cv.txt", skiprows=1)
-        self.ax.plot3D(pose[:,0], pose[:,1], pose[:,2], label="Drone DNN CV estimate")
+        pose = np.loadtxt(f"{self.data_dir}/pose_estimates/dnn_cv_pose.txt", skiprows=1)
+        self.ax.plot3D(pose[:,1], pose[:,2], pose[:,3], label="Drone DNN CV estimate")
         plt.legend()
 
     def plot_helipad_estimate(self):
         print("Plotting helipad estimate (not implemented)")
         # pose = np.loadtxt(f"{self.data_dir}/estimate/helipad/pose.txt", skiprows=1)
-        # self.ax.plot3D(pose[:,0], pose[:,1], pose[:,2], label="Helipad estimate")
+        # self.ax.plot3D(pose[:,1], pose[:,2], pose[:,3], label="Helipad estimate")
         # plt.legend()
 
 
