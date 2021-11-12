@@ -1,9 +1,0 @@
-<launch>
-    <node
-        name="ground_truth_parser"
-        pkg="ground_truth"
-        type="parser.py"
-        output="screen">
-        <param name="config_file" value="motion_capture.yaml" />
-    </node>
-</launch>

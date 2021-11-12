@@ -1,4 +1,0 @@
-drone:
-  pose_topic: /ground_truth/pose/drone
-helipad:
-  pose_topic: /ground_truth/pose/helipad

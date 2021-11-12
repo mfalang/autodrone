@@ -1,4 +1,0 @@
-drone:
-  pose_topic: /qualisys/anafi/pose
-helipad:
-  pose_topic: /qualisys/helipad/pose

@@ -1,9 +1,0 @@
-<launch>
-    <node
-        name="pose_estimate_data_saver"
-        pkg="pose_estimate"
-        type="data_saver.py"
-        output="screen">
-        <param name="config_file" value="config.yaml" />
-    </node>
-</launch>

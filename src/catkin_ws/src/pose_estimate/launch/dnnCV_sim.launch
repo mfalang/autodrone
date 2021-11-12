@@ -3,5 +3,4 @@
 <launch>
     <node name="dnnCV" pkg="pose_estimate" type="dnnCV.py" output="screen"/>
     <include file="$(find darknet_ros)/launch/anafi_sim.launch"></include>
-    <include file="$(find pose_estimate)/launch/data_saver.launch"></include>
 </launch>
