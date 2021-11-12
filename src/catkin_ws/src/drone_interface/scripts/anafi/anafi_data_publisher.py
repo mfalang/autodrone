@@ -100,6 +100,11 @@ class TelemetryPublisher():
         ))
 
         self.telemetry_publishers.append(GenericMessagePublisher(
+            "drone/out/relative_altitude", geometry_msgs.msg.PointStamped,
+            self._collect_relative_altitude, publish_rate=500
+        ))
+
+        self.telemetry_publishers.append(GenericMessagePublisher(
             "drone/out/gps_data", sensor_msgs.msg.NavSatFix,
             self._collect_gps_data, publish_rate=10
         ))
@@ -208,6 +213,28 @@ class TelemetryPublisher():
         ] = velocity_body
 
         return velocity_msg
+
+    def _collect_relative_altitude(self):
+        """
+        Get the drone altitude relative to launch and store this in a ROS
+        message.
+
+        Returns
+        -------
+        geometry_msgs.msg.PointStamped
+            ROS message containing drone altitude relative launch as
+            z-parameter. Note that x and y parameters are not used.
+        """
+        relative_altitude_msg = geometry_msgs.msg.PointStamped()
+        relative_altitude_msg.header.stamp = rospy.Time.now()
+
+        relative_altitude = self.drone.get_state(
+            olympe_msgs.ardrone3.PilotingState.AltitudeChanged
+        )["altitude"]
+
+        relative_altitude_msg.point.z = relative_altitude
+
+        return relative_altitude_msg
 
     def _collect_gps_data(self):
         """
