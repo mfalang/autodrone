@@ -35,7 +35,7 @@ class DNNPoseEstimator():
         )
 
         self.pose_estimate_publisher = rospy.Publisher(
-            "estimate/drone_pose/dnnCV", geometry_msgs.msg.Twist, queue_size=10
+            "estimate/drone_pose/dnnCV", geometry_msgs.msg.TwistStamped, queue_size=10
         )
 
     def start(self):
@@ -60,7 +60,10 @@ class DNNPoseEstimator():
             if all(center_px) and radius_px:
                 pose_estimate = self._transform_pixel_position_to_world_coordinates(center_px, radius_px)
                 pose_estimate.angular.z = rotation if rotation is not None else 0.0
-                self.pose_estimate_publisher.publish(pose_estimate)
+                pose_estimate_stamped = geometry_msgs.msg.TwistStamped()
+                pose_estimate_stamped.header.stamp = rospy.Time.now()
+                pose_estimate_stamped.twist = pose_estimate
+                self.pose_estimate_publisher.publish(pose_estimate_stamped)
 
             self.new_bounding_boxes_available = False
             rate.sleep()
