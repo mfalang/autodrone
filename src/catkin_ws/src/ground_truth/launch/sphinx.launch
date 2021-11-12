@@ -5,11 +5,11 @@
         type="sphinx_ros_bridge.py"
         output="screen"
     />
-    <node
+    <!-- <node
         name="ground_truth_parser"
         pkg="ground_truth"
         type="parser.py"
         output="screen" >
         <param name="config_file" value="sphinx.yaml" />
-    </node>
+    </node> -->
 </launch>

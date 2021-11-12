@@ -1,0 +1,28 @@
+ground_truths:
+  drone_pose:
+    name: drone_pose
+    num_states: 6
+    topic:
+      sim: /ground_truth/pose/drone
+      real: /qualisys/anafi/pose
+    file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
+    max_values_stored_in_buffer: 500
+
+  helipad_pose:
+    name: helipad_pose
+    num_states: 6
+    topic:
+      sim: /ground_truth/pose/helipad
+      real: /qualisys/helipad/pose
+    file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
+    max_values_stored_in_buffer: 500
+
+pose_estimates:
+  dnn_cv_pose:
+    name: dnn_cv_pose
+    num_states: 4
+    topic:
+      sim: /estimate/drone_pose/dnnCV
+      real: /estimate/drone_pose/dnnCV
+    file_header: "Format: timestamp[sec] [x[m], y[m], z[m], psi[deg]]\n"
+    max_values_stored_in_buffer: 500
