@@ -185,12 +185,18 @@ class SphinxRosBridge():
     def _pack_message(self, model):
 
         # Return None if data has not been initialized yet
-        if None in self.data["timestamp"].values():
+        if None in self.data["timestamp"].values() or None in self.data[model]["position"].values():
             return None
 
         model_pose = geometry_msgs.msg.PoseStamped()
-        model_pose.header.stamp.secs = self.data["timestamp"]["sec"]
-        model_pose.header.stamp.nsecs = self.data["timestamp"]["nsec"]
+        
+        # model_pose.header.stamp.secs = self.data["timestamp"]["sec"]
+        # model_pose.header.stamp.nsecs = self.data["timestamp"]["nsec"]
+        # Using rospy.Time.now() will give a timestamp consistent with the 
+        # timestamps from all the other packages. The timestamp from the 
+        # Gazebo-topic gives only the simulation time. The timestamp is left in
+        # in case it will be useful in the future
+        model_pose.header.stamp = rospy.Time.now()
         model_pose.pose.position.x = self.data[model]["position"]["x"]
         model_pose.pose.position.y = self.data[model]["position"]["y"]
         model_pose.pose.position.z = self.data[model]["position"]["z"]
