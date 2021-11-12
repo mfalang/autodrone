@@ -48,7 +48,7 @@ class EstimateDataSaver():
         self.dnn_cv_timestamps = np.zeros((self.max_values_stored_in_ram, 1))
         self.dnn_cv_data_index = 0
 
-        self.dnn_cv_estimates_filename = f"{self.estimate_dir}/drone/estimates.txt"
+        self.dnn_cv_estimates_filename = f"{self.estimate_dir}/drone/pose_dnn_cv.txt"
         self.dnn_cv_timestamps_filename = f"{self.estimate_dir}/drone/timestamps.txt"
 
         self._write_format_header_to_file(self.dnn_cv_estimates_filename,

@@ -33,10 +33,10 @@ class Plotter():
         plt.legend()
 
     def plot_drone_estimate(self):
-        print("Plotting drone estimate (not implemented)")
-        # pose = np.loadtxt(f"{self.data_dir}/estimate/drone/pose.txt", skiprows=1)
-        # self.ax.plot3D(pose[:,0], pose[:,1], pose[:,2], label="Drone estimate")
-        # plt.legend()
+        print("Plotting drone estimate raw from DNN CV")
+        pose = np.loadtxt(f"{self.data_dir}/estimate/drone/pose_dnn_cv.txt", skiprows=1)
+        self.ax.plot3D(pose[:,0], pose[:,1], pose[:,2], label="Drone DNN CV estimate")
+        plt.legend()
 
     def plot_helipad_estimate(self):
         print("Plotting helipad estimate (not implemented)")
