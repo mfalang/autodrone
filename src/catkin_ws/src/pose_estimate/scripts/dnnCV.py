@@ -3,6 +3,7 @@
 import rospy
 import geometry_msgs.msg
 import darknet_ros_msgs.msg
+import drone_interface.msg
 
 import math
 import numpy as np
@@ -29,8 +30,8 @@ class DNNPoseEstimator():
             darknet_ros_msgs.msg.BoundingBoxes, self._get_bounding_box_cb
         )
 
-        rospy.Subscriber("drone/out/attitude",
-            geometry_msgs.msg.QuaternionStamped, self._get_attitude_cb
+        rospy.Subscriber("drone/out/attitude_euler",
+            drone_interface.msg.AttitudeEuler, self._get_attitude_cb
         )
 
         self.pose_estimate_publisher = rospy.Publisher(
@@ -69,16 +70,12 @@ class DNNPoseEstimator():
         self.new_bounding_boxes_available = True
 
     def _get_attitude_cb(self, msg):
-        res = []
 
-        quat = [msg.quaternion.x,
-            msg.quaternion.y,
-            msg.quaternion.z,
-            msg.quaternion.w
+        self.latest_orientation = [
+            msg.roll*3.14159/180,
+            msg.pitch*3.14159/180,
+            msg.yaw*3.14159/180
         ]
-        euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
-
-        self.latest_orientation = [euler[0], euler[1], euler[2]]
 
     def _estimate_center_rotation_and_radius(self, bounding_boxes):
         """

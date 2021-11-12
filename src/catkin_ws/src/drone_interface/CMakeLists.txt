@@ -54,6 +54,7 @@ add_message_files(
   GimbalAttitude.msg
   AttitudeSetpoint.msg
   SaturationLimits.msg
+  AttitudeEuler.msg
 )
 
 ## Generate services in the 'srv' folder

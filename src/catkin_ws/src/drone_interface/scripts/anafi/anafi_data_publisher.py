@@ -90,8 +90,13 @@ class TelemetryPublisher():
 
         # Topics to publish to
         self.telemetry_publishers.append(GenericMessagePublisher(
-            "drone/out/attitude", geometry_msgs.msg.QuaternionStamped,
-            self._collect_attitude, publish_rate=500
+            "drone/out/attitude_quat", geometry_msgs.msg.QuaternionStamped,
+            self._collect_attitude_quat, publish_rate=500
+        ))
+
+        self.telemetry_publishers.append(GenericMessagePublisher(
+            "drone/out/attitude_euler", drone_interface.msg.AttitudeEuler,
+            self._collect_attitude_euler, publish_rate=500
         ))
 
         self.telemetry_publishers.append(GenericMessagePublisher(
@@ -141,7 +146,7 @@ class TelemetryPublisher():
                 if publisher.should_publish():
                     publisher.publish()
 
-    def _collect_attitude(self):
+    def _collect_attitude_quat(self):
         """
         Get the attitude of the drone in Euler angles and convert a quaternion
         used in the ROS message for attitude.
@@ -149,7 +154,7 @@ class TelemetryPublisher():
         Returns
         -------
         geometry_msgs.msg.QuaternionStamped
-            ROS message with drone attitude
+            ROS message with drone attitude in quaternions
         """
         attitude_msg = geometry_msgs.msg.QuaternionStamped()
         attitude_msg.header.stamp = rospy.Time.now()
@@ -168,6 +173,29 @@ class TelemetryPublisher():
             [att_euler["roll"], att_euler["pitch"], att_euler["yaw"]],
             degrees=False
         ).as_quat()
+
+        return attitude_msg
+
+    def _collect_attitude_euler(self):
+        """
+        Get the attitude of the drone in Euler angles and put this into a ROS
+        message.
+
+        Returns
+        -------
+        drone_interface.msg.AttitudeEuler
+            ROS message with drone attitude in Euler angles
+        """
+        attitude_msg = drone_interface.msg.AttitudeEuler()
+        attitude_msg.header.stamp = rospy.Time.now()
+
+        att_euler = self.drone.get_state(
+            olympe_msgs.ardrone3.PilotingState.AttitudeChanged
+        )
+
+        attitude_msg.roll = att_euler["roll"]*180/3.14159
+        attitude_msg.pitch = att_euler["pitch"]*180/3.14159
+        attitude_msg.yaw = att_euler["yaw"]*180/3.14159
 
         return attitude_msg
 
