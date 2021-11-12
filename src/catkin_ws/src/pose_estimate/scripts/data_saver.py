@@ -56,11 +56,12 @@ class EstimateDataSaver():
         )
 
         rospy.Subscriber(self.config["subscribed_topics"]["dnnCV_estimator"],
-            geometry_msgs.msg.Twist, self._dnn_cv_pose_cb
+            geometry_msgs.msg.TwistStamped, self._dnn_cv_pose_cb
         )
 
     def start(self):
         rospy.loginfo(f"Saving output from estimates to {self.estimate_dir}")
+        rospy.on_shutdown(self._on_shutdown)
         rospy.spin()
 
     def _write_format_header_to_file(self, estimates_filename, timestamps_filename, type):
@@ -88,13 +89,17 @@ class EstimateDataSaver():
 
         self.dnn_cv_timestamps[self.dnn_cv_data_index] = msg.header.stamp.to_sec()
         self.dnn_cv_estimates[self.dnn_cv_data_index] = [
-            msg.Twist.linear.x,
-            msg.Twist.linear.y,
-            msg.Twist.linear.z,
-            msg.Twist.angular.z
+            msg.twist.linear.x,
+            msg.twist.linear.y,
+            msg.twist.linear.z,
+            msg.twist.angular.z
         ]
 
         self.dnn_cv_data_index += 1
+
+    def _on_shutdown(self):
+        rospy.sleep(1) # In order to prevent darknet output from removing the info below
+        rospy.loginfo(f"Saved estimates to {self.estimate_dir}")
 
 def main():
     data_saver = EstimateDataSaver()
