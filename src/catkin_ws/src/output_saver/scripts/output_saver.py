@@ -4,6 +4,7 @@ import os
 import yaml
 import sys
 import time
+import shutil
 
 import rospy
 
@@ -47,12 +48,16 @@ class OutputSaver():
             "ground_truths", "helipad_pose", self.environment
         )
 
-        # rospy.on_shutdown(self._on_shutdown)
+        rospy.on_shutdown(self._on_shutdown)
         rospy.spin()
 
-    # def _on_shutdown(self):
-        # rospy.sleep(1) # In order to prevent darknet output from removing the info below
-        # rospy.loginfo(f"Saved estimates to {self.output_base_dir}")
+    def _on_shutdown(self):
+        ans = input("Save output? [y/n] ")
+        if ans.lower() == "n" or ans.lower() == "no":
+            rospy.loginfo(f"Deleting directory {self.output_base_dir}")
+            shutil.rmtree(self.output_base_dir)
+        else:
+            rospy.loginfo(f"Saved estimates to {self.output_base_dir}")
 
 
 def main():
