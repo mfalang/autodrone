@@ -79,12 +79,20 @@ class ForwardBackward(Mission):
         self._get_keyboard_input("Ready to take off? (yes) ", "yes")
         self._takeoff()
 
+        self._get_keyboard_input("Go up 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -0.5, 0)
+        self.setpoint_publisher.publish(msg)
+
         self._get_keyboard_input("Go forward 1m? (yes/abort) ", "yes")
         msg = self._create_setpoint_message(1, 0, 0, 0)
         self.setpoint_publisher.publish(msg)
 
-        self._get_keyboard_input("Go backward 1m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(-1, 0, 0, 0)
+        self._get_keyboard_input("Go backward 2m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(-2, 0, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go forward 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(1, 0, 0, 0)
         self.setpoint_publisher.publish(msg)
 
         self._get_keyboard_input("Land? (yes) ", "yes")
@@ -130,7 +138,7 @@ class SquareMission(Mission):
 def main():
     ans = input("Choose mission\n" \
         "(1 = takeoff - landing)\n" \
-        "(2 = takeoff - 1m forward - 1m backward - landing)\n" \
+        "(2 = takeoff - 0.5m up - 1m forward - 2m backward - 1m forwards - landing)\n" \
         "(3 = takeoff - fly square (2x2m) - landing\n")
 
     if ans == "1":
