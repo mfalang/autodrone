@@ -2,6 +2,7 @@
 import rospy
 import geometry_msgs.msg
 
+import numpy as np
 from scipy.spatial.transform import Rotation
 
 from generic_output_saver import GenericOutputSaver
@@ -11,19 +12,36 @@ class DronePoseDataSaver(GenericOutputSaver):
     def __init__(self, config, base_dir, output_category, output_type, environment):
         super().__init__(config, base_dir, output_category, output_type, environment)
 
+        self.initialized = False
+        self.offsets = None # Format: numpy array [0,x,y,z,roll,pitch,yaw] (0 for timestamp)
+
         rospy.Subscriber(self.topic_name, geometry_msgs.msg.PoseStamped, self._drone_gt_pose_cb)
 
+
     def _drone_gt_pose_cb(self, msg):
+
+        output_raw = get_output_from_geometry_msg(msg)
+
+        if self.initialized == False:
+            self.offsets = output_raw
+            self.offsets[0] = 0 # No offset in timestamp
+            self.initialized = True
+
+        output = output_raw - self.offsets
+        
         # Used for setup of motion capture system
-        # x, y, z, roll, pitch, yaw = get_output_from_geometry_msg(msg)[-6:]
+        # x, y, z, roll, pitch, yaw = output[-6:]
         # print(f"Drone pose: \t\tx: {x:.3f} y: {y:.3f} z: {z:.3f}\tRoll: {roll:.3f} Pitch: {pitch:.3f} Yaw: {yaw:.3f}")
 
-        self._save_output(get_output_from_geometry_msg(msg))
+        self._save_output(output)
 
 class HelipadPoseDataSaver(GenericOutputSaver):
 
     def __init__(self, config, base_dir, output_category, output_type, environment):
         super().__init__(config, base_dir, output_category, output_type, environment)
+
+        self.initialized = False
+        self.offsets = None # Format: numpy array [x,y,z,roll,pitch,yaw]
 
         rospy.Subscriber(self.topic_name, geometry_msgs.msg.PoseStamped, self._helipad_gt_pose_cb)
 
@@ -43,11 +61,6 @@ def get_output_from_geometry_msg(msg):
         - x-axis of mocap is negative y-axis of pose estimate
         - y-axis of mocap is x-axis of pose estimate
     """
-    res = []
-    res.append(msg.header.stamp.to_sec())
-    res.append(-msg.pose.position.y)
-    res.append(msg.pose.position.x)
-    res.append(msg.pose.position.z)
 
     quat = [msg.pose.orientation.x,
         msg.pose.orientation.y,
@@ -55,9 +68,15 @@ def get_output_from_geometry_msg(msg):
         msg.pose.orientation.w
     ]
     euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
-
-    res.append(euler[0])
-    res.append(euler[1])
-    res.append(euler[2])
+    
+    res = np.array([
+        msg.header.stamp.to_sec(),
+        -msg.pose.position.y, # conversion between frames
+        msg.pose.position.x, # conversion between framess
+        msg.pose.position.z,
+        euler[0],
+        euler[1],
+        euler[2]
+    ])
 
     return res
