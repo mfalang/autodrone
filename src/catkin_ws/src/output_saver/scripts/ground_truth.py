@@ -14,6 +14,10 @@ class DronePoseDataSaver(GenericOutputSaver):
         rospy.Subscriber(self.topic_name, geometry_msgs.msg.PoseStamped, self._drone_gt_pose_cb)
 
     def _drone_gt_pose_cb(self, msg):
+        # Used for setup of motion capture system
+        # x, y, z, roll, pitch, yaw = get_output_from_geometry_msg(msg)[-6:]
+        # print(f"Drone pose: \t\tx: {x:.3f} y: {y:.3f} z: {z:.3f}\tRoll: {roll:.3f} Pitch: {pitch:.3f} Yaw: {yaw:.3f}")
+
         self._save_output(get_output_from_geometry_msg(msg))
 
 class HelipadPoseDataSaver(GenericOutputSaver):
@@ -24,6 +28,10 @@ class HelipadPoseDataSaver(GenericOutputSaver):
         rospy.Subscriber(self.topic_name, geometry_msgs.msg.PoseStamped, self._helipad_gt_pose_cb)
 
     def _helipad_gt_pose_cb(self, msg):
+        # Used for setup of motion capture system
+        # x, y, z, roll, pitch, yaw = get_output_from_geometry_msg(msg)[-6:]
+        # print(f"Helipad pose: \t\tx: {x:.3f} y: {y:.3f} z: {z:.3f}\tRoll: {roll:.3f} Pitch: {pitch:.3f} Yaw: {yaw:.3f}")
+
         self._save_output(get_output_from_geometry_msg(msg))
 
 # Helper function
@@ -41,6 +49,7 @@ def get_output_from_geometry_msg(msg):
         msg.pose.orientation.w
     ]
     euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
+
     res.append(euler[0])
     res.append(euler[1])
     res.append(euler[2])
