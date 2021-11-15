@@ -7,76 +7,98 @@ from scipy.spatial.transform import Rotation
 
 from generic_output_saver import GenericOutputSaver
 
-class DronePoseDataSaver(GenericOutputSaver):
+class GroundTruthDataSaver(GenericOutputSaver):
 
     def __init__(self, config, base_dir, output_category, output_type, environment):
         super().__init__(config, base_dir, output_category, output_type, environment)
 
-        self.initialized = False
+        self.initialized_offsets = False
         self.offsets = None # Format: numpy array [0,x,y,z,roll,pitch,yaw] (0 for timestamp)
+
+    def _initialize_offsets(self, output_raw, object_type):
+        self.offsets = output_raw
+        self.offsets[0] = 0 # No offset in timestamp
+        print(f"Offsets ({object_type}): " \
+                f"x: {self.offsets[1]:.3f}m y: {self.offsets[2]:.3f}m " \
+                f"z: {self.offsets[3]:.3f}m roll: {self.offsets[4]:.3f}deg " \
+                f"pitch: {self.offsets[5]:.3f}deg yaw: {self.offsets[6]:.3f}deg"
+        )
+        self.initialized_offsets = True
+
+    def _print_output(self, output, object_type):
+        # Used for setup of motion capture system
+        x, y, z, roll, pitch, yaw = output[1:]
+        print(f"Pose ({object_type}):\tx: {x:.3f} y: {y:.3f} z: {z:.3f}\tRoll: {roll:.3f} Pitch: {pitch:.3f} Yaw: {yaw:.3f}")
+
+    def _get_output_from_geometry_msg(self, msg):
+        """
+        Modifications made so that coordinate system is aligned with the on used
+        by the pose estimate. Here:
+        Motion capture:
+            - x-axis of mocap is negative y-axis of pose estimate
+            - y-axis of mocap is x-axis of pose estimate
+        """
+
+        quat = [msg.pose.orientation.x,
+            msg.pose.orientation.y,
+            msg.pose.orientation.z,
+            msg.pose.orientation.w
+        ]
+        euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
+        
+        res = np.array([
+            msg.header.stamp.to_sec(),
+            -msg.pose.position.y, # conversion between frames
+            msg.pose.position.x, # conversion between framess
+            msg.pose.position.z,
+            euler[0],
+            euler[1],
+            euler[2]
+        ])
+
+        return res
+
+class DronePoseDataSaver(GroundTruthDataSaver):
+
+    def __init__(self, config, base_dir, output_category, output_type, environment):
+        super().__init__(config, base_dir, output_category, output_type, environment)
 
         rospy.Subscriber(self.topic_name, geometry_msgs.msg.PoseStamped, self._drone_gt_pose_cb)
 
 
     def _drone_gt_pose_cb(self, msg):
 
-        output_raw = get_output_from_geometry_msg(msg)
+        output_raw = self._get_output_from_geometry_msg(msg)
 
-        if self.initialized == False:
-            self.offsets = output_raw
-            self.offsets[0] = 0 # No offset in timestamp
-            self.initialized = True
+        # self._print_output(output_raw, "drone")
+
+        if self.initialized_offsets == False:
+            self._initialize_offsets(output_raw, "drone")
 
         output = output_raw - self.offsets
         
-        # Used for setup of motion capture system
-        # x, y, z, roll, pitch, yaw = output[-6:]
-        # print(f"Drone pose: \t\tx: {x:.3f} y: {y:.3f} z: {z:.3f}\tRoll: {roll:.3f} Pitch: {pitch:.3f} Yaw: {yaw:.3f}")
+        # self._print_output(output, "drone")
 
         self._save_output(output)
 
-class HelipadPoseDataSaver(GenericOutputSaver):
+class HelipadPoseDataSaver(GroundTruthDataSaver):
 
     def __init__(self, config, base_dir, output_category, output_type, environment):
         super().__init__(config, base_dir, output_category, output_type, environment)
 
-        self.initialized = False
-        self.offsets = None # Format: numpy array [x,y,z,roll,pitch,yaw]
-
         rospy.Subscriber(self.topic_name, geometry_msgs.msg.PoseStamped, self._helipad_gt_pose_cb)
 
     def _helipad_gt_pose_cb(self, msg):
-        # Used for setup of motion capture system
-        # x, y, z, roll, pitch, yaw = get_output_from_geometry_msg(msg)[-6:]
-        # print(f"Helipad pose: \t\tx: {x:.3f} y: {y:.3f} z: {z:.3f}\tRoll: {roll:.3f} Pitch: {pitch:.3f} Yaw: {yaw:.3f}")
+        
+        output_raw = self._get_output_from_geometry_msg(msg)
 
-        self._save_output(get_output_from_geometry_msg(msg))
+        # self._print_output(output_raw, "helipad")
 
-# Helper function
-def get_output_from_geometry_msg(msg):
-    """
-    Modifications made so that coordinate system is aligned with the on used
-    by the pose estimate. Here:
-    Motion capture:
-        - x-axis of mocap is negative y-axis of pose estimate
-        - y-axis of mocap is x-axis of pose estimate
-    """
+        if self.initialized_offsets == False:
+            self._initialize_offsets(output_raw, "helipad")
 
-    quat = [msg.pose.orientation.x,
-        msg.pose.orientation.y,
-        msg.pose.orientation.z,
-        msg.pose.orientation.w
-    ]
-    euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
-    
-    res = np.array([
-        msg.header.stamp.to_sec(),
-        -msg.pose.position.y, # conversion between frames
-        msg.pose.position.x, # conversion between framess
-        msg.pose.position.z,
-        euler[0],
-        euler[1],
-        euler[2]
-    ])
+        output = output_raw - self.offsets
+        
+        # self._print_output(output, "helipad")
 
-    return res
+        self._save_output(output)
