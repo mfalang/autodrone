@@ -36,11 +36,17 @@ class HelipadPoseDataSaver(GenericOutputSaver):
 
 # Helper function
 def get_output_from_geometry_msg(msg):
-
+    """
+    Modifications made so that coordinate system is aligned with the on used
+    by the pose estimate. Here:
+    Motion capture:
+        - x-axis of mocap is negative y-axis of pose estimate
+        - y-axis of mocap is x-axis of pose estimate
+    """
     res = []
     res.append(msg.header.stamp.to_sec())
+    res.append(-msg.pose.position.y)
     res.append(msg.pose.position.x)
-    res.append(msg.pose.position.y)
     res.append(msg.pose.position.z)
 
     quat = [msg.pose.orientation.x,
