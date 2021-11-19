@@ -1,7 +1,7 @@
 
 import numpy as np
 
-class MeasurementModel():
+class DnnCvModel():
 
     def __init__(self, sigmas):
         """
@@ -13,6 +13,8 @@ class MeasurementModel():
         self.R = np.diag(sigmas)**2
         self.H = np.hstack((np.eye(4), np.zeros((4,3))))
 
+        self.z
+
     def h(self, x):
         return x[:3]
     
@@ -21,4 +23,3 @@ class MeasurementModel():
 
     def R(self):
         return self.R
-

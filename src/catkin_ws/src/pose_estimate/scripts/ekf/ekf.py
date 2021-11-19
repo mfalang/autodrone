@@ -3,9 +3,6 @@ from numpy.testing._private.utils import measure
 import scipy.linalg as la
 import numpy as np
 
-from models.dynamic.helipad_3D_movement import DynamicModel
-from models.measurement.cv_measurements import MeasurementModel
-
 class EKFState():
 
     def __init__(self, mean, cov):
@@ -115,11 +112,4 @@ class EKF():
         # alternative:
         # NIS = v @ la.solve(S, v)
         return NIS
-
-def main():
-    dynamic_model = DynamicModel()
-    measurement_model = MeasurementModel()
-    ekf = EKF(dynamic_model, measurement_model)
-
-if __name__ == "__main__":
-    main()
+        
