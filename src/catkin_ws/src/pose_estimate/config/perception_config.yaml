@@ -1,6 +1,6 @@
 ekf:
   output:
-    topic_name: /estimate/drone_pose/ekf
+    topic_name: /estimate/ekf
   init_values:
     x0: [0, 0, 0, 0, 0, 0, 0]
     P0: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]

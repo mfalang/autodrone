@@ -1,6 +1,7 @@
 
 import rospy
 import geometry_msgs.msg
+import pose_estimate.msg
 
 from generic_output_saver import GenericOutputSaver
 
@@ -20,3 +21,26 @@ class DNNCVDataSaver(GenericOutputSaver):
             msg.twist.linear.z,
             msg.twist.angular.z
         ])
+
+class EkfDataSaver(GenericOutputSaver):
+
+    def __init__(self, config, base_dir, output_category, output_type, environment):
+        super().__init__(config, base_dir, output_category, output_type, environment)
+
+        rospy.Subscriber(self.topic_name, pose_estimate.msg.EkfOutput, 
+            self._dnn_cv_pose_cb
+        )
+
+    def _ekf_output_cb(self, msg):
+        self._save_output([
+            msg.header.stamp.to_sec(),
+            msg.x,
+            msg.y,
+            msg.z,
+            msg.psi,
+            msg.v_x,
+            msg.v_y,
+            msg.v_z,
+            msg.covariance
+        ])
+        
