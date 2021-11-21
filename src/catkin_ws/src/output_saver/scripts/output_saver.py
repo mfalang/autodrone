@@ -9,7 +9,7 @@ import shutil
 import rospy
 
 import ground_truth
-import pose_estimate
+import estimates
 
 class OutputSaver():
 
@@ -37,8 +37,12 @@ class OutputSaver():
     def start(self):
         rospy.loginfo(f"Saving output to {self.output_base_dir}")
 
-        pose_estimate.DNNCVDataSaver(self.config, self.output_base_dir, 
-            "pose_estimates", "dnn_cv_pose", self.environment
+        estimates.DNNCVDataSaver(self.config, self.output_base_dir, 
+            "estimates", "dnn_cv_pose", self.environment
+        )
+
+        estimates.EkfDataSaver(self.config, self.output_base_dir,
+            "estimates", "ekf_output", self.environment
         )
 
         ground_truth.DronePoseDataSaver(self.config, self.output_base_dir,

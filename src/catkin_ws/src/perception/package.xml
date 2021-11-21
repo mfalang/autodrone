@@ -1,19 +1,19 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>pose_estimate</name>
+  <name>perception</name>
   <version>0.0.0</version>
-  <description>The pose_estimate package</description>
+  <description>The perception package</description>
 
-  <maintainer email="peterbh@stud.ntnu.no">Peter Bull Hove</maintainer>
+  <maintainer email="martfal@stud.ntnu.no">Martin Falang</maintainer>
   <license>BSD</license>
 
 
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/pose_estimate</url> -->
+  <!-- <url type="website">http://wiki.ros.org/perception</url> -->
 
-  <author email="thomsun@stud.ntnu.no">Thomas Sundvoll</author>
+  <author email="thomsun@stud.ntnu.no, peterbh@stud.ntnu.no">Thomas Sundvoll/Peter Bull Hove</author>
 
   <buildtool_depend>catkin</buildtool_depend>
 

@@ -1,7 +1,7 @@
 
 import rospy
 import geometry_msgs.msg
-import pose_estimate.msg
+import perception.msg
 
 from generic_output_saver import GenericOutputSaver
 
@@ -27,7 +27,7 @@ class EkfDataSaver(GenericOutputSaver):
     def __init__(self, config, base_dir, output_category, output_type, environment):
         super().__init__(config, base_dir, output_category, output_type, environment)
 
-        rospy.Subscriber(self.topic_name, pose_estimate.msg.EkfOutput, 
+        rospy.Subscriber(self.topic_name, perception.msg.EkfOutput, 
             self._dnn_cv_pose_cb
         )
 

@@ -7,7 +7,7 @@ import yaml
 
 import rospy
 import geometry_msgs.msg
-import pose_estimate.msg
+import perception.msg
 import numpy as np
 
 from ekf.ekf import EKF, EKFState
@@ -63,7 +63,7 @@ class EKFRosRunner():
             self.estimate_publisher.publish(output_msg)
 
     def _pack_estimate_msg(self, ekfstate):
-        msg = pose_estimate.msg.EkfOutput()
+        msg = perception.msg.EkfOutput()
         msg.header.stamp = rospy.time.Now()
         msg.x = ekfstate.mean[0]
         msg.y = ekfstate.mean[1]    

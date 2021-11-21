@@ -34,7 +34,7 @@ class Plotter():
 
     def plot_drone_estimate(self):
         print("Plotting drone estimate raw from DNN CV")
-        pose = np.loadtxt(f"{self.data_dir}/pose_estimates/dnn_cv_pose.txt", skiprows=1)
+        pose = np.loadtxt(f"{self.data_dir}/estimates/dnn_cv_pose.txt", skiprows=1)
         self.ax.plot3D(pose[:,1], pose[:,2], pose[:,3], label="Drone DNN CV estimate")
         plt.legend()
 

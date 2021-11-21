@@ -17,7 +17,7 @@ ground_truths:
     file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
     max_values_stored_in_buffer: 10
 
-pose_estimates:
+estimates:
   dnn_cv_pose:
     name: dnn_cv_pose
     num_states: 4

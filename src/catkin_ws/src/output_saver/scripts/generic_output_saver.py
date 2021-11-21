@@ -5,7 +5,7 @@ import numpy as np
 class GenericOutputSaver():
 
     def __init__(self, config, base_dir, output_category, output_type, environment):
-        # TODO: Include that output_category must be e.g. ground_truth or pose_estimate
+        # TODO: Include that output_category must be e.g. ground_truth or estimates
         
         self.config = config[output_category][output_type]
 
