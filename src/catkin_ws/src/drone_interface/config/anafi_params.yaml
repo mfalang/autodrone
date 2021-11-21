@@ -1,0 +1,7 @@
+physical_parameters:
+  mass_g: 315
+camera_parameters:
+  focal_length_mm: 26
+  image_dims:
+    width: 1280
+    heigh: 720
