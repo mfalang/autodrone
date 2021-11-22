@@ -13,7 +13,7 @@ class Plotter():
         script_dir = os.path.dirname(os.path.realpath(__file__))
         self.data_dir = f"{script_dir}/../../../../../out/{data_dir}"
 
-        self.pose3D_figure = plt.figure()
+        self.pose3D_figure = plt.figure(1)
         self.pose3D_ax = plt.axes(projection='3d')
         self.pose3D_ax.set_xlabel("x [m]")
         self.pose3D_ax.set_ylabel("y [m]")
@@ -40,7 +40,7 @@ class Plotter():
     def plot_drone_pose_ekf(self):
         print("Plotting drone estimate from EKF and covariance")
         output = np.loadtxt(f"{self.data_dir}/estimates/ekf_output.txt", skiprows=1)
-        self.pose3D_ax.plot3D(output[:,1], output[:,2], output[:,3], label="Drone EKF estimate")
+        self.pose3D_ax.plot(output[:,1], output[:,2], output[:,3], label="Drone EKF estimate")
         plt.legend()
 
     def plot_drone_pose_cov(self):

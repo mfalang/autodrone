@@ -28,11 +28,11 @@ class EkfDataSaver(GenericOutputSaver):
         super().__init__(config, base_dir, output_category, output_type, environment)
 
         rospy.Subscriber(self.topic_name, perception.msg.EkfOutput, 
-            self._dnn_cv_pose_cb
+            self._ekf_output_cb
         )
 
     def _ekf_output_cb(self, msg):
-        self._save_output([
+        output = [
             msg.header.stamp.to_sec(),
             msg.x,
             msg.y,
@@ -40,7 +40,10 @@ class EkfDataSaver(GenericOutputSaver):
             msg.psi,
             msg.v_x,
             msg.v_y,
-            msg.v_z,
-            msg.covariance
-        ])
+            msg.v_z
+        ]
+
+        output.extend(msg.covariance)
+
+        self._save_output(output)
         
