@@ -71,8 +71,9 @@ class EKFRosRunner():
         while not rospy.is_shutdown():
 
             # TODO: Find out what to do with input so that the input is synchronized
-            # while not (self.new_attitude_input and self.new_velocity_input):
-            #     pass # Wait
+            while not (self.new_attitude_input and self.new_velocity_input):
+                # print("Waiting")
+                pass # Wait
 
             ekf_estimate = filter.predict(ekf_estimate, self.latest_input, self.dt)
             self.new_velocity_input = False
@@ -107,8 +108,8 @@ class EKFRosRunner():
 
     def _velocity_input_cb(self, msg):
         self.latest_input[0] = msg.point.x
-        self.latest_input[0] = msg.point.y
-        self.latest_input[0] = msg.point.z
+        self.latest_input[1] = msg.point.y
+        self.latest_input[2] = msg.point.z
         self.new_velocity_input = True
 
 

@@ -19,8 +19,8 @@ class DynamicModel():
 
         """
 
-        x_next = np.zeros_like(x)
-
+        x_next = np.zeros_like(x, dtype=float)
+        
         x_next[0] = x[0] + dt*(u[0]*np.cos(x[3]) + u[1]*np.sin(x[3])) - dt*x[4]
         x_next[1] = x[1] + dt*(-u[0]*np.sin(x[3]) + u[1]*np.cos(x[3])) - dt*x[5]
         x_next[2] = x[2] + dt*u[2] - dt*x[6]
@@ -29,6 +29,7 @@ class DynamicModel():
         x_next[5] = x[5]
         x_next[6] = x[6]
 
+        print(x_next)
         return x_next.copy()
 
     def F(self, x, u, dt):

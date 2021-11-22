@@ -25,6 +25,7 @@ class EKF():
         Q = self.dynamic_model.Q(x, dt)
 
         x_pred = self.dynamic_model.f(x, u, dt)
+
         P_pred = F @ P @ F.T + Q
 
         assert np.all(np.isfinite(P_pred)) and np.all(
