@@ -3,14 +3,14 @@ import numpy as np
 
 class DynamicModel():
 
-    Q = np.diag([1, 1, 1, 1, 1, 1, 1])
+    _Q = np.diag([1, 1, 1, 1, 1, 1, 1])
     n = 7
 
-    def f(x, u, dt):
+    def f(self, x, u, dt):
         """
         Calculate zero-noise transition from current x
-        
-        x = [drone_position (x,y,z), 
+
+        x = [drone_position (x,y,z),
              drone heading relative helipad (psi),
              helipad_velocity (x,y,z)]
 
@@ -31,7 +31,7 @@ class DynamicModel():
 
         return x_next.copy()
 
-    def F(x, u, dt):
+    def F(self, x, u, dt):
         """
         Calculate transition function Jacobian
         """
@@ -48,3 +48,5 @@ class DynamicModel():
 
         return F.copy()
 
+    def Q(self, x, dt):
+        return self._Q.copy()

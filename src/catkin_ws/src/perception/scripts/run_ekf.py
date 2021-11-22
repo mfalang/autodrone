@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 
 import ekf
 
@@ -17,7 +18,7 @@ from ekf.measurement_models.dnn_cv import DnnCvModel
 class EKFRosRunner():
 
     def __init__(self):
-        
+
         rospy.init_node("perception_ekf", anonymous=False)
 
         config_file = rospy.get_param("~config_file")
@@ -28,50 +29,56 @@ class EKFRosRunner():
                 self.config = yaml.safe_load(f)
         except Exception as e:
             rospy.logerr(f"Failed to load config: {e}")
-            sys.exit()    
-    
+            sys.exit()
+
         self.z = np.zeros((4))
         self.new_messurement = False
-        
+
+        self.dnn_cv_sigmas = np.array(self.config["measurements"]["dnn_cv"]["sigmas"])
+
         self.dt = self.config["ekf"]["dt"]
 
-        self.estimate_publisher = rospy.publisher(
-            self.config["ekf"]["output"]["topic_name"], 
-            geometry_msgs.msg.EkfOutput, queue_size=10
+
+        self.estimate_publisher = rospy.Publisher(
+            self.config["ekf"]["output"]["topic_name"],
+            perception.msg.EkfOutput, queue_size=10
         )
 
 
     def run(self):
         rospy.loginfo("Starting perception EKF")
-        
-        filter = EKF(DynamicModel(), DnnCvModel())
 
-        x0 = np.asarry(self.config["ekf"]["init_values"]["x0"])
-        P0 = np.asarry(self.config["ekf"]["init_values"]["P0"])
+        filter = EKF(DynamicModel(), DnnCvModel(self.dnn_cv_sigmas))
+
+        x0 = np.array(self.config["ekf"]["init_values"]["x0"])
+        P0 = np.array(self.config["ekf"]["init_values"]["P0"])
+
+        # TODO: Have to include the input u here somewhere
+        u = np.zeros((4))
 
         ekf_estimate = EKFState(x0, P0)
 
         while not rospy.is_shutdown():
-            
-            ekf_estimate = filter.predict(ekf_estimate, self.dt)
+
+            ekf_estimate = filter.predict(ekf_estimate, u, self.dt)
 
             if self.new_messurement:
                 ekf_estimate = filter.update(self.z, ekf_estimate)
                 self.new_messurement = False
 
-            output_msg = self._pack_estimate_msg(self, ekf_estimate)
+            output_msg = self._pack_estimate_msg(ekf_estimate)
             self.estimate_publisher.publish(output_msg)
 
     def _pack_estimate_msg(self, ekfstate):
         msg = perception.msg.EkfOutput()
-        msg.header.stamp = rospy.time.Now()
+        msg.header.stamp = rospy.Time.now()
         msg.x = ekfstate.mean[0]
-        msg.y = ekfstate.mean[1]    
+        msg.y = ekfstate.mean[1]
         msg.z = ekfstate.mean[2]
-        msg.psi = ekfstate.mean[3]    
-        msg.v_x = ekfstate.mean[4]    
-        msg.v_y = ekfstate.mean[5]    
-        msg.v_z = ekfstate.mean[6]    
+        msg.psi = ekfstate.mean[3]
+        msg.v_x = ekfstate.mean[4]
+        msg.v_y = ekfstate.mean[5]
+        msg.v_z = ekfstate.mean[6]
         msg.covariance = ekfstate.cov.flatten().tolist()
 
         return msg

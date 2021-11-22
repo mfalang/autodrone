@@ -16,21 +16,21 @@ class EKF():
         self.dynamic_model = dynamic_model
         self.measurement_model = measurement_model
 
-    def predict(self, ekfstate, dt):
+    def predict(self, ekfstate, u, dt):
         """Predict the EKF state dt seconds ahead."""
         x = ekfstate.mean
         P = ekfstate.cov
 
-        F = self.dynamic_model.F(x, dt)
+        F = self.dynamic_model.F(x, u, dt)
         Q = self.dynamic_model.Q(x, dt)
 
-        x_pred = self.dynamic_model.f(x, dt)
+        x_pred = self.dynamic_model.f(x, u, dt)
         P_pred = F @ P @ F.T + Q
 
         assert np.all(np.isfinite(P_pred)) and np.all(
             np.isfinite(x_pred)
         ), "Non-finite EKF prediction."
-        
+
         state_pred = EKFState(x_pred, P_pred)
 
         return state_pred
@@ -81,12 +81,12 @@ class EKF():
 
         x_upd = x + W @ v
         # P_upd = P - W @ H @ P
-        
+
         # this version of getting P_upd is more numerically stable
         I = np.eye(*P.shape)
         R = self.measurement_model.R()
         P_upd = (I - W @ H) @ P @ (I - W @ H).T + W @ R @ W.T
-        
+
         ekfstate_upd = EKFState(x_upd, P_upd)
 
         return ekfstate_upd
@@ -112,4 +112,3 @@ class EKF():
         # alternative:
         # NIS = v @ la.solve(S, v)
         return NIS
-        

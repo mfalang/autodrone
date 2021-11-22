@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+    <node
+        name="ekf"
+        pkg="perception"
+        type="run_ekf.py"
+        output="screen" >
+        <param name="config_file" value="ekf_config.yaml" />
+    </node>
+    <!-- <include file="$(find darknet_ros)/launch/anafi_real.launch"></include> -->
+</launch>

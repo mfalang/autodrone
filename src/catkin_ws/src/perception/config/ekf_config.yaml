@@ -6,7 +6,7 @@ ekf:
     P0: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
   dt: 0.01
 
-estimators:
+measurements:
   dnn_cv:
     output:
       topic_name: /estimate/drone_pose/dnnCV
