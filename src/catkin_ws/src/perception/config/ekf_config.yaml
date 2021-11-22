@@ -1,6 +1,9 @@
 ekf:
   output:
     topic_name: /estimate/ekf
+  input:
+    attitude_topic_name: /drone/out/attitude_euler
+    velocity_topic_name: /drone/out/velocity_body
   init_values:
     x0: [0, 0, 0, 0, 0, 0, 0]
     P0: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]

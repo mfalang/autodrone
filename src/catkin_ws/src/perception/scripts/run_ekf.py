@@ -7,8 +7,9 @@ import sys
 import yaml
 
 import rospy
-import geometry_msgs.msg
 import perception.msg
+import geometry_msgs.msg
+import drone_interface.msg
 import numpy as np
 
 from ekf.ekf import EKF, EKFState
@@ -44,6 +45,18 @@ class EKFRosRunner():
             perception.msg.EkfOutput, queue_size=10
         )
 
+        self.latest_input = np.zeros((4))
+        self.new_attitude_input = False
+        self.new_velocity_input = False
+
+        rospy.Subscriber(self.config["ekf"]["input"]["attitude_topic_name"],
+            drone_interface.msg.AttitudeEuler, self._attitude_input_cb
+        )
+
+        rospy.Subscriber(self.config["ekf"]["input"]["velocity_topic_name"],
+            geometry_msgs.msg.PointStamped, self._velocity_input_cb
+        )
+
 
     def run(self):
         rospy.loginfo("Starting perception EKF")
@@ -53,14 +66,17 @@ class EKFRosRunner():
         x0 = np.array(self.config["ekf"]["init_values"]["x0"])
         P0 = np.array(self.config["ekf"]["init_values"]["P0"])
 
-        # TODO: Have to include the input u here somewhere
-        u = np.zeros((4))
-
         ekf_estimate = EKFState(x0, P0)
 
         while not rospy.is_shutdown():
 
-            ekf_estimate = filter.predict(ekf_estimate, u, self.dt)
+            # TODO: Find out what to do with input so that the input is synchronized
+            # while not (self.new_attitude_input and self.new_velocity_input):
+            #     pass # Wait
+
+            ekf_estimate = filter.predict(ekf_estimate, self.latest_input, self.dt)
+            self.new_velocity_input = False
+            self.new_attitude_input = False
 
             if self.new_messurement:
                 ekf_estimate = filter.update(self.z, ekf_estimate)
@@ -68,6 +84,8 @@ class EKFRosRunner():
 
             output_msg = self._pack_estimate_msg(ekf_estimate)
             self.estimate_publisher.publish(output_msg)
+
+            rospy.sleep(self.dt)
 
     def _pack_estimate_msg(self, ekfstate):
         msg = perception.msg.EkfOutput()
@@ -82,6 +100,17 @@ class EKFRosRunner():
         msg.covariance = ekfstate.cov.flatten().tolist()
 
         return msg
+
+    def _attitude_input_cb(self, msg):
+        self.latest_input[3] = msg.yaw
+        self.new_attitude_input = True
+
+    def _velocity_input_cb(self, msg):
+        self.latest_input[0] = msg.point.x
+        self.latest_input[0] = msg.point.y
+        self.latest_input[0] = msg.point.z
+        self.new_velocity_input = True
+
 
     def _dnn_cv_estimate_cb(self, msg):
         self.z = np.array([
