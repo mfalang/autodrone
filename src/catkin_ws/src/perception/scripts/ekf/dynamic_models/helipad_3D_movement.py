@@ -29,7 +29,6 @@ class DynamicModel():
         x_next[5] = x[5]
         x_next[6] = x[6]
 
-        print(x_next)
         return x_next.copy()
 
     def F(self, x, u, dt):

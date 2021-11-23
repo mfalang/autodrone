@@ -55,6 +55,7 @@ add_message_files(
   AttitudeSetpoint.msg
   SaturationLimits.msg
   AttitudeEuler.msg
+  EkfInput.msg
 )
 
 ## Generate services in the 'srv' folder

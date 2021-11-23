@@ -134,6 +134,11 @@ class TelemetryPublisher():
             self._collect_saturation_limits, publish_rate=2
         ))
 
+        self.telemetry_publishers.append(GenericMessagePublisher(
+            "drone/out/ekf_input", drone_interface.msg.EkfInput,
+            self._collect_ekf_input, publish_rate=500, queue_size=1
+        ))
+
         rospy.loginfo("Initialized telemetry publisher")
 
     def publish(self):
@@ -421,6 +426,44 @@ class TelemetryPublisher():
         saturation_limits_msg.max_vertical_speed = max_vertical_speed
 
         return saturation_limits_msg
+
+    def _collect_ekf_input(self):
+        """
+        Get the velocity and heading of the drone.
+
+        Returns
+        -------
+        drone_interface.msg.EkfInput
+            Message containing ekf input
+        """
+
+        ekf_msg = drone_interface.msg.EkfInput()
+        ekf_msg.header.stamp = rospy.Time.now()
+
+        att_euler = self.drone.get_state(
+            olympe_msgs.ardrone3.PilotingState.AttitudeChanged
+        )
+
+        R_ned_to_body = Rotation.from_euler(
+            "xyz",
+            [att_euler["roll"], att_euler["pitch"], att_euler["yaw"]],
+            degrees=False
+        ).as_matrix().T
+
+        speed = self.drone.get_state(
+            olympe_msgs.ardrone3.PilotingState.SpeedChanged
+        )
+
+
+        velocity_ned = np.array([speed["speedX"], speed["speedY"], speed["speedZ"]])
+
+        velocity_body = R_ned_to_body @ velocity_ned
+        ekf_msg.v_x = velocity_body[0]
+        ekf_msg.v_y = velocity_body[1]
+        ekf_msg.v_z = velocity_body[2]
+        ekf_msg.psi = att_euler["yaw"]*180/3.14159
+
+        return ekf_msg
 
 class CameraPublisher():
     """

@@ -45,16 +45,11 @@ class EKFRosRunner():
             perception.msg.EkfOutput, queue_size=10
         )
 
-        self.latest_input = np.zeros((4))
-        self.new_attitude_input = False
-        self.new_velocity_input = False
+        self.latest_input = np.zeros(4)
+        self.last_psi = None
 
-        rospy.Subscriber(self.config["ekf"]["input"]["attitude_topic_name"],
-            drone_interface.msg.AttitudeEuler, self._attitude_input_cb
-        )
-
-        rospy.Subscriber(self.config["ekf"]["input"]["velocity_topic_name"],
-            geometry_msgs.msg.PointStamped, self._velocity_input_cb
+        rospy.Subscriber(self.config["ekf"]["input"]["topic_name"],
+            drone_interface.msg.EkfInput, self._input_cb
         )
 
 
@@ -69,11 +64,6 @@ class EKFRosRunner():
         ekf_estimate = EKFState(x0, P0)
 
         while not rospy.is_shutdown():
-
-            # TODO: Find out what to do with input so that the input is synchronized
-            while not (self.new_attitude_input and self.new_velocity_input):
-                # print("Waiting")
-                pass # Wait
 
             ekf_estimate = filter.predict(ekf_estimate, self.latest_input, self.dt)
             self.new_velocity_input = False
@@ -102,15 +92,13 @@ class EKFRosRunner():
 
         return msg
 
-    def _attitude_input_cb(self, msg):
-        self.latest_input[3] = msg.yaw
-        self.new_attitude_input = True
-
-    def _velocity_input_cb(self, msg):
-        self.latest_input[0] = msg.point.x
-        self.latest_input[1] = msg.point.y
-        self.latest_input[2] = msg.point.z
-        self.new_velocity_input = True
+    def _input_cb(self, msg):
+        self.latest_input[0] = msg.v_x
+        self.latest_input[1] = msg.v_y
+        self.latest_input[2] = msg.v_z
+        
+        if self.last_psi is not None:
+            self.latest_input[3] = msg.psi - self.last_psi
 
 
     def _dnn_cv_estimate_cb(self, msg):
