@@ -197,9 +197,12 @@ class SphinxRosBridge():
         # Gazebo-topic gives only the simulation time. The timestamp is left in
         # in case it will be useful in the future
         model_pose.header.stamp = rospy.Time.now()
-        model_pose.pose.position.x = self.data[model]["position"]["x"]
-        model_pose.pose.position.y = self.data[model]["position"]["y"]
-        model_pose.pose.position.z = self.data[model]["position"]["z"]
+
+        # Convert East-North-Up (ENU) coordinates to North-East-Down (NED)
+        model_pose.pose.position.x = self.data[model]["position"]["y"]
+        model_pose.pose.position.y = self.data[model]["position"]["x"]
+        model_pose.pose.position.z = -self.data[model]["position"]["z"]
+
         model_pose.pose.orientation.x = self.data[model]["orientation"]["x"]
         model_pose.pose.orientation.y = self.data[model]["orientation"]["y"]
         model_pose.pose.orientation.z = self.data[model]["orientation"]["z"]

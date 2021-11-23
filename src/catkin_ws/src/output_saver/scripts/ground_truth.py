@@ -37,8 +37,10 @@ class GroundTruthDataSaver(GenericOutputSaver):
         Motion capture:
             - x-axis of mocap is negative y-axis of pose estimate
             - y-axis of mocap is x-axis of pose estimate
+        Simulator:
+            - All axis are the same
         """
-
+        # TODO: Make this work for simulator also
         quat = [msg.pose.orientation.x,
             msg.pose.orientation.y,
             msg.pose.orientation.z,
@@ -46,15 +48,26 @@ class GroundTruthDataSaver(GenericOutputSaver):
         ]
         euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
         
-        res = np.array([
-            msg.header.stamp.to_sec(),
-            -msg.pose.position.y, # conversion between frames
-            msg.pose.position.x, # conversion between framess
-            msg.pose.position.z,
-            euler[0],
-            euler[1],
-            euler[2]
-        ])
+        if self.environment == "real":
+            res = np.array([
+                msg.header.stamp.to_sec(),
+                -msg.pose.position.y, # conversion between frames
+                msg.pose.position.x, # conversion between framess
+                msg.pose.position.z,
+                euler[0],
+                euler[1],
+                euler[2]
+            ])
+        else:
+            res = np.array([
+                msg.header.stamp.to_sec(),
+                msg.pose.position.x, 
+                msg.pose.position.y,
+                msg.pose.position.z,
+                euler[0],
+                euler[1],
+                euler[2]
+            ])
 
         return res
 

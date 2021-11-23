@@ -22,25 +22,25 @@ class Plotter():
     def plot_drone_ground_truth(self):
         print("Plotting drone ground truth")
         pose = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose.txt", skiprows=1)
-        self.pose3D_ax.plot3D(pose[:,1], pose[:,2], pose[:,3], label="Drone ground truth")
+        self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone ground truth")
         plt.legend()
 
     def plot_helipad_ground_truth(self):
         print("Plotting helipad ground truth")
         pose = np.loadtxt(f"{self.data_dir}/ground_truths/helipad_pose.txt", skiprows=1)
-        self.pose3D_ax.plot3D(pose[:,1], pose[:,2], pose[:,3], label="Helipad ground truth")
+        self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Helipad ground truth")
         plt.legend()
 
     def plot_drone_pose_dnn_cv(self):
         print("Plotting drone estimate raw from DNN CV")
         pose = np.loadtxt(f"{self.data_dir}/estimates/dnn_cv_pose.txt", skiprows=1)
-        self.pose3D_ax.plot3D(pose[:,1], pose[:,2], pose[:,3], label="Drone DNN CV estimate")
+        self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone DNN CV estimate")
         plt.legend()
 
     def plot_drone_pose_ekf(self):
         print("Plotting drone estimate from EKF and covariance")
         output = np.loadtxt(f"{self.data_dir}/estimates/ekf_output.txt", skiprows=1)
-        self.pose3D_ax.plot(output[:,1], output[:,2], output[:,3], label="Drone EKF estimate")
+        self.pose3D_ax.plot(output[:,1], output[:,2], -output[:,3], label="Drone EKF estimate")
         plt.legend()
 
     def plot_drone_pose_cov(self):

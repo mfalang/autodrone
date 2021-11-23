@@ -12,6 +12,7 @@ class GenericOutputSaver():
         self.output_dir = f"{base_dir}/{output_category}"
         pathlib.Path(f"{self.output_dir}").mkdir(parents=True, exist_ok=True)
 
+        self.environment = environment
 
         self.buffer_index = 0
         self.buffer_max_size = self.config["max_values_stored_in_buffer"]
@@ -25,7 +26,7 @@ class GenericOutputSaver():
         with open(self.output_filename, "w+") as file_desc:
             file_desc.write(self.config["file_header"])
 
-        self.topic_name = self.config["topic"][environment]
+        self.topic_name = self.config["topic"][self.environment]
 
     def _save_output(self, output):
         # Write buffer array to file if full
