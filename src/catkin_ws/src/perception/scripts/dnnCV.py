@@ -11,15 +11,15 @@ from scipy.spatial.transform import Rotation
 
 class DNNPoseEstimator():
 
-    def __init__(self, image_dims, camera_offsets):
+    def __init__(self):
 
         rospy.init_node("dnn_cv_estimator", anonymous=False)
 
-        self.image_width = image_dims[0]
-        self.image_height = image_dims[1]
-
-        self.camera_offset_x = camera_offsets[0]
-        self.camera_offset_z = camera_offsets[1]
+        self.focal_length_mm = rospy.get_param("/drone/camera/focal_length_mm")
+        self.image_width = rospy.get_param("/drone/camera/img_width")
+        self.image_height = rospy.get_param("/drone/camera/img_height")
+        self.camera_offset_x_mm = rospy.get_param("/drone/camera/offset_x_mm")
+        self.camera_offset_z_mm = rospy.get_param("/drone/camera/offset_z_mm")
 
         self.latest_bounding_boxes = None
         self.new_bounding_boxes_available = False
@@ -184,7 +184,7 @@ class DNNPoseEstimator():
         center_px = (center_px[1], center_px[0]) # such that x = height, y = width for this
 
         # These are from ArDrone so probably wrong
-        focal_length = 374.67 # if cfg.is_simulator else 720
+        # self.focal_length_mm = 374.67 # if cfg.is_simulator else 720
         real_radius = 390 # mm (780mm in diameter / 2)
 
         # Center of image
@@ -195,14 +195,14 @@ class DNNPoseEstimator():
         d_x = x_0 - center_px[0]
         d_y = y_0 - center_px[1]
 
-        est_z = real_radius*focal_length / radius_px
+        est_z = real_radius*self.focal_length_mm / radius_px
 
         # Camera is placed 150 mm along x-axis of the drone
         # Since the camera is pointing down, the x and y axis of the drone
         # is the inverse of the x and y axis of the camera
-        est_x = -((est_z * d_x / focal_length) + self.camera_offset_x) # mm adjustment for translated camera frame in x direction
-        est_y = -(est_z * d_y / focal_length)
-        est_z += self.camera_offset_z # mm adjustment for translated camera frame in z direction
+        est_x = -((est_z * d_x / self.focal_length_mm) + self.camera_offset_x_mm) # mm adjustment for translated camera frame in x direction
+        est_y = -(est_z * d_y / self.focal_length_mm)
+        est_z += self.camera_offset_z_mm # mm adjustment for translated camera frame in z direction
 
         # Compensation for angled camera.
 
@@ -238,10 +238,7 @@ class DNNPoseEstimator():
 
 def main():
 
-    image_dims = [1280, 720]
-    camera_offsets = [-60, 45] # mm (taken from ArDrone so probably wrong)
-
-    estimator = DNNPoseEstimator(image_dims, camera_offsets)
+    estimator = DNNPoseEstimator()
     estimator.start()
 
 if __name__ == "__main__":
