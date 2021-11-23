@@ -96,9 +96,14 @@ class EKFRosRunner():
         self.latest_input[0] = msg.v_x
         self.latest_input[1] = msg.v_y
         self.latest_input[2] = msg.v_z
-        
+
         if self.last_psi is not None:
             self.latest_input[3] = msg.psi - self.last_psi
+
+        self.last_psi = msg.psi
+
+        if self.latest_input[3] != 0:
+            print(f"dpsi: {self.latest_input[3]}")
 
 
     def _dnn_cv_estimate_cb(self, msg):

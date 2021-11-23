@@ -123,7 +123,7 @@ class CommandListener():
         """
         rospy.loginfo(f"Moving dx: {msg.dx} dy: {msg.dy} dz: {msg.dz} dpsi: {msg.dpsi}")
         self.drone(olympe_msgs.move.extended_move_by(
-            msg.dx, msg.dy, msg.dz, msg.dpsi,
+            msg.dx, msg.dy, msg.dz, msg.dpsi*3.14159/180,
             msg.max_horizontal_speed, msg.max_vertical_speed,
             msg.max_yaw_rotation_speed)
         )

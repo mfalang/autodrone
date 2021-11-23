@@ -461,7 +461,7 @@ class TelemetryPublisher():
         ekf_msg.v_x = velocity_body[0]
         ekf_msg.v_y = velocity_body[1]
         ekf_msg.v_z = velocity_body[2]
-        ekf_msg.psi = att_euler["yaw"]*180/3.14159
+        ekf_msg.psi = -att_euler["yaw"]*180/3.14159 # positive rotation counter clockwise
 
         return ekf_msg
 

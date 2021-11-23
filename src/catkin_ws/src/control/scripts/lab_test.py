@@ -33,7 +33,7 @@ class Mission():
     def _create_setpoint_message(self, dx, dy, dz, dpsi,
         max_horizontal_speed=0.5, max_vertical_speed=0.5, max_yaw_rotation_speed=45
     ):
-        rospy.loginfo(f"Moving to x={dx}, y={dy}, z={dz}, psi={dpsi*180/3.1415}")
+        rospy.loginfo(f"Moving to x={dx}, y={dy}, z={dz}, psi={dpsi}")
         msg = PositionSetpointRelative()
         msg.header.stamp = rospy.Time.now()
         msg.dx = dx
@@ -135,11 +135,55 @@ class SquareMission(Mission):
         self._get_keyboard_input("Land? (yes) ", "yes")
         self._land()
 
+class RotateMission(Mission):
+    
+    def __init__(self):
+        super().__init__()
+
+    def start(self):
+
+        self._get_keyboard_input("Ready to take off? (yes) ", "yes")
+        self._takeoff()
+
+        self._get_keyboard_input("Go up 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -0.5, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate -90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, -90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Land? (yes) ", "yes")
+        self._land()
+        
+
+
 def main():
     ans = input("Choose mission\n" \
         "(1 = takeoff - landing)\n" \
         "(2 = takeoff - 0.5m up - 1m forward - 2m backward - 1m forwards - landing)\n" \
-        "(3 = takeoff - fly square (2x2m) - landing\n")
+        "(3 = takeoff - fly square (2x2m) - landing)\n" \
+        "(4 = takeoff - rotate - landing)\n")
 
     if ans == "1":
         mission = TakeoffLand()
@@ -147,6 +191,8 @@ def main():
         mission = ForwardBackward()
     elif ans == "3":
         mission = SquareMission()
+    elif ans == "4":
+        mission = RotateMission()
     else:
         print(f"Invalid choice {ans}")
         sys.exit(0)
