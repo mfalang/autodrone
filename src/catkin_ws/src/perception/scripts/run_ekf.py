@@ -52,6 +52,11 @@ class EKFRosRunner():
             drone_interface.msg.EkfInput, self._input_cb
         )
 
+        rospy.Subscriber(
+            self.config["measurements"]["dnn_cv"]["output"]["topic_name"],
+            geometry_msgs.msg.TwistStamped, self._dnn_cv_estimate_cb
+        )
+
 
     def run(self):
         rospy.loginfo("Starting perception EKF")
@@ -101,10 +106,6 @@ class EKFRosRunner():
             self.latest_input[3] = msg.psi - self.last_psi
 
         self.last_psi = msg.psi
-
-        if self.latest_input[3] != 0:
-            print(f"dpsi: {self.latest_input[3]}")
-
 
     def _dnn_cv_estimate_cb(self, msg):
         self.z = np.array([

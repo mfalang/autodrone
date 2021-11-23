@@ -53,8 +53,8 @@ class EKF():
         x = ekfstate.mean
         P = ekfstate.cov
 
-        H = self.sensor_model.H()
-        R = self.sensor_model.R()
+        H = self.measurement_model.H()
+        R = self.measurement_model.R()
         S = H @ P @ H.T + R
 
         return S
@@ -65,9 +65,7 @@ class EKF():
         v = self.innovation_mean(z, ekfstate)
         S = self.innovation_cov(ekfstate)
 
-        innovationstate = EKFState(v, S)
-
-        return innovationstate
+        return v, S
 
     def update(self, z, ekfstate):
         """Update ekfstate with z in sensor_state"""

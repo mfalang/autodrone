@@ -10,14 +10,14 @@ class DnnCvModel():
         z = [x, y, z, psi]
 
         """
-        self.R = np.diag(sigmas)**2
-        self.H = np.hstack((np.eye(4), np.zeros((4,3))))
+        self._R = np.diag(sigmas)**2
+        self._H = np.hstack((np.eye(4), np.zeros((4,3))))
 
     def h(self, x):
-        return x[:3]
+        return x[:4]
 
     def H(self):
-        return self.H
+        return self._H
 
     def R(self):
-        return self.R
+        return self._R
