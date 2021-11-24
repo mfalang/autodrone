@@ -14,10 +14,30 @@ class CornerDetector():
 
         self.fast_feature_dector = cv.FastFeatureDetector_create()
 
-    def color_segment_image(self, img):
-
+    def preprocess_image(self, img):
         # Make image grayscale
-        output = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
+        # Reduce the noise to avoid false circle detection
+        gray = cv.medianBlur(gray, 5)
+
+        # Find circle in helipad
+        circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, gray.shape[0] / 8,
+                               param1=100, param2=200,
+                               minRadius=0, maxRadius=0)
+
+        if circles is not None:
+            circles = np.uint16(np.around(circles))
+            for i in circles[0, :]:
+                center = (i[0], i[1])
+                # circle center
+                cv.circle(img, center, 1, (0, 100, 100), 3)
+                # circle outline
+                radius = i[2]
+                cv.circle(img, center, radius, (255, 0, 255), 3)
+
+        cv.imshow("Circles", img)
+        output = gray
 
         return output
 
@@ -29,7 +49,6 @@ class CornerDetector():
         return corners
 
     def find_corners_shi_tomasi(self, img):
-        # corners = cv.goodFeaturesToTrack(img, self._max_corners, self._quality_level, self._min_distance, None, blockSize=self._block_size, gradientSize=self._gradient_size, useHarrisDetector=False, k=self._k)
 
         corners = cv.goodFeaturesToTrack(img, self._max_corners, self._quality_level,
             self._min_distance, None, blockSize=self._block_size,
@@ -63,16 +82,13 @@ def main():
 
     corner_detector = CornerDetector(config)
 
-    img = cv.imread("test_images/test1.png")
-    img_gray = corner_detector.color_segment_image(img)
-    cv.imwrite("from_corner.png", img_gray)
-    import sys
-    sys.exit()
+    img = cv.imread("test_images/half_circle_5.png")
+    img_gray = corner_detector.preprocess_image(img)
     cv.imshow("test", img_gray)
     # corners = corner_detector.find_corners_harris(img_gray)
     # corner_detector.show_corners_found(img, corners)
     corners = corner_detector.find_corners_shi_tomasi(img_gray)
-    corner_detector.show_corners_found(img, corners)
+    corner_detector.show_corners_found(img, corners, color="red")
     cv.waitKey()
 
 if __name__ == "__main__":
