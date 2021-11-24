@@ -72,7 +72,9 @@ class TcvPoseEstimator():
                 self.corner_detector.show_corners_found(img, corners, color="red")
                 # self.corner_detector.show_corners_found(img, corners_fast, color="blue")
 
-                cv.waitKey(1)
+                cv.waitKey()
+                input("Press enter to quit")
+                sys.exit()
 
 def main():
     estimator = TcvPoseEstimator(config_file="tcv_config.yaml")

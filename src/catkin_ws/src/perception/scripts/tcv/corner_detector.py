@@ -102,7 +102,21 @@ class CornerDetector():
             print(f"Not enough points to determine H uniquely ({corners.shape[0]}/13)")
             return None
 
+        dists = np.zeros((13,13))
 
+        for i, xy_i in enumerate(corners.reshape(corners.shape[0], 2)):
+            print(f"{i} distances: ", end="")
+            for j, xy_j in enumerate(corners.reshape(corners.shape[0], 2)):
+                print(f"{j}: {cv.norm(xy_i, xy_j)} ", end="")
+                dists[i,j] = cv.norm(xy_i, xy_j)
+            print()
+
+        np.savetxt("test_corner_dists.txt", dists)
+
+        # for i in range(corners.shape[0]):
+        #     current_corner = i
+        #     for j in range(corner.shape[0]):
+        #         dist = cv.norm(current_corner, )
 
     def show_corners_found(self, img, corners, color):
         image = np.copy(img)
