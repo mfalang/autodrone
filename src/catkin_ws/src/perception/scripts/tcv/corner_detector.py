@@ -2,6 +2,21 @@
 import cv2 as cv
 import numpy as np
 
+HSV_SIM_GREEN = [120, 100, 30]
+
+HUE_MARGIN = 15
+SAT_MARGIN = 15
+VAL_MARGIN = 15
+
+HUE_LOW_GREEN = max(0, HSV_SIM_GREEN[0] - HUE_MARGIN)
+HUE_HIGH_GREEN = min(360, HSV_SIM_GREEN[0] + HUE_MARGIN)
+
+SAT_LOW_GREEN = 85
+SAT_HIGH_GREEN = 100
+
+VAL_LOW_GREEN = 15
+VAL_HIGH_GREEN = 60
+
 class CornerDetector():
 
     def __init__(self, shi_tomasi_config):
@@ -18,25 +33,40 @@ class CornerDetector():
         # Make image grayscale
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
-        # Reduce the noise to avoid false circle detection
-        gray = cv.medianBlur(gray, 5)
+        # # Reduce the noise to avoid false circle detection
+        blur = cv.medianBlur(img, 5)
 
-        # Find circle in helipad
-        circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, gray.shape[0] / 8,
-                               param1=100, param2=200,
-                               minRadius=0, maxRadius=0)
+        blur = cv.GaussianBlur(blur,(5,5),0)
+        blur = cv.bilateralFilter(blur,9,75,75)
 
-        if circles is not None:
-            circles = np.uint16(np.around(circles))
-            for i in circles[0, :]:
-                center = (i[0], i[1])
-                # circle center
-                cv.circle(img, center, 1, (0, 100, 100), 3)
-                # circle outline
-                radius = i[2]
-                cv.circle(img, center, radius, (255, 0, 255), 3)
+        hsv = cv.cvtColor(blur, cv.COLOR_BGR2HSV)
 
-        cv.imshow("Circles", img)
+        # low_green = np.array([HUE_LOW_GREEN, SAT_LOW_GREEN, VAL_LOW_GREEN])
+        # high_green = np.array([HUE_HIGH_GREEN, SAT_HIGH_GREEN, VAL_HIGH_GREEN])
+
+        low_green = np.array([85-60,255-60,127-60])
+        high_green = np.array([85+60,255+60,127+60])
+
+        mask = cv.inRange(hsv, low_green, high_green)
+
+        cv.imshow("segmented", mask)
+
+        # # Find circle in helipad
+        # circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, gray.shape[0] / 8,
+        #                        param1=200, param2=50,
+        #                        minRadius=0, maxRadius=0)
+
+        # if circles is not None:
+        #     circles = np.uint16(np.around(circles))
+        #     for i in circles[0, :]:
+        #         center = (i[0], i[1])
+        #         # circle center
+        #         cv.circle(img, center, 1, (0, 100, 100), 3)
+        #         # circle outline
+        #         radius = i[2]
+        #         cv.circle(img, center, radius, (255, 0, 255), 3)
+
+        # cv.imshow("Circles", img)
         output = gray
 
         return output

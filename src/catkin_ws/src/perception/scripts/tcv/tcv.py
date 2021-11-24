@@ -57,9 +57,9 @@ class TcvPoseEstimator():
             if self.new_image_available:
 
                 img = self.latest_image.astype(np.uint8)
-                img_segmented = self.corner_detector.color_segment_image(img)
+                img_processed = self.corner_detector.preprocess_image(img)
 
-                corners = self.corner_detector.find_corners_shi_tomasi(img_segmented)
+                corners = self.corner_detector.find_corners_shi_tomasi(img_processed)
                 # corners = self.corner_detector.find_corners_fast(img)
 
                 if corners is None:
@@ -67,7 +67,7 @@ class TcvPoseEstimator():
 
                 self.new_image_available = False
 
-                self.corner_detector.show_corners_found(img, corners, color="red")
+                self.corner_detector.show_corners_found(img_processed, corners, color="red")
                 # self.corner_detector.show_corners_found(img, corners_fast, color="blue")
 
                 cv.waitKey(1)
