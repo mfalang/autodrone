@@ -33,7 +33,6 @@ class CornerDetector():
         # Make image grayscale
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
-        # # Reduce the noise to avoid false circle detection
         blur = cv.medianBlur(img, 5)
 
         blur = cv.GaussianBlur(blur,(5,5),0)
@@ -44,12 +43,22 @@ class CornerDetector():
         # low_green = np.array([HUE_LOW_GREEN, SAT_LOW_GREEN, VAL_LOW_GREEN])
         # high_green = np.array([HUE_HIGH_GREEN, SAT_HIGH_GREEN, VAL_HIGH_GREEN])
 
-        low_green = np.array([85-60,255-60,127-60])
-        high_green = np.array([85+60,255+60,127+60])
+        hue_margin = 60
+        sat_margin = 60
+        val_margin = 60
+
+        low_green = np.array([85-hue_margin,255-sat_margin,127-val_margin])
+        high_green = np.array([85+hue_margin,255+sat_margin,127+val_margin])
 
         mask = cv.inRange(hsv, low_green, high_green)
 
-        cv.imshow("segmented", mask)
+        img_segmented = cv.bitwise_and(gray, gray, mask=mask)
+        img_segmented = cv.medianBlur(img_segmented, 5)
+        img_segmented = cv.GaussianBlur(img_segmented,(5,5),0)
+        img_segmented = cv.bilateralFilter(img_segmented,9,75,75)
+
+        # cv.imshow("mask", mask)
+        cv.imshow("segmented", img_segmented)
 
         # # Find circle in helipad
         # circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, gray.shape[0] / 8,
@@ -87,6 +96,14 @@ class CornerDetector():
 
         return corners
 
+    def find_H(self, img, corners):
+
+        if corners.shape[0] != 13:
+            print(f"Not enough points to determine H uniquely ({corners.shape[0]}/13)")
+            return None
+
+
+
     def show_corners_found(self, img, corners, color):
         image = np.copy(img)
 
@@ -96,14 +113,29 @@ class CornerDetector():
             c = (255,0,0)
 
         for i in range(corners.shape[0]):
-            cv.circle(image, (int(corners[i,0,0]), int(corners[i,0,1])), 4, c, cv.FILLED)
+            center = (int(corners[i,0,0]), int(corners[i,0,1]))
+
+            text_face = cv.FONT_HERSHEY_DUPLEX
+            text_scale = 0.5
+            text_thickness = 1
+            text = f"{i}"
+            text_offset = 10
+
+            text_size, _ = cv.getTextSize(text, text_face, text_scale, text_thickness)
+            text_origin = (
+                int(center[0] - text_size[0] / 2) + text_offset,
+                int(center[1] + text_size[1] / 2) - text_offset
+            )
+
+            cv.circle(image, center, 4, c, cv.FILLED)
+            cv.putText(image, text, text_origin, text_face, text_scale, (127,255,127), text_thickness, cv.LINE_AA)
 
         cv.imshow("Detected corners", image)
 
 def main():
     config = {
         "max_corners" : 13,
-        "quality_level" : 0.01,
+        "quality_level" : 0.001,
         "min_distance" : 10,
         "block_size" : 3,
         "gradient_size" : 3,
