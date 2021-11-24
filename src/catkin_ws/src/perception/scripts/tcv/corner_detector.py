@@ -12,6 +12,8 @@ class CornerDetector():
         self._gradient_size = shi_tomasi_config["gradient_size"]
         self._k = shi_tomasi_config["k"]
 
+        self.fast_feature_dector = cv.FastFeatureDetector_create()
+
     def color_segment_image(self, img):
 
         # Make image grayscale
@@ -19,21 +21,33 @@ class CornerDetector():
 
         return output
 
-    def find_corners_shi_tomasi(self, img):
-        corners = cv.goodFeaturesToTrack(img, self._max_corners, self._quality_level, self._min_distance, None, blockSize=self._block_size, gradientSize=self._gradient_size, useHarrisDetector=False, k=self._k)
+    def find_corners_fast(self, img):
+        key_points = self.fast_feature_dector.detect(img, None)
 
-        # corners = cv.goodFeaturesToTrack(img, self._max_corners, self._quality_level,
-            # self._min_distance, None, blockSize=self._block_size,
-            # gradientSize=self._gradient_size, useHarrisDetector=False, k=self._k
-        # )
+        corners = np.array([key_points[idx].pt for idx in range(0, len(key_points))]).reshape(-1, 1, 2)
 
         return corners
 
-    def show_corners_found(self, img, corners):
+    def find_corners_shi_tomasi(self, img):
+        # corners = cv.goodFeaturesToTrack(img, self._max_corners, self._quality_level, self._min_distance, None, blockSize=self._block_size, gradientSize=self._gradient_size, useHarrisDetector=False, k=self._k)
+
+        corners = cv.goodFeaturesToTrack(img, self._max_corners, self._quality_level,
+            self._min_distance, None, blockSize=self._block_size,
+            gradientSize=self._gradient_size, useHarrisDetector=False, k=self._k
+        )
+
+        return corners
+
+    def show_corners_found(self, img, corners, color):
         image = np.copy(img)
 
+        if color == "red":
+            c = (0,0,255)
+        elif color == "blue":
+            c = (255,0,0)
+
         for i in range(corners.shape[0]):
-            cv.circle(image, (int(corners[i,0,0]), int(corners[i,0,1])), 4, (0,0,255), cv.FILLED)
+            cv.circle(image, (int(corners[i,0,0]), int(corners[i,0,1])), 4, c, cv.FILLED)
 
         cv.imshow("Detected corners", image)
 
