@@ -60,6 +60,46 @@ class CornerDetector():
         # cv.imshow("mask", mask)
         cv.imshow("segmented", img_segmented)
 
+        # setting threshold of gray image
+        _, threshold = cv.threshold(mask, 127, 255, cv.THRESH_BINARY)
+
+        cv.imshow("mask", cv.bitwise_not(mask))
+        cv.imshow("threshold", threshold)
+
+        contours, _ = cv.findContours(
+            threshold, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+        i = 0
+
+        # list for storing names of shapes
+        for contour in contours:
+
+            # here we are ignoring first counter because
+            # findcontour function detects whole image as shape
+            if i == 0:
+                i = 1
+                continue
+
+            # cv.approxPloyDP() function to approximate the shape
+            approx = cv.approxPolyDP(
+                contour, 0.01 * cv.arcLength(contour, True), True)
+
+
+            if len(approx) <= 12 and len(approx) >= 12:
+                print(approx)
+                # using drawContours() function
+                cv.drawContours(img, [contour], 0, (0, 0, 255), 5)
+                # finding center point of shape
+                M = cv.moments(contour)
+                if M['m00'] != 0.0:
+                    x = int(M['m10']/M['m00'])
+                    y = int(M['m01']/M['m00'])
+                cv.putText(img, 'H', (x, y),
+                            cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+
+        # displaying the image after drawing contours
+        cv.imshow('shapes', img)
+
         # # Find circle in helipad
         # circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, gray.shape[0] / 8,
         #                        param1=200, param2=50,
@@ -110,8 +150,6 @@ class CornerDetector():
                 print(f"{j}: {cv.norm(xy_i, xy_j)} ", end="")
                 dists[i,j] = cv.norm(xy_i, xy_j)
             print()
-
-        np.savetxt("test_corner_dists.txt", dists)
 
         # for i in range(corners.shape[0]):
         #     current_corner = i
