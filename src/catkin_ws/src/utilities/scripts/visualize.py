@@ -47,7 +47,7 @@ class Plotter():
         print("Plotting drone pose estimate covariance")
         output = np.loadtxt(f"{self.data_dir}/estimates/ekf_output.txt", skiprows=1)
 
-    
+
 
     def plot_helipad_estimate(self):
         print("Plotting helipad estimate (not implemented)")
@@ -67,7 +67,7 @@ def main():
     )
 
     args = parser.parse_args()
-    
+
     plotter = Plotter(args.data_dir)
 
     if args.gt_plots == "all":

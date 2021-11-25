@@ -219,7 +219,7 @@ class DNNPoseEstimator():
         est = geometry_msgs.msg.Twist()
         est.linear.x = x / 1000.0
         est.linear.y = y / 1000.0
-        est.linear.z = z / 1000.0
+        est.linear.z = - z / 1000.0 # get output in NED
         return est
 
 

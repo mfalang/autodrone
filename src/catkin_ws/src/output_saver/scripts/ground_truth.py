@@ -47,13 +47,13 @@ class GroundTruthDataSaver(GenericOutputSaver):
             msg.pose.orientation.w
         ]
         euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
-        
+
         if self.environment == "real":
             res = np.array([
                 msg.header.stamp.to_sec(),
                 -msg.pose.position.y, # conversion between frames
                 msg.pose.position.x, # conversion between framess
-                msg.pose.position.z,
+                -msg.pose.position.z,
                 euler[0],
                 euler[1],
                 euler[2]
@@ -61,7 +61,7 @@ class GroundTruthDataSaver(GenericOutputSaver):
         else:
             res = np.array([
                 msg.header.stamp.to_sec(),
-                msg.pose.position.x, 
+                msg.pose.position.x,
                 msg.pose.position.y,
                 msg.pose.position.z,
                 euler[0],
@@ -89,7 +89,7 @@ class DronePoseDataSaver(GroundTruthDataSaver):
             self._initialize_offsets(output_raw, "drone")
 
         output = output_raw - self.offsets
-        
+
         # self._print_output(output, "drone")
 
         self._save_output(output)
@@ -102,7 +102,7 @@ class HelipadPoseDataSaver(GroundTruthDataSaver):
         rospy.Subscriber(self.topic_name, geometry_msgs.msg.PoseStamped, self._helipad_gt_pose_cb)
 
     def _helipad_gt_pose_cb(self, msg):
-        
+
         output_raw = self._get_output_from_geometry_msg(msg)
 
         # self._print_output(output_raw, "helipad")
@@ -111,7 +111,7 @@ class HelipadPoseDataSaver(GroundTruthDataSaver):
             self._initialize_offsets(output_raw, "helipad")
 
         output = output_raw - self.offsets
-        
+
         # self._print_output(output, "helipad")
 
         self._save_output(output)

@@ -67,9 +67,9 @@ class CommandListener():
             control_mode="position",
             pitch_frame_of_reference="relative",
             pitch=camera_angle,
-            roll_frame_of_reference="none",
+            roll_frame_of_reference="relative",
             roll=0,
-            yaw_frame_of_reference="none",
+            yaw_frame_of_reference="relative",
             yaw=0
         ))
 
