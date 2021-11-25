@@ -139,6 +139,14 @@ class TelemetryPublisher():
             self._collect_ekf_input, publish_rate=500, queue_size=1
         ))
 
+        # Zero heading a startup of drone interface
+        att_euler = self.drone.get_state(
+            olympe_msgs.ardrone3.PilotingState.AttitudeChanged
+        )
+
+        self._initial_heading = att_euler["yaw"]*180/3.14159
+        rospy.loginfo(f"Initial heading: {self._initial_heading} deg")
+
         rospy.loginfo("Initialized telemetry publisher")
 
     def publish(self):
@@ -461,7 +469,10 @@ class TelemetryPublisher():
         ekf_msg.v_x = velocity_body[0]
         ekf_msg.v_y = velocity_body[1]
         ekf_msg.v_z = velocity_body[2]
-        ekf_msg.psi = -att_euler["yaw"]*180/3.14159 # positive rotation counter clockwise
+
+        # positive rotation counter clockwise. Smallest signed angle
+        ekf_msg.psi = ((-att_euler["yaw"]*180/3.14159 + self._initial_heading) \
+                    + 180) % 360 - 180
 
         return ekf_msg
 
