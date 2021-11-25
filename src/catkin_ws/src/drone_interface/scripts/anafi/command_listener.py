@@ -67,16 +67,20 @@ class CommandListener():
             control_mode="position",
             pitch_frame_of_reference="relative",
             pitch=camera_angle,
-            roll_frame_of_reference="relative",
+            roll_frame_of_reference="none",
             roll=0,
-            yaw_frame_of_reference="relative",
+            yaw_frame_of_reference="none",
             yaw=0
         ))
 
         assert self.drone(olympe_msgs.gimbal.attitude(
             gimbal_id=0,
+            roll_relative=0,
+            roll_frame_of_reference="relative",
             pitch_relative=camera_angle,
-            pitch_frame_of_reference="relative"
+            pitch_frame_of_reference="relative",
+            yaw_relative=0,
+            yaw_frame_of_reference="relative"
         )).wait(5).success(), "Failed to pitch camera"
 
         rospy.loginfo(f"Initialized gimbal at {camera_angle} degrees")
