@@ -1,7 +1,7 @@
 drone:
   mass_g: 315
   camera:
-    focal_length_mm: 26
+    focal_length_mm: 918
     img_width: 1280
     img_height: 720
     offset_x_mm: 50
