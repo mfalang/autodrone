@@ -18,6 +18,7 @@ class GroundTruthDataSaver(GenericOutputSaver):
     def _initialize_offsets(self, output_raw, object_type):
         self.offsets = output_raw
         self.offsets[0] = 0 # No offset in timestamp
+        self.offsets[4:] = 0
         print(f"Offsets ({object_type}): " \
                 f"x: {self.offsets[1]:.3f}m y: {self.offsets[2]:.3f}m " \
                 f"z: {self.offsets[3]:.3f}m roll: {self.offsets[4]:.3f}deg " \
@@ -46,13 +47,14 @@ class GroundTruthDataSaver(GenericOutputSaver):
             msg.pose.orientation.z,
             msg.pose.orientation.w
         ]
+
         euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
 
         if self.environment == "real":
             res = np.array([
                 msg.header.stamp.to_sec(),
                 -msg.pose.position.y, # conversion between frames
-                msg.pose.position.x, # conversion between framess
+                msg.pose.position.x, # conversion between frames
                 -msg.pose.position.z,
                 euler[0],
                 euler[1],
@@ -81,15 +83,34 @@ class DronePoseDataSaver(GroundTruthDataSaver):
 
     def _drone_gt_pose_cb(self, msg):
 
-        output_raw = self._get_output_from_geometry_msg(msg)
+        output_raw_ned = self._get_output_from_geometry_msg(msg)
 
+        # Convert postion estimate to body frame
+        # R_ned_to_body = np.array([
+        #     [np.cos(output_raw_ned[6]), np.sin(output_raw_ned[6]), 0],
+        #     [-np.sin(output_raw_ned[6]), np.cos(output_raw_ned[6]), 0],
+        #     [0, 0, 1]
+        # ])
+        # pos_ned = np.array([output_raw_ned[1], output_raw_ned[2], output_raw_ned[3]])
+
+        # x_body, y_body, z_body = R_ned_to_body @ pos_ned
+        # output_raw = np.array([
+        #     output_raw_ned[0],
+        #     x_body,
+        #     y_body,
+        #     z_body,
+        #     output_raw_ned[4],
+        #     output_raw_ned[5],
+        #     output_raw_ned[6],
+        # ])
+        output_raw = output_raw_ned
         # self._print_output(output_raw, "drone")
 
         if self.initialized_offsets == False:
             self._initialize_offsets(output_raw, "drone")
 
         output = output_raw - self.offsets
-
+        print(output[6])
         # self._print_output(output, "drone")
 
         self._save_output(output)

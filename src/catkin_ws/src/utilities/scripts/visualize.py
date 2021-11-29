@@ -24,6 +24,8 @@ class Plotter():
         pose = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose.txt", skiprows=1)
         self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone ground truth")
         plt.legend()
+        plt.figure()
+        plt.plot(np.linspace(0, 10, pose[:,6].shape[0]), pose[:,6])
 
     def plot_helipad_ground_truth(self):
         print("Plotting helipad ground truth")
@@ -46,8 +48,6 @@ class Plotter():
     def plot_drone_pose_cov(self):
         print("Plotting drone pose estimate covariance")
         output = np.loadtxt(f"{self.data_dir}/estimates/ekf_output.txt", skiprows=1)
-
-
 
     def plot_helipad_estimate(self):
         print("Plotting helipad estimate (not implemented)")
