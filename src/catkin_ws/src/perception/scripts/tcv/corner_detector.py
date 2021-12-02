@@ -155,19 +155,79 @@ class CornerDetector():
         # Index of the 4 largest distances
         inds = np.unravel_index(np.argsort(-dists, axis=None)[:4], dists.shape)
 
-        # TODO: Remove assert and return none instead
-        assert np.array_equal(np.sort(inds[0]), np.sort(inds[1])), \
-            "Distances between corners nor internally consistent"
+        # TODO: Check if this actually does anything
+        if not np.array_equal(np.sort(inds[0]), np.sort(inds[1])):
+            print("Arrays not consistent")
 
         arrow_idx = np.bincount(inds[0]).argmax()
 
         H_corner_idns = inds[0][np.not_equal(inds[0], arrow_idx)]
 
         arrow_coords = corners[arrow_idx]
+        corner_0_idx = H_corner_idns[0]
+        corner_0_coords = corners[corner_0_idx]
+        corner_1_idx = H_corner_idns[1]
+        corner_1_coords = corners[corner_1_idx]
+
+        # Check that distance between arrow and both corners is the same
+        if not np.allclose(dists[arrow_idx, corner_0_idx], dists[arrow_idx, corner_1_idx], atol=1):
+            return None
 
         # TODO: Determine which is which
-        h_left_coords = corners[H_corner_idns[0]]
-        h_right_coords = corners[H_corner_idns[1]]
+
+        # Case when arrow is above both corners
+        if arrow_coords[1] < corner_0_coords[1] and arrow_coords[1] < corner_1_coords[1]:
+            # Left will be whichever has the smallest x value
+            if corner_0_coords[0] < corner_1_coords[0]:
+                h_left_coords = corner_0_coords
+                h_right_coords = corner_1_coords
+            else:
+                h_right_coords = corner_0_coords
+                h_left_coords = corner_1_coords
+
+        # Case when arrow is below both corners
+        elif arrow_coords[1] > corner_0_coords[1] and arrow_coords[1] > corner_1_coords[1]:
+            # Left will be whichever has the largest x value
+            if corner_0_coords[0] > corner_1_coords[0]:
+                h_left_coords = corner_0_coords
+                h_right_coords = corner_1_coords
+            else:
+                h_right_coords = corner_0_coords
+                h_left_coords = corner_1_coords
+
+        # Case when arrow is to the right of both corners
+        elif arrow_coords[0] > corner_0_coords[0] and arrow_coords[0] > corner_1_coords[0]:
+            # Left will be whichever has the smallest y value
+            if corner_0_coords[1] < corner_1_coords[1]:
+                h_left_coords = corner_0_coords
+                h_right_coords = corner_1_coords
+            else:
+                h_right_coords = corner_0_coords
+                h_left_coords = corner_1_coords
+
+        # Case when arrow is to the left of both corners
+        elif arrow_coords[0] < corner_0_coords[0] and arrow_coords[0] < corner_1_coords[0]:
+            # Left will be whichever has the largest y value
+            if corner_0_coords[1] > corner_1_coords[1]:
+                h_left_coords = corner_0_coords
+                h_right_coords = corner_1_coords
+            else:
+                h_right_coords = corner_0_coords
+                h_left_coords = corner_1_coords
+
+        else:
+            print("Unable to determine corners")
+            return None
+
+        # h_left_idx = H_corner_idns[0]
+        # h_right_idx = H_corner_idns[1]
+
+        # h_left_coords = corners[h_left_idx]
+        # h_right_coords = corners[h_right_idx]
+
+        print(arrow_coords, h_left_coords, h_right_coords)
+
+
 
         return arrow_coords, h_left_coords, h_right_coords
 
