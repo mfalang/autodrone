@@ -65,11 +65,13 @@ class TcvPoseEstimator():
                 if corners is None:
                     continue
 
-                # self.corner_detector.find_H(img, corners)
+                arrow, h_left, h_right = self.corner_detector.find_arrow_and_H(corners)
+
+                self.corner_detector.show_known_points(img, arrow, h_left, h_right)
 
                 self.new_image_available = False
 
-                self.corner_detector.show_corners_found(img, corners, color="red")
+                # self.corner_detector.show_corners_found(img, corners, color="red")
                 # self.corner_detector.show_corners_found(img, corners_fast, color="blue")
 
                 cv.waitKey(1)
