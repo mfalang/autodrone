@@ -34,89 +34,6 @@ class CornerDetector():
         # Make image grayscale
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
-        # blur = cv.medianBlur(img, 5)
-
-        # blur = cv.GaussianBlur(blur,(5,5),0)
-        # blur = cv.bilateralFilter(blur,9,75,75)
-
-        # hsv = cv.cvtColor(blur, cv.COLOR_BGR2HSV)
-
-        # # low_green = np.array([HUE_LOW_GREEN, SAT_LOW_GREEN, VAL_LOW_GREEN])
-        # # high_green = np.array([HUE_HIGH_GREEN, SAT_HIGH_GREEN, VAL_HIGH_GREEN])
-
-        # hue_margin = 60
-        # sat_margin = 60
-        # val_margin = 60
-
-        # low_green = np.array([85-hue_margin,255-sat_margin,127-val_margin])
-        # high_green = np.array([85+hue_margin,255+sat_margin,127+val_margin])
-
-        # mask = cv.inRange(hsv, low_green, high_green)
-
-        # img_segmented = cv.bitwise_and(gray, gray, mask=mask)
-        # img_segmented = cv.medianBlur(img_segmented, 5)
-        # img_segmented = cv.GaussianBlur(img_segmented,(5,5),0)
-        # img_segmented = cv.bilateralFilter(img_segmented,9,75,75)
-
-        # # cv.imshow("mask", mask)
-        # cv.imshow("segmented", img_segmented)
-
-        # # setting threshold of gray image
-        # _, threshold = cv.threshold(mask, 127, 255, cv.THRESH_BINARY)
-
-        # cv.imshow("mask", cv.bitwise_not(mask))
-        # cv.imshow("threshold", threshold)
-
-        # contours, _ = cv.findContours(
-        #     threshold, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-
-        # i = 0
-
-        # list for storing names of shapes
-        # for contour in contours:
-
-        #     # here we are ignoring first counter because
-        #     # findcontour function detects whole image as shape
-        #     if i == 0:
-        #         i = 1
-        #         continue
-
-        #     # cv.approxPloyDP() function to approximate the shape
-        #     approx = cv.approxPolyDP(
-        #         contour, 0.01 * cv.arcLength(contour, True), True)
-
-
-        #     if len(approx) <= 12 and len(approx) >= 12:
-        #         print(approx)
-        #         # using drawContours() function
-        #         cv.drawContours(img, [contour], 0, (0, 0, 255), 5)
-        #         # finding center point of shape
-        #         M = cv.moments(contour)
-        #         if M['m00'] != 0.0:
-        #             x = int(M['m10']/M['m00'])
-        #             y = int(M['m01']/M['m00'])
-        #         cv.putText(img, 'H', (x, y),
-        #                     cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-
-        # displaying the image after drawing contours
-        # cv.imshow('shapes', img)
-
-        # # Find circle in helipad
-        # circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, gray.shape[0] / 8,
-        #                        param1=200, param2=50,
-        #                        minRadius=0, maxRadius=0)
-
-        # if circles is not None:
-        #     circles = np.uint16(np.around(circles))
-        #     for i in circles[0, :]:
-        #         center = (i[0], i[1])
-        #         # circle center
-        #         cv.circle(img, center, 1, (0, 100, 100), 3)
-        #         # circle outline
-        #         radius = i[2]
-        #         cv.circle(img, center, radius, (255, 0, 255), 3)
-
-        # cv.imshow("Circles", img)
         output = gray
 
         return output
@@ -143,24 +60,23 @@ class CornerDetector():
             print(f"Not enough points to determine H uniquely ({corners.shape[0]}/13)")
             return None
 
+        # Compute distances between all corners
         dists = np.zeros((13,13))
-
         for i, xy_i in enumerate(corners):
-            # print(f"{i} distances: ", end="")
             for j, xy_j in enumerate(corners):
-                # print(f"{j}: {cv.norm(xy_i, xy_j)} ", end="")
                 dists[i,j] = cv.norm(xy_i, xy_j)
-            # print()
 
-        # Index of the 4 largest distances
+        # Find the index of the 4 largest distances (4 since both distances will be
+        # counted twice in the dists matrix (i.e. distance from point x to y and y to x
+        # will be the same and both the largest))
         inds = np.unravel_index(np.argsort(-dists, axis=None)[:4], dists.shape)
 
-        # TODO: Check if this actually does anything
-        if not np.array_equal(np.sort(inds[0]), np.sort(inds[1])):
-            print("Arrays not consistent")
-
+        # The arrow index appears twice in each set of indecies while the corners
+        # only appear once, so it can be found by finding the index most frequent in
+        # any of the inds arrays
         arrow_idx = np.bincount(inds[0]).argmax()
 
+        # The indecies not associated to the arrow (in no particular order)
         H_corner_idns = inds[0][np.not_equal(inds[0], arrow_idx)]
 
         arrow_coords = corners[arrow_idx]
@@ -169,11 +85,16 @@ class CornerDetector():
         corner_1_idx = H_corner_idns[1]
         corner_1_coords = corners[corner_1_idx]
 
-        # Check that distance between arrow and both corners is the same
+        # Check that distance between arrow and both corners is the same. This
+        # rejects most outliers
         if not np.allclose(dists[arrow_idx, corner_0_idx], dists[arrow_idx, corner_1_idx], atol=1):
             return None
 
-        # TODO: Determine which is which
+        # TODO: Add an outlier test that rejects the points if the ratio between
+        # the distance between the corners and the distance from the corner to
+        # arrow is not as it should be
+
+        # Determine which corner is the left corner of the H and which is the right
 
         # Case when arrow is above both corners
         if arrow_coords[1] < corner_0_coords[1] and arrow_coords[1] < corner_1_coords[1]:
@@ -219,24 +140,7 @@ class CornerDetector():
             print("Unable to determine corners")
             return None
 
-        # h_left_idx = H_corner_idns[0]
-        # h_right_idx = H_corner_idns[1]
-
-        # h_left_coords = corners[h_left_idx]
-        # h_right_coords = corners[h_right_idx]
-
-        print(arrow_coords, h_left_coords, h_right_coords)
-
-
-
         return arrow_coords, h_left_coords, h_right_coords
-
-
-
-        # for i in range(corners.shape[0]):
-        #     current_corner = i
-        #     for j in range(corner.shape[0]):
-        #         dist = cv.norm(current_corner, )
 
     def show_known_points(self, img, arrow_coords, h_left_coords, h_right_coords):
         image = np.copy(img)
@@ -245,41 +149,19 @@ class CornerDetector():
         text_thickness = 1
         text_offset = 10
 
-        # Show arrow
-        center = (int(arrow_coords[0]), int(arrow_coords[1]))
-        text = f"Arrow"
-        text_size, _ = cv.getTextSize(text, text_face, text_scale, text_thickness)
-        text_origin = (
-            int(center[0] - text_size[0] / 2) + text_offset,
-            int(center[1] + text_size[1] / 2) - text_offset
-        )
+        points = [arrow_coords, h_left_coords, h_right_coords]
+        texts = ["Arrow", "Left corner", "Right corner"]
 
-        cv.circle(image, center, 4, (0,0,255), cv.FILLED)
-        cv.putText(image, text, text_origin, text_face, text_scale, (127,255,127), text_thickness, cv.LINE_AA)
+        for (point, text) in zip(points, texts):
+            center = (int(point[0]), int(point[1]))
+            text_size, _ = cv.getTextSize(text, text_face, text_scale, text_thickness)
+            text_origin = (
+                int(center[0] - text_size[0] / 2) + text_offset,
+                int(center[1] + text_size[1] / 2) - text_offset
+            )
 
-        # Show bottom left corner of H
-        center = (int(h_left_coords[0]), int(h_left_coords[1]))
-        text = f"Left corner"
-        text_size, _ = cv.getTextSize(text, text_face, text_scale, text_thickness)
-        text_origin = (
-            int(center[0] - text_size[0] / 2) + text_offset,
-            int(center[1] + text_size[1] / 2) - text_offset
-        )
-
-        cv.circle(image, center, 4, (0,0,255), cv.FILLED)
-        cv.putText(image, text, text_origin, text_face, text_scale, (127,255,127), text_thickness, cv.LINE_AA)
-
-        # Show bottom right corner of H
-        center = (int(h_right_coords[0]), int(h_right_coords[1]))
-        text = f"Right corner"
-        text_size, _ = cv.getTextSize(text, text_face, text_scale, text_thickness)
-        text_origin = (
-            int(center[0] - text_size[0] / 2) + text_offset,
-            int(center[1] + text_size[1] / 2) - text_offset
-        )
-
-        cv.circle(image, center, 4, (0,0,255), cv.FILLED)
-        cv.putText(image, text, text_origin, text_face, text_scale, (127,255,127), text_thickness, cv.LINE_AA)
+            cv.circle(image, center, 4, (0,0,255), cv.FILLED)
+            cv.putText(image, text, text_origin, text_face, text_scale, (127,255,127), text_thickness, cv.LINE_AA)
 
         cv.imshow("Detected features", image)
 

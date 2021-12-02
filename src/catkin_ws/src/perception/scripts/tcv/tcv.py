@@ -28,7 +28,6 @@ class TcvPoseEstimator():
             rospy.logerr(f"Failed to load config: {e}")
             sys.exit()
 
-
         rospy.init_node("tcv_pose_estimator", anonymous=False)
 
         rospy.Subscriber("/drone/out/image_rect_color", sensor_msgs.msg.Image,
@@ -78,9 +77,6 @@ class TcvPoseEstimator():
                 # self.corner_detector.show_corners_found(img, corners_fast, color="blue")
 
                 cv.waitKey(1)
-                # cv.waitKey()
-                # input("Press enter to quit")
-                # sys.exit()
 
 def main():
     estimator = TcvPoseEstimator(config_file="tcv_config.yaml")
