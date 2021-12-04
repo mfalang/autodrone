@@ -13,3 +13,7 @@ measurements:
     output:
       topic_name: /estimate/drone_pose/dnnCV
     sigmas: [0.1, 0.1, 0.1, 0.1] # std. dev. in x,y,z,psi
+  tcv_cv:
+    output:
+      topic_name: /estimate/drone_pose/tcv
+    sigmas: [0.1, 0.1, 0.1, 0.1] # std. dev. in x,y,z,psi

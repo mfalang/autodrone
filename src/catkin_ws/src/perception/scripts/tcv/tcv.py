@@ -11,6 +11,8 @@ import numpy as np
 import corner_detector
 import pose_recovery
 
+import perception.msg
+
 class TcvPoseEstimator():
 
     def __init__(self, config_file=None):
@@ -55,6 +57,10 @@ class TcvPoseEstimator():
         self.corner_detector = corner_detector.CornerDetector(self.config["shi_tomasi"])
         self.pose_recoverer = pose_recovery.PoseRecovery(self.K)
 
+        self.pose_estimate_publisher = rospy.Publisher(
+            "/estimate/drone_pose/tcv", perception.msg.EulerPose, queue_size=10
+        )
+
 
     def _new_image_cb(self, msg):
         self.latest_image = np.frombuffer(msg.data,
@@ -64,6 +70,9 @@ class TcvPoseEstimator():
 
 
     def start(self):
+
+        rospy.loginfo("Starting TCV pose estimator")
+
         while not rospy.is_shutdown():
 
             if self.new_image_available:
@@ -82,7 +91,7 @@ class TcvPoseEstimator():
                 if features_image is None:
                     continue
 
-                self.corner_detector.show_known_points(img, features_image)
+                # self.corner_detector.show_known_points(img, features_image)
 
                 H = self.pose_recoverer.find_homography(features_image, self.feature_dists_metric)
                 R, t = self.pose_recoverer.find_R_t(features_image, self.feature_dists_metric, H)
@@ -90,7 +99,7 @@ class TcvPoseEstimator():
 
                 pose = self.pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
 
-                print(f"Pose: {pose}")
+                self._publish_pose(pose)
 
                 self.new_image_available = False
 
@@ -98,6 +107,19 @@ class TcvPoseEstimator():
                 # self.corner_detector.show_corners_found(img, corners_fast, color="blue")
 
                 cv.waitKey(1)
+
+    def _publish_pose(self, pose):
+        msg = perception.msg.EulerPose()
+        msg.header.stamp = rospy.Time.now()
+
+        msg.x = pose[0]
+        msg.y = pose[1]
+        msg.z = pose[2]
+        msg.phi = pose[3]
+        msg.theta = pose[4]
+        msg.psi = pose[5]
+
+        self.pose_estimate_publisher.publish(msg)
 
 
 def main():
