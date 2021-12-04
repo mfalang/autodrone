@@ -107,6 +107,23 @@ class PoseRecovery():
 
         homography.draw_frame(self.K, T_LM, scale=0.1)
 
+        plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.plot(XY[0,:], XY[1,:], np.zeros(XY.shape[1]), '.') # Draw markers in 3D
+        pO = np.linalg.inv(T_LM)@np.array([0,0,0,1]) # Compute camera origin
+        pX = np.linalg.inv(T_LM)@np.array([0.1,0,0,1]) # Compute camera X-axis
+        pY = np.linalg.inv(T_LM)@np.array([0,0.1,0,1]) # Compute camera Y-axis
+        pZ = np.linalg.inv(T_LM)@np.array([0,0,0.1,1]) # Compute camera Z-axis
+        plt.plot([pO[0], pZ[0]], [pO[1], pZ[1]], [pO[2], pZ[2]], color='blue') # Draw camera Z-axis
+        plt.plot([pO[0], pY[0]], [pO[1], pY[1]], [pO[2], pY[2]], color='green') # Draw camera Y-axis
+        plt.plot([pO[0], pX[0]], [pO[1], pX[1]], [pO[2], pX[2]], color='red') # Draw camera X-axis
+        ax.set_xlim([-1, 1])
+        ax.set_ylim([-1, 1])
+        ax.set_zlim([0, 2])
+        ax.set_xlabel('X')
+        ax.set_zlabel('Y')
+        ax.set_ylabel('Z')
+
         plt.legend()
         plt.show()
 
@@ -126,8 +143,8 @@ def main():
     features_metric = np.loadtxt("../../data/helipad_dists_metric.txt")
 
     K = np.array([
-            [918, 1280 / 2, 0],
-            [0, 918, 720 / 2],
+            [919.32, 646.24, 0],
+            [0, 916.93, 352.28],
             [0, 0, 1]
     ])
     pose_recoverer = PoseRecovery(K)
@@ -149,8 +166,6 @@ def main():
     )
 
     pose = pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
-
-    print(f"Pose: {pose}")
 
 if __name__ == "__main__":
     main()
