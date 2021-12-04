@@ -85,14 +85,18 @@ class CornerDetector():
         corner_1_idx = H_corner_idns[1]
         corner_1_coords = corners[corner_1_idx]
 
-        # Check that distance between arrow and both corners is the same. This
-        # rejects most outliers
+        # Remove outliers
+
+        # Check that distance between arrow and both corners is the same
         if not np.allclose(dists[arrow_idx, corner_0_idx], dists[arrow_idx, corner_1_idx], atol=1):
             return None
 
-        # TODO: Add an outlier test that rejects the points if the ratio between
-        # the distance between the corners and the distance from the corner to
-        # arrow is not as it should be
+        # Check that ratio between distances in the image and in real life are the same
+        dist_ratio_px = dists[arrow_idx, corner_0_idx] / dists[corner_0_idx, corner_1_idx]
+        dist_ratio_m = cv.norm(helipad_dists_metric[:3,0], helipad_dists_metric[:3,4]) \
+                     / cv.norm(helipad_dists_metric[:3,0], helipad_dists_metric[:3,1])
+        if not np.allclose(dist_ratio_px, dist_ratio_m, atol=1):
+            return None
 
         # Determine which corner is the left corner of the H and which is the right
 
