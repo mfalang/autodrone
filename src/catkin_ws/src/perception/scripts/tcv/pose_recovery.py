@@ -2,8 +2,8 @@
 
 class PoseRecovery():
 
-    def __init__(self):
-        pass
+    def __init__(self, K):
+        self._K = K
 
     def recover_pose(self):
         pass

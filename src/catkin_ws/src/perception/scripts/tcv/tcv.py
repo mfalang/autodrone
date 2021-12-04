@@ -9,6 +9,7 @@ import cv2 as cv
 import numpy as np
 
 import corner_detector
+import pose_recovery
 
 class TcvPoseEstimator():
 
@@ -36,11 +37,18 @@ class TcvPoseEstimator():
 
         self.img_height = rospy.get_param("/drone/camera/img_height")
         self.img_width = rospy.get_param("/drone/camera/img_width")
+        self.focal_length = rospy.get_param("/drone/focal_length")
+
+        self.K = np.array([
+            [self.focal_length, self.img_width / 2, 0],
+            [0, self.focal_length, self.img_height / 2],
+            0, 0, 1])
 
         self.latest_image = np.zeros((self.img_height, self.img_width, 3))
         self.new_image_available = False
 
         self.corner_detector = corner_detector.CornerDetector(self.config["shi_tomasi"])
+        self.pose_recoverer = pose_recovery.PoseRecovery(self.K)
 
 
     def _new_image_cb(self, msg):
