@@ -42,7 +42,8 @@ class TcvPoseEstimator():
         self.K = np.array([
             [self.focal_length, self.img_width / 2, 0],
             [0, self.focal_length, self.img_height / 2],
-            0, 0, 1])
+            [0, 0, 1]
+        ])
 
         self.feature_dists_metric = np.loadtxt(
             f"{script_dir}/../../{self.config['feature_dists_metric']['path']}"
@@ -76,12 +77,12 @@ class TcvPoseEstimator():
                 if corners is None:
                     continue
 
-                features = self.corner_detector.find_arrow_and_H(corners)
+                features = self.corner_detector.find_arrow_and_H(corners, self.feature_dists_metric)
 
                 if features is None:
                     continue
 
-                self.corner_detector.show_known_points(img, features[0], features[1], features[2])
+                self.corner_detector.show_known_points(img, features)
 
                 self.new_image_available = False
 

@@ -100,59 +100,101 @@ class CornerDetector():
         if arrow_coords[1] < corner_0_coords[1] and arrow_coords[1] < corner_1_coords[1]:
             # Left will be whichever has the smallest x value
             if corner_0_coords[0] < corner_1_coords[0]:
-                h_left_coords = corner_0_coords
-                h_right_coords = corner_1_coords
+                h_bottom_left_coords = corner_0_coords
+                h_bottom_right_coords = corner_1_coords
             else:
-                h_right_coords = corner_0_coords
-                h_left_coords = corner_1_coords
+                h_bottom_right_coords = corner_0_coords
+                h_bottom_left_coords = corner_1_coords
 
         # Case when arrow is below both corners
         elif arrow_coords[1] > corner_0_coords[1] and arrow_coords[1] > corner_1_coords[1]:
             # Left will be whichever has the largest x value
             if corner_0_coords[0] > corner_1_coords[0]:
-                h_left_coords = corner_0_coords
-                h_right_coords = corner_1_coords
+                h_bottom_left_coords = corner_0_coords
+                h_bottom_right_coords = corner_1_coords
             else:
-                h_right_coords = corner_0_coords
-                h_left_coords = corner_1_coords
+                h_bottom_right_coords = corner_0_coords
+                h_bottom_left_coords = corner_1_coords
 
         # Case when arrow is to the right of both corners
         elif arrow_coords[0] > corner_0_coords[0] and arrow_coords[0] > corner_1_coords[0]:
             # Left will be whichever has the smallest y value
             if corner_0_coords[1] < corner_1_coords[1]:
-                h_left_coords = corner_0_coords
-                h_right_coords = corner_1_coords
+                h_bottom_left_coords = corner_0_coords
+                h_bottom_right_coords = corner_1_coords
             else:
-                h_right_coords = corner_0_coords
-                h_left_coords = corner_1_coords
+                h_bottom_right_coords = corner_0_coords
+                h_bottom_left_coords = corner_1_coords
 
         # Case when arrow is to the left of both corners
         elif arrow_coords[0] < corner_0_coords[0] and arrow_coords[0] < corner_1_coords[0]:
             # Left will be whichever has the largest y value
             if corner_0_coords[1] > corner_1_coords[1]:
-                h_left_coords = corner_0_coords
-                h_right_coords = corner_1_coords
+                h_bottom_left_coords = corner_0_coords
+                h_bottom_right_coords = corner_1_coords
             else:
-                h_right_coords = corner_0_coords
-                h_left_coords = corner_1_coords
+                h_bottom_right_coords = corner_0_coords
+                h_bottom_left_coords = corner_1_coords
 
         else:
             print("Unable to determine corners")
             return None
 
-        return arrow_coords, h_left_coords, h_right_coords
+        if np.all(h_bottom_left_coords == corner_0_coords):
+            h_bottom_left_idx = corner_0_idx
+            h_bottom_right_idx = corner_1_idx
+        else:
+            h_bottom_right_idx = corner_0_idx
+            h_bottom_left_idx = corner_1_idx
 
-    def show_known_points(self, img, arrow_coords, h_left_coords, h_right_coords):
+        # Find ratio between pixels and meters using the distance between the
+        # two lower corners
+        pixels_per_meter = dists[h_bottom_left_idx, h_bottom_right_idx] \
+                         / cv.norm(helipad_dists_metric[:3,0], helipad_dists_metric[:3,1])
+
+        # Now that we know the two bottom corners, we can find the two top corners
+
+        # Find pixel distance between lower left and top right, and then find
+        # this distance in the distances matrix to find the index of the top
+        # right corner
+        dist_lower_left_top_right_px = pixels_per_meter * cv.norm(
+            helipad_dists_metric[:3,0],
+            helipad_dists_metric[:3,2]
+        )
+        h_top_right_idx = np.argmin(
+            np.abs(dists[h_bottom_left_idx] - dist_lower_left_top_right_px)
+        )
+        h_top_right_coords = corners[h_top_right_idx]
+
+        # Same procedure for top left
+        dist_lower_left_top_left_px = pixels_per_meter * cv.norm(
+            helipad_dists_metric[:3,0],
+            helipad_dists_metric[:3,3]
+        )
+        h_top_left_idx = np.argmin(
+            np.abs(dists[h_bottom_left_idx] - dist_lower_left_top_left_px)
+        )
+        h_top_left_coords = corners[h_top_left_idx]
+
+        ret = np.hstack((
+            h_bottom_left_coords.reshape(-1,1),
+            h_bottom_right_coords.reshape(-1,1),
+            h_top_right_coords.reshape(-1,1),
+            h_top_left_coords.reshape(-1,1),
+            arrow_coords.reshape(-1,1),
+        ))
+
+        return ret
+
+    def show_known_points(self, img, features):
         image = np.copy(img)
         text_face = cv.FONT_HERSHEY_DUPLEX
         text_scale = 0.5
         text_thickness = 1
         text_offset = 10
+        texts = ["Lower left", "Lower right", "Top right", "Top left", "Arrow"]
 
-        points = [arrow_coords, h_left_coords, h_right_coords]
-        texts = ["Arrow", "Left corner", "Right corner"]
-
-        for (point, text) in zip(points, texts):
+        for (point, text) in zip(features.T, texts):
             center = (int(point[0]), int(point[1]))
             text_size, _ = cv.getTextSize(text, text_face, text_scale, text_thickness)
             text_origin = (
