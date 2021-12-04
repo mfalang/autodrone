@@ -117,9 +117,9 @@ class PoseRecovery():
         plt.plot([pO[0], pZ[0]], [pO[1], pZ[1]], [pO[2], pZ[2]], color='blue') # Draw camera Z-axis
         plt.plot([pO[0], pY[0]], [pO[1], pY[1]], [pO[2], pY[2]], color='green') # Draw camera Y-axis
         plt.plot([pO[0], pX[0]], [pO[1], pX[1]], [pO[2], pX[2]], color='red') # Draw camera X-axis
-        ax.set_xlim([-1, 1])
-        ax.set_ylim([-1, 1])
-        ax.set_zlim([0, 2])
+        # ax.set_xlim([-1, 1])
+        # ax.set_ylim([-1, 1])
+        # ax.set_zlim([0, 2])
         ax.set_xlabel('X')
         ax.set_zlabel('Y')
         ax.set_ylabel('Z')
@@ -140,7 +140,7 @@ def main():
         "k" : 0.04
     }
     detector = corner_detector.CornerDetector(detector_config)
-    features_metric = np.loadtxt("../../data/helipad_dists_metric.txt")
+    features_metric = np.loadtxt("../../data/helipad_dists_origin_center_enu_metric.txt")
 
     K = np.array([
             [919.32, 646.24, 0],
