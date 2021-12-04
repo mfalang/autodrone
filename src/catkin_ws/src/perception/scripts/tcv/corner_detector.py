@@ -54,7 +54,7 @@ class CornerDetector():
 
         return corners.reshape(corners.shape[0], 2)
 
-    def find_arrow_and_H(self, corners):
+    def find_arrow_and_H(self, corners, helipad_dists_metric):
 
         if corners.shape[0] != 13:
             print(f"Not enough points to determine H uniquely ({corners.shape[0]}/13)")

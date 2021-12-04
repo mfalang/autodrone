@@ -5,3 +5,6 @@ shi_tomasi:
   block_size: 3
   gradient_size: 3
   k: 0.04
+
+feature_dists_metric:
+  path: "data/helipad_dists_metric.txt"

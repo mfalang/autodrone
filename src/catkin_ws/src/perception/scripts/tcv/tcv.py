@@ -37,12 +37,16 @@ class TcvPoseEstimator():
 
         self.img_height = rospy.get_param("/drone/camera/img_height")
         self.img_width = rospy.get_param("/drone/camera/img_width")
-        self.focal_length = rospy.get_param("/drone/focal_length")
+        self.focal_length = rospy.get_param("/drone/camera/focal_length")
 
         self.K = np.array([
             [self.focal_length, self.img_width / 2, 0],
             [0, self.focal_length, self.img_height / 2],
             0, 0, 1])
+
+        self.feature_dists_metric = np.loadtxt(
+            f"{script_dir}/../../{self.config['feature_dists_metric']['path']}"
+        )
 
         self.latest_image = np.zeros((self.img_height, self.img_width, 3))
         self.new_image_available = False
