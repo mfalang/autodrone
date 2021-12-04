@@ -66,6 +66,12 @@ class PoseRecovery():
 
     def evaluate_reprojection(self, image, features_image, features_metric, H, R, t, R_LM, t_LM):
 
+        T_LM = homography.create_T_from_Rt(R_LM, t_LM)
+
+        angles = homography.rotation_matrix2euler_angles(R_LM)*180/np.pi
+
+        print(f"Pos: {t_LM} orientation: {angles}")
+
         # uv is image pixel location (origin = upper left)
         uv = features_image.copy()
 
@@ -98,6 +104,9 @@ class PoseRecovery():
                     edgecolors='black', label="Reprojected using R and t")
         plt.scatter(*uv_Rt_LM, s=30, marker='o', c='red',
                     edgecolors='black', label="Reprojected using LM")
+
+        homography.draw_frame(self.K, T_LM, scale=0.1)
+
         plt.legend()
         plt.show()
 

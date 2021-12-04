@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 
 def homogenize(v):
@@ -331,3 +332,29 @@ def rotation_matrix2euler_angles(R) :
         z = 0
 
     return np.array([x, y, z])
+
+def project(K, X):
+    """
+    Computes the pinhole projection of a (3 or 4)xN array X using
+    the camera intrinsic matrix K. Returns the pixel coordinates
+    as an array of size 2xN.
+    """
+    uvw = K@X[:3, :]
+    uvw /= uvw[2, :]
+    return uvw[:2, :]
+
+def draw_frame(K, T, scale=1):
+    """
+    Visualize the coordinate frame axes of the 4x4 object-to-camera
+    matrix T using the 3x3 intrinsic matrix K.
+    Control the length of the axes by specifying the scale argument.
+    """
+    X = T @ np.array([
+        [0, scale, 0, 0],
+        [0, 0, scale, 0],
+        [0, 0, 0, scale],
+        [1, 1, 1, 1]])
+    u, v = project(K, X)
+    plt.plot([u[0], u[1]], [v[0], v[1]], color='red')  # X-axis
+    plt.plot([u[0], u[2]], [v[0], v[2]], color='green')  # Y-axis
+    plt.plot([u[0], u[3]], [v[0], v[3]], color='blue')  # Z-axis
