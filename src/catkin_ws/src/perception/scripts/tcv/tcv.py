@@ -77,12 +77,14 @@ class TcvPoseEstimator():
                 if corners is None:
                     continue
 
-                features = self.corner_detector.find_arrow_and_H(corners, self.feature_dists_metric)
+                features_image = self.corner_detector.find_arrow_and_H(corners, self.feature_dists_metric)
 
-                if features is None:
+                if features_image is None:
                     continue
 
-                self.corner_detector.show_known_points(img, features)
+                self.corner_detector.show_known_points(img, features_image)
+
+                self.pose_recoverer.recover_pose(features_image, self.feature_dists_metric)
 
                 self.new_image_available = False
 
