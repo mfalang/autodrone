@@ -84,7 +84,13 @@ class TcvPoseEstimator():
 
                 self.corner_detector.show_known_points(img, features_image)
 
-                self.pose_recoverer.recover_pose(features_image, self.feature_dists_metric)
+                H = self.pose_recoverer.find_homography(features_image, self.feature_dists_metric)
+                R, t = self.pose_recoverer.find_R_t(features_image, self.feature_dists_metric, H)
+                R_LM, t_LM = self.pose_recoverer.optimize_R_t(features_image, self.feature_dists_metric, R, t)
+
+                pose = self.pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
+
+                print(f"Pose: {pose}")
 
                 self.new_image_available = False
 
@@ -92,6 +98,7 @@ class TcvPoseEstimator():
                 # self.corner_detector.show_corners_found(img, corners_fast, color="blue")
 
                 cv.waitKey(1)
+
 
 def main():
     estimator = TcvPoseEstimator(config_file="tcv_config.yaml")

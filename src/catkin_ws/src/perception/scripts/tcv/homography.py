@@ -114,6 +114,16 @@ def choose_decomposition(T1, T2, XYZ1):
 
     return T
 
+def reproject_using_H(K, H, XY1):
+    """
+    Reprojects the points in XY1 using the homography H.
+    Returns:
+        Dehomogenized coordinates uv in pixel coords.
+    """
+    uv_homgen = K @ H @ XY1
+    uv = dehomogenize(uv_homgen)
+    return uv
+
 def reproject_using_Rt(K, R, t, XYZ1):
     """
     Reprojects the points in XYZ1 using the rigid-body transformation R and t.
