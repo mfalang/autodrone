@@ -163,6 +163,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   scripts/dnnCV.py
   scripts/run_ekf.py
+  scripts/tcv/tcv.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

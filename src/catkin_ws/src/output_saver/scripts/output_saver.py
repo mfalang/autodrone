@@ -14,7 +14,7 @@ import estimates
 class OutputSaver():
 
     def __init__(self):
-        
+
         rospy.init_node("output_saver", anonymous=False)
 
         script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -37,8 +37,12 @@ class OutputSaver():
     def start(self):
         rospy.loginfo(f"Saving output to {self.output_base_dir}")
 
-        estimates.DNNCVDataSaver(self.config, self.output_base_dir, 
+        estimates.DNNCVDataSaver(self.config, self.output_base_dir,
             "estimates", "dnn_cv_pose", self.environment
+        )
+
+        estimates.TcvDataSaver(self.config, self.output_base_dir,
+            "estimates", "tcv_pose", self.environment
         )
 
         estimates.EkfDataSaver(self.config, self.output_base_dir,

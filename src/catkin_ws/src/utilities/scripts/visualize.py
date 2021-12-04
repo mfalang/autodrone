@@ -37,6 +37,12 @@ class Plotter():
         self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone DNN CV estimate")
         plt.legend()
 
+    def plot_drone_pose_tcv(self):
+        print("Plotting drone estimate raw from TCV")
+        pose = np.loadtxt(f"{self.data_dir}/estimates/tcv_pose.txt", skiprows=1)
+        self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone TCV estimate")
+        plt.legend()
+
     def plot_drone_pose_ekf(self):
         print("Plotting drone estimate from EKF and covariance")
         output = np.loadtxt(f"{self.data_dir}/estimates/ekf_output.txt", skiprows=1)
@@ -59,7 +65,7 @@ class Plotter():
 def main():
     parser = argparse.ArgumentParser(description="Visualize data.")
     parser.add_argument("data_dir", metavar="data_dir", type=str, help="Base directory of data")
-    parser.add_argument("--estimate_plots", choices=["all", "ekf_pose", "dnn_cv_pose", "none"],
+    parser.add_argument("--estimate_plots", choices=["all", "ekf_pose", "dnn_cv_pose", "tcv_pose", "none"],
         help="What estimation data to visualize (default: all)", default="all"
     )
     parser.add_argument("--gt_plots", choices=["all", "drone_pose", "helipad_pose", "none"],
@@ -81,10 +87,13 @@ def main():
     if args.estimate_plots == "all":
         plotter.plot_drone_pose_dnn_cv()
         plotter.plot_drone_pose_ekf()
+        plotter.plot_drone_pose_tcv()
     elif args.estimate_plots == "dnn_cv_pose":
         plotter.plot_drone_pose_dnn_cv()
     elif args.estimate_plots == "ekf_pose":
         plotter.plot_drone_pose_ekf()
+    elif args.estimate_plots == "tcv_pose":
+        plotter.plot_drone_pose_tcv()
 
     plt.show()
 
