@@ -1,4 +1,5 @@
 
+import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -89,7 +90,7 @@ class PoseRecovery():
         print("Reprojection error using R and t from LM:", err_Rt_LM)
 
         plt.figure()
-        plt.imshow(image)
+        plt.imshow(cv.cvtColor(image, cv.COLOR_BGR2RGB))
         plt.scatter(*uv, s=150, marker='o', c='white', edgecolor='black', label="True")
         plt.scatter(*uv_H, s=30, marker='o', c='yellow',
                     edgecolors='black', label="Reprojected using H")
@@ -97,9 +98,50 @@ class PoseRecovery():
                     edgecolors='black', label="Reprojected using R and t")
         plt.scatter(*uv_Rt_LM, s=30, marker='o', c='red',
                     edgecolors='black', label="Reprojected using LM")
+        plt.legend()
+        plt.show()
 
 def main():
-    pass
+    # Test reprojection using
+    import corner_detector
+
+    detector_config = {
+        "max_corners" : 13,
+        "quality_level" : 0.001,
+        "min_distance" : 10,
+        "block_size" : 3,
+        "gradient_size" : 3,
+        "k" : 0.04
+    }
+    detector = corner_detector.CornerDetector(detector_config)
+    features_metric = np.loadtxt("../../data/helipad_dists_metric.txt")
+
+    K = np.array([
+            [918, 1280 / 2, 0],
+            [0, 918, 720 / 2],
+            [0, 0, 1]
+    ])
+    pose_recoverer = PoseRecovery(K)
+
+    img = cv.imread("test_images/test1.png")
+
+    img_processed = detector.preprocess_image(img)
+
+    corners = detector.find_corners_shi_tomasi(img_processed)
+
+    features_image = detector.find_arrow_and_H(corners, features_metric)
+
+    H = pose_recoverer.find_homography(features_image, features_metric)
+    R, t = pose_recoverer.find_R_t(features_image, features_metric, H)
+    R_LM, t_LM = pose_recoverer.optimize_R_t(features_image, features_metric, R, t)
+
+    pose_recoverer.evaluate_reprojection(img, features_image, features_metric,
+        H, R, t, R_LM, t_LM
+    )
+
+    pose = pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
+
+    print(f"Pose: {pose}")
 
 if __name__ == "__main__":
     main()
