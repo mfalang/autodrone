@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import numpy as np
 import cv2 as cv
 import glob
@@ -57,7 +59,7 @@ def get_valid_images(images, grid_size, visualize=False):
     return valid_images, objpoints, imgpoints
 
 
-def calibrate(object_points, image_points, alpha, image_shape, output_dir):
+def calibrate(object_points, image_points, alpha, image_shape, output_dir, save):
     """
     Returns
     - The standard camera matrix
@@ -77,21 +79,23 @@ def calibrate(object_points, image_points, alpha, image_shape, output_dir):
     h = image_shape[2]
     newcameramtx, roi = cv.getOptimalNewCameraMatrix(mtx, dist, (w, h), alpha, (w, h))
 
-    np.savetxt(f"{output_dir}/camera_matrix.txt", mtx)
-    np.savetxt(f"{output_dir}/camera_matrix_corrected.txt", newcameramtx)
-    np.savetxt(f"{output_dir}/distortion.txt", dist)
-    np.savetxt(f"{output_dir}/roi.txt", roi)
-    np.savetxt(f"{output_dir}/std_deviation_intrinsic.txt", std_deviation_intrinsic)
+    if save:
+        print("Saving output")
+        np.savetxt(f"{output_dir}/camera_matrix.txt", mtx)
+        np.savetxt(f"{output_dir}/camera_matrix_corrected.txt", newcameramtx)
+        np.savetxt(f"{output_dir}/distortion.txt", dist)
+        np.savetxt(f"{output_dir}/roi.txt", roi)
+        np.savetxt(f"{output_dir}/std_deviation_intrinsic.txt", std_deviation_intrinsic)
 
-    with open(f"{output_dir}/rotation_vecs.txt", "wb") as f:
-        for rvec in rvecs:
-            np.savetxt(f, rvec)
-            f.write(b"\n")
+        with open(f"{output_dir}/rotation_vecs.txt", "wb") as f:
+            for rvec in rvecs:
+                np.savetxt(f, rvec)
+                f.write(b"\n")
 
-    with open(f"{output_dir}/translation_vecs.txt", "wb") as f:
-        for tvec in tvecs:
-            np.savetxt(f, tvec)
-            f.write(b"\n")
+        with open(f"{output_dir}/translation_vecs.txt", "wb") as f:
+            for tvec in tvecs:
+                np.savetxt(f, tvec)
+                f.write(b"\n")
 
     return mtx, newcameramtx, roi, dist, rvecs, tvecs, std_deviation_intrinsic
 
@@ -167,12 +171,27 @@ def calculate_errors(object_points, image_points, rvecs, tvecs, camera_matrix,
 
 if __name__ == "__main__":
     import os
+    import sys
+
+    usage = "Usage: calibrate.py <save/nosave>"
+
+    if len(sys.argv) != 2:
+        print(usage)
+        sys.exit()
+
+    if sys.argv[1] == "save":
+        save = True
+    elif sys.argv[1] == "nosave":
+        save = False
+    else:
+        print(usage)
+        sys.exit()
 
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    grid_size = (7, 10)
+    grid_size = (8, 5)
     num_corners = grid_size[0] * grid_size[1]
-    base_path = "../calib_images/"
+    base_path = "../calib_images"
 
     images = glob.glob(f"{base_path}/*.png")
     images.sort(key=lambda x: x[-8:-4])  # sort images based on last numbers
@@ -185,7 +204,7 @@ if __name__ == "__main__":
     alpha = 1
     camera_matrix, new_camera_matrix, roi, distortion, rvecs, tvecs, \
         std_deviation_intrinsic = calibrate(object_points, image_points,
-                                            alpha, img_shape, base_path)
+                                            alpha, img_shape, base_path, save)
 
     calculate_errors(object_points, image_points, rvecs, tvecs, camera_matrix,
                      distortion, std_deviation_intrinsic, num_corners)
