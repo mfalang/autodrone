@@ -189,9 +189,9 @@ if __name__ == "__main__":
 
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    grid_size = (8, 5)
+    grid_size = (7, 10)
     num_corners = grid_size[0] * grid_size[1]
-    base_path = "../calib_images"
+    base_path = "../calib_images/newest"
 
     images = glob.glob(f"{base_path}/*.png")
     images.sort(key=lambda x: x[-8:-4])  # sort images based on last numbers
