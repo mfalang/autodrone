@@ -128,7 +128,7 @@ Original source: https://developer.parrot.com/docs/sphinx/worldfile.html# -->
     <!-- Helipad -->
     <model name='helipad'>
       <static>0</static>
-      <pose>0 0 0.06 0 0 0</pose>
+      <pose>5 5 0.06 0 0 -0.78</pose>
       <link name='link_01'>
         <collision name='collision_01'>
           <mass>4</mass>
@@ -176,7 +176,7 @@ Original source: https://developer.parrot.com/docs/sphinx/worldfile.html# -->
         <stolen_interface></stolen_interface>
       </drone>
       <spawn_point name="default">
-        <pose>0 0 0.1 0 0 1.57</pose>
+        <pose>5 5 0.1 0 0 0.78</pose>
       </spawn_point>
     </plugin>
 

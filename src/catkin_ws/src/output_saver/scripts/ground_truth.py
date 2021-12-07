@@ -2,10 +2,28 @@
 import rospy
 import geometry_msgs.msg
 
+import math
 import numpy as np
 from scipy.spatial.transform import Rotation
 
 from generic_output_saver import GenericOutputSaver
+
+def rotate_z(radians):
+    c = np.cos(radians)
+    s = np.sin(radians)
+    return np.array([[c, -s, 0],
+                     [s, c, 0],
+                     [0, 0, 1]])
+def translate(x, y, z):
+    return np.array([[1, 0, 0, x],
+                     [0, 1, 0, y],
+                     [0, 0, 1, z],
+                     [0, 0, 0, 1]])
+
+def create_T_from_Rt(R, t):
+    T = np.hstack((R, t[:, None]))
+    T = np.vstack((T, np.array([0, 0, 0, 1])))
+    return T
 
 class GroundTruthDataSaver(GenericOutputSaver):
 
@@ -16,6 +34,17 @@ class GroundTruthDataSaver(GenericOutputSaver):
         self.offsets = None # Format: numpy array [0,x,y,z,roll,pitch,yaw] (0 for timestamp)
 
     def _initialize_offsets(self, output_raw, object_type):
+
+        print(output_raw[6])
+        self.R = rotate_z(-output_raw[6]*math.pi/180)
+
+        # print(R)
+        # R = np.eye(3)
+        # t = -np.array([output_raw[1], output_raw[2], output_raw[3]])
+        # t = np.array([0,0,0])
+
+        # self.T = create_T_from_Rt(R, t)
+
         self.offsets = output_raw
         self.offsets[0] = 0 # No offset in timestamp
         print(f"Offsets ({object_type}): " \
@@ -23,6 +52,9 @@ class GroundTruthDataSaver(GenericOutputSaver):
                 f"z: {self.offsets[3]:.3f}m roll: {self.offsets[4]:.3f}deg " \
                 f"pitch: {self.offsets[5]:.3f}deg yaw: {self.offsets[6]:.3f}deg"
         )
+
+
+
         self.initialized_offsets = True
 
     def _print_output(self, output, object_type):
@@ -88,7 +120,33 @@ class DronePoseDataSaver(GroundTruthDataSaver):
         if self.initialized_offsets == False:
             self._initialize_offsets(output_raw, "drone")
 
-        output = output_raw - self.offsets
+        # output = output_raw - self.offsets
+
+        pos_ned = output_raw[1:4].copy() - self.offsets[1:4].copy()
+        print("Pos ned", pos_ned)
+
+        # pos_homogeneous = np.array([pos[0], pos[1], pos[2], 1])
+        # pos_body = self.T @ pos_homogeneous
+        pos_body = self.R @ pos_ned
+        print("Pos body", pos_body)
+        print()
+        # print(self.T)
+        # print(pos)
+        # print("pos body", pos_body)
+        # print()
+
+        orientation = output_raw[4:].copy()
+
+        output = [
+            output_raw[0],
+            pos_body[0],
+            pos_body[1],
+            pos_body[2],
+            orientation[0],
+            orientation[1],
+            orientation[2]
+        ]
+        # print(output)
 
         # self._print_output(output, "drone")
 
