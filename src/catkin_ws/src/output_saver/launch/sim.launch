@@ -7,5 +7,5 @@
         <param name="config_file" value="output_types.yaml" />
         <param name="environment" value="sim" />
     </node>
-    <!-- <include file="$(find ground_truth)/launch/sphinx_ros_bridge.launch"></include> -->
+    <include file="$(find ground_truth)/launch/sphinx_ros_bridge.launch"></include>
 </launch>

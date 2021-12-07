@@ -18,6 +18,8 @@ class Plotter():
         self.pose3D_ax.set_xlabel("x [m]")
         self.pose3D_ax.set_ylabel("y [m]")
         self.pose3D_ax.set_zlabel("z [m]")
+        self.pose3D_ax.set_xlim(-2, 2)
+        self.pose3D_ax.set_ylim(-2, 2)
 
     def plot_drone_ground_truth(self):
         print("Plotting drone ground truth")
