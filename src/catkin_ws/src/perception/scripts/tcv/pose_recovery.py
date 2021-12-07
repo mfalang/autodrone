@@ -143,8 +143,8 @@ def main():
     features_metric = np.loadtxt("../../data/helipad_dists_origin_center_enu_metric.txt")
 
     K = np.array([
-            [919.32, 646.24, 0],
-            [0, 916.93, 352.28],
+            [941.22, 0, 580.66],
+            [0, 932.66, 375.35],
             [0, 0, 1]
     ])
     pose_recoverer = PoseRecovery(K)

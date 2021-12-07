@@ -43,8 +43,8 @@ class TcvPoseEstimator():
         self.focal_length = rospy.get_param("/drone/camera/focal_length")
 
         self.K = np.array([
-            [self.focal_length, self.img_width / 2, 0],
-            [0, self.focal_length, self.img_height / 2],
+            [941.22, 0, 580.66],
+            [0, 932.66, 375.35],
             [0, 0, 1]
         ])
 
