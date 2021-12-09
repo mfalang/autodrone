@@ -25,7 +25,12 @@ class GroundTruthDataSaver(GenericOutputSaver):
 
     def _initialize_offsets(self, output_raw, object_type):
 
-        self.R_ned_to_body = Rz(-output_raw[6]*math.pi/180)
+        R = Rz(-output_raw[6]*math.pi/180)
+
+        t = -R @ np.array([output_raw[1], output_raw[2], output_raw[3]]).reshape(-1,1)
+
+        # Create homogeneous transformation matrix
+        self.T_ned_helipad = np.vstack((np.hstack((R, t)), np.array([0,0,0,1])))
 
         self.offsets = output_raw
         self.offsets[0] = 0 # No offset in timestamp
@@ -100,23 +105,21 @@ class DronePoseDataSaver(GroundTruthDataSaver):
         if self.initialized_offsets == False:
             self._initialize_offsets(output_raw, "drone")
 
-        # output = output_raw - self.offsets
-
-        pos_ned = output_raw[1:4].copy() - self.offsets[1:4].copy()
+        # NED position in homogeneous coordinates
+        pos_ned = np.array([output_raw[1], output_raw[2], output_raw[3], 1])
         # print("Pos ned", pos_ned)
 
-        pos_body = self.R_ned_to_body @ pos_ned
-        # print("Pos body", pos_body)
-        # print()
+        pos_helipad = self.T_ned_helipad @ pos_ned
+        print("Pos body", pos_helipad)
 
         # TODO: Fix so that orientation is the same also
         orientation = output_raw[4:].copy()
 
         output = [
             output_raw[0],
-            pos_body[0],
-            pos_body[1],
-            pos_body[2],
+            pos_helipad[0],
+            pos_helipad[1],
+            pos_helipad[2],
             orientation[0],
             orientation[1],
             orientation[2]
