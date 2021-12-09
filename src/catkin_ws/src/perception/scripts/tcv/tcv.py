@@ -98,10 +98,12 @@ class TcvPoseEstimator():
                 R, t = self.pose_recoverer.find_R_t(features_image, self.feature_dists_metric, H)
                 R_LM, t_LM = self.pose_recoverer.optimize_R_t(features_image, self.feature_dists_metric, R, t)
 
-                pose = self.pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
-                print(f"Pos: {pose[0:3]}")
+                pose_enu = self.pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
 
-                self._publish_pose(pose)
+                pose_ned = self._pose_enu_to_ned(pose_enu)
+                print(f"Pos: {pose_ned[0:3]} Heading: {pose_ned[5]}")
+
+                self._publish_pose(pose_ned)
 
                 self.new_image_available = False
 
@@ -109,6 +111,18 @@ class TcvPoseEstimator():
                 # self.corner_detector.show_corners_found(img, corners_fast, color="blue")
 
                 cv.waitKey(1)
+
+    def _pose_enu_to_ned(self, pose_enu):
+        pose_ned = np.zeros_like(pose_enu)
+        pose_ned[0] = pose_enu[1]
+        pose_ned[1] = pose_enu[0]
+        pose_ned[2] = -pose_enu[2]
+        pose_ned[3] = pose_enu[3]
+        pose_ned[4] = pose_enu[4]
+        pose_ned[5] = pose_enu[5]
+
+        return pose_ned
+
 
     def _publish_pose(self, pose):
         msg = perception.msg.EulerPose()

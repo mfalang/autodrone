@@ -52,7 +52,7 @@ class Plotter():
         pose = np.loadtxt(f"{self.data_dir}/estimates/tcv_pose.txt", skiprows=1)
         self.pose3D_ax.scatter(pose[:,1], pose[:,2], -pose[:,3], s=1, c="red", label="Drone TCV estimate")
         self.pose3D_figure.legend()
-        self.heading_ax.scatter(pose[:,0] - pose[0,0], pose[:,6], label="Ground truth")
+        self.heading_ax.scatter(pose[:,0] - pose[0,0], pose[:,6], s=5, c="red", label="TCV estimate")
         self.heading_figure.legend()
 
     def plot_drone_pose_ekf(self):

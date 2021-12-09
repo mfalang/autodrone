@@ -34,7 +34,7 @@ estimates:
       sim: /estimate/drone_pose/tcv
       real: /estimate/drone_pose/tcv
     file_header: "Format: timestamp[sec] [x[m], y[m], z[m], phi[deg] theta[deg] psi[deg]]\n"
-    max_values_stored_in_buffer: 10
+    max_values_stored_in_buffer: 1
 
   ekf_output:
     name: ekf_output
