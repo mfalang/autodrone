@@ -21,10 +21,17 @@ class Plotter():
         self.pose3D_ax.set_xlim(-2, 2)
         self.pose3D_ax.set_ylim(-2, 2)
 
+        self.heading_figure = plt.figure(2)
+        self.heading_ax = plt.axes()
+        self.heading_ax.set_xlabel("Timestamp")
+        self.heading_ax.set_ylabel("Heading [deg]")
+
     def plot_drone_ground_truth(self):
         print("Plotting drone ground truth")
-        pose = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose.txt", skiprows=1)
+        # skiprows=2 instead of 1 because for some reason the first timestamp is negative so skip it
+        pose = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose.txt", skiprows=2)
         self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone ground truth")
+        self.heading_ax.plot(pose[:,0] - pose[0,0], pose[:,6])
         plt.legend()
 
     def plot_helipad_ground_truth(self):

@@ -114,7 +114,6 @@ class DronePoseDataSaver(GroundTruthDataSaver):
         pos_helipad = self.T_ned_helipad @ pos_ned
         # print("Pos helipad", pos_helipad)
 
-        # TODO: Fix so that orientation is the same also
         orientation = output_raw[4:].copy()
         orientation[2] = (orientation[2] - self.psi_offset + 180) % 360 - 180
         # print(f"Psi: {orientation[2]}")
