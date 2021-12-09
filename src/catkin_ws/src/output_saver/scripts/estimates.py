@@ -35,7 +35,7 @@ class TcvDataSaver(GenericOutputSaver):
             msg.x,
             msg.y,
             msg.z,
-            msg.psi,
+            msg.phi,
             msg.theta,
             msg.psi
         ])

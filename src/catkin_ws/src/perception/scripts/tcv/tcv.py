@@ -41,6 +41,9 @@ class TcvPoseEstimator():
         self.img_height = rospy.get_param("/drone/camera/img_height")
         self.img_width = rospy.get_param("/drone/camera/img_width")
         self.focal_length = rospy.get_param("/drone/camera/focal_length")
+        self.camera_offset_x_mm = rospy.get_param("/drone/camera/offset_x_mm")
+        self.camera_offset_y_mm = rospy.get_param("/drone/camera/offset_y_mm")
+        self.camera_offset_z_mm = rospy.get_param("/drone/camera/offset_z_mm")
 
         self.K = np.array([
             [941.22, 0, 580.66],
@@ -98,10 +101,10 @@ class TcvPoseEstimator():
                 R, t = self.pose_recoverer.find_R_t(features_image, self.feature_dists_metric, H)
                 R_LM, t_LM = self.pose_recoverer.optimize_R_t(features_image, self.feature_dists_metric, R, t)
 
-                pose_enu = self.pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
+                pose_camera = self.pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
 
-                pose_ned = self._pose_enu_to_ned(pose_enu)
-                print(f"Pos: {pose_ned[0:3]} Heading: {pose_ned[5]}")
+                pose_ned = self._pose_camera_to_ned(pose_camera)
+                print(f"Pos: {pose_ned[0:3]} Orientation: {pose_ned[3:]}")
 
                 self._publish_pose(pose_ned)
 
@@ -112,14 +115,20 @@ class TcvPoseEstimator():
 
                 cv.waitKey(1)
 
-    def _pose_enu_to_ned(self, pose_enu):
-        pose_ned = np.zeros_like(pose_enu)
-        pose_ned[0] = pose_enu[1]
-        pose_ned[1] = pose_enu[0]
-        pose_ned[2] = -pose_enu[2]
-        pose_ned[3] = pose_enu[3]
-        pose_ned[4] = pose_enu[4]
-        pose_ned[5] = pose_enu[5]
+    def _pose_camera_to_ned(self, pose_camera):
+        # Convert pose from camera frame with ENU coordinates, to NED coordinates
+
+        pose_ned = np.zeros_like(pose_camera)
+        pose_ned[0] = pose_camera[1]
+        pose_ned[1] = pose_camera[0]
+        pose_ned[2] = -pose_camera[2]
+        pose_ned[3] = pose_camera[3]
+        pose_ned[4] = pose_camera[4]
+        pose_ned[5] = pose_camera[5]
+
+        pose_ned[0] -= self.camera_offset_x_mm / 1000
+        pose_ned[1] -= self.camera_offset_y_mm / 1000
+        pose_ned[2] -= self.camera_offset_z_mm / 1000
 
         return pose_ned
 
