@@ -112,19 +112,19 @@ class SquareMission(Mission):
         self._get_keyboard_input("Go to first checkpoint (yes/abort) ", "yes")
 
         # Move in a square
-        msg = self._create_setpoint_message(1, 1, 0, -3.1415/2)
+        msg = self._create_setpoint_message(1, 1, 0, -90)
         self.setpoint_publisher.publish(msg)
 
         self._get_keyboard_input("Go to second checkpoint (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(2, 0, 0, -3.1415/2)
+        msg = self._create_setpoint_message(2, 0, 0, -90)
         self.setpoint_publisher.publish(msg)
 
         self._get_keyboard_input("Go to third checkpoint (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(2, 0, 0, -3.1415/2)
+        msg = self._create_setpoint_message(2, 0, 0, -90)
         self.setpoint_publisher.publish(msg)
 
         self._get_keyboard_input("Go to forth checkpoint (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(2, 0, 0, -3.1415/2)
+        msg = self._create_setpoint_message(2, 0, 0, -90)
         self.setpoint_publisher.publish(msg)
 
         self._get_keyboard_input("Go to fifth checkpoint (yes/abort) ", "yes")
@@ -136,7 +136,7 @@ class SquareMission(Mission):
         self._land()
 
 class RotateMission(Mission):
-    
+
     def __init__(self):
         super().__init__()
 
@@ -175,15 +175,52 @@ class RotateMission(Mission):
 
         self._get_keyboard_input("Land? (yes) ", "yes")
         self._land()
-        
 
+class SmallSquare(Mission):
+
+    def __init__(self):
+        super().__init__()
+
+    def start(self):
+        self._get_keyboard_input("Ready to take off? (yes) ", "yes")
+        self._takeoff()
+
+        self._get_keyboard_input("Go up 2m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -2, 0)
+        self.setpoint_publisher.publish(msg)
+
+        # Move in a square
+        self._get_keyboard_input("Go to first checkpoint (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0.5, 0.5, 0, -90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go to second checkpoint (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(1, 0, 0, -90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go to third checkpoint (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(1, 0, 0, -90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go to forth checkpoint (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(1, 0, 0, -90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go to fifth checkpoint (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0.5, -0.5, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        # Land
+        self._get_keyboard_input("Land? (yes) ", "yes")
+        self._land()
 
 def main():
     ans = input("Choose mission\n" \
         "(1 = takeoff - landing)\n" \
         "(2 = takeoff - 0.5m up - 1m forward - 2m backward - 1m forwards - landing)\n" \
         "(3 = takeoff - fly square (2x2m) - landing)\n" \
-        "(4 = takeoff - rotate - landing)\n")
+        "(4 = takeoff - rotate - landing)\n" \
+        "(5 = takeoff - small square - landing)\n")
 
     if ans == "1":
         mission = TakeoffLand()
@@ -193,6 +230,8 @@ def main():
         mission = SquareMission()
     elif ans == "4":
         mission = RotateMission()
+    elif ans == "5":
+        mission = SmallSquare()
     else:
         print(f"Invalid choice {ans}")
         sys.exit(0)
