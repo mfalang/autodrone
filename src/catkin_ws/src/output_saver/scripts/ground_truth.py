@@ -25,7 +25,9 @@ class GroundTruthDataSaver(GenericOutputSaver):
 
     def _initialize_offsets(self, output_raw, object_type):
 
-        R = Rz(-output_raw[6]*math.pi/180)
+        self.psi_offset = output_raw[6]
+
+        R = Rz(-self.psi_offset*math.pi/180)
 
         t = -R @ np.array([output_raw[1], output_raw[2], output_raw[3]]).reshape(-1,1)
 
@@ -110,10 +112,12 @@ class DronePoseDataSaver(GroundTruthDataSaver):
         # print("Pos ned", pos_ned)
 
         pos_helipad = self.T_ned_helipad @ pos_ned
-        print("Pos body", pos_helipad)
+        # print("Pos helipad", pos_helipad)
 
         # TODO: Fix so that orientation is the same also
         orientation = output_raw[4:].copy()
+        orientation[2] = (orientation[2] - self.psi_offset + 180) % 360 - 180
+        # print(f"Psi: {orientation[2]}")
 
         output = [
             output_raw[0],
