@@ -57,7 +57,6 @@ class CornerDetector():
     def find_arrow_and_H(self, corners, helipad_dists_metric):
 
         if corners.shape[0] != 13:
-            print(f"Not enough points to determine H uniquely ({corners.shape[0]}/13)")
             return None
 
         # Compute distances between all corners
@@ -179,6 +178,13 @@ class CornerDetector():
             np.abs(dists[h_bottom_left_idx] - dist_lower_left_top_left_px)
         )
         h_top_left_coords = corners[h_top_left_idx]
+
+        # More consistency checks
+
+        # Check that distance between bottom left and top left is equal to distance
+        # between bottom right and top right
+        if not np.allclose(dists[h_bottom_left_idx, h_top_left_idx], dists[h_bottom_right_idx, h_top_right_idx], atol=1):
+            return None
 
         ret = np.hstack((
             h_bottom_left_coords.reshape(-1,1),

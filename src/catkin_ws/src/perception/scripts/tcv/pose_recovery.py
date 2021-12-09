@@ -51,7 +51,7 @@ class PoseRecovery():
         XY01 = features_metric.copy()
 
         R, t = homography.estimate_Rt_ls(
-                    xy, XY01, R.copy(), t.copy(), self.K, uv, num_iterations=1000, debug=False)
+                    xy, XY01, R.copy(), t.copy(), self.K, uv, num_iterations=100, debug=False)
 
         return R, t
 

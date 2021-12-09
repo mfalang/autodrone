@@ -31,26 +31,29 @@ class Plotter():
         # skiprows=2 instead of 1 because for some reason the first timestamp is negative so skip it
         pose = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose.txt", skiprows=2)
         self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone ground truth")
-        self.heading_ax.plot(pose[:,0] - pose[0,0], pose[:,6])
-        plt.legend()
+        self.heading_ax.plot(pose[:,0] - pose[0,0], pose[:,6], label="Ground truth")
+        self.pose3D_figure.legend()
+        self.heading_figure.legend()
 
     def plot_helipad_ground_truth(self):
         print("Plotting helipad ground truth")
         pose = np.loadtxt(f"{self.data_dir}/ground_truths/helipad_pose.txt", skiprows=1)
         self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Helipad ground truth")
-        plt.legend()
+        self.pose3D_figure.legend()
 
     def plot_drone_pose_dnn_cv(self):
         print("Plotting drone estimate raw from DNN CV")
         pose = np.loadtxt(f"{self.data_dir}/estimates/dnn_cv_pose.txt", skiprows=1)
         self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone DNN CV estimate")
-        plt.legend()
+        self.pose3D_figure.legend()
 
     def plot_drone_pose_tcv(self):
         print("Plotting drone estimate raw from TCV")
         pose = np.loadtxt(f"{self.data_dir}/estimates/tcv_pose.txt", skiprows=1)
-        self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone TCV estimate")
-        plt.legend()
+        self.pose3D_ax.scatter(pose[:,1], pose[:,2], -pose[:,3], s=1, c="red", label="Drone TCV estimate")
+        self.pose3D_figure.legend()
+        self.heading_ax.scatter(pose[:,0] - pose[0,0], pose[:,6], label="Ground truth")
+        self.heading_figure.legend()
 
     def plot_drone_pose_ekf(self):
         print("Plotting drone estimate from EKF and covariance")

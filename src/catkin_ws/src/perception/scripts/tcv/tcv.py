@@ -92,13 +92,14 @@ class TcvPoseEstimator():
                 if features_image is None:
                     continue
 
-                # self.corner_detector.show_known_points(img, features_image)
+                self.corner_detector.show_known_points(img, features_image)
 
                 H = self.pose_recoverer.find_homography(features_image, self.feature_dists_metric)
                 R, t = self.pose_recoverer.find_R_t(features_image, self.feature_dists_metric, H)
                 R_LM, t_LM = self.pose_recoverer.optimize_R_t(features_image, self.feature_dists_metric, R, t)
 
                 pose = self.pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
+                print(f"Pos: {pose[0:3]}")
 
                 self._publish_pose(pose)
 
