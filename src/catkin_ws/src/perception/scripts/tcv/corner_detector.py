@@ -1,6 +1,7 @@
 
 import cv2 as cv
 import numpy as np
+from numpy.core.numeric import isclose
 from numpy.core.records import array
 
 HSV_SIM_GREEN = [120, 100, 30]
@@ -30,11 +31,61 @@ class CornerDetector():
 
         self.fast_feature_dector = cv.FastFeatureDetector_create()
 
-    def preprocess_image(self, img):
-        # Make image grayscale
-        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    def preprocess_image(self, img, segment=False):
 
-        output = gray
+        if segment:
+            # # Reduce the noise to avoid false circle detection
+            blur = cv.medianBlur(img, 5)
+
+            blur = cv.GaussianBlur(blur,(5,5),0)
+            blur = cv.bilateralFilter(blur,9,75,75)
+
+            hsv = cv.cvtColor(blur, cv.COLOR_BGR2HSV)
+
+            low_green = (36, 25, 25)
+            high_green = (70, 255,255)
+
+            # mask = cv.inRange(hsv, low_green, high_green)
+            mask = cv.inRange(hsv, low_green, high_green)
+            segmented = cv.bitwise_and(img,img, mask= mask)
+
+            cv.imshow("segmented", segmented)
+
+            # Make image grayscale
+            gray = cv.cvtColor(segmented, cv.COLOR_BGR2GRAY)
+
+            rows = gray.shape[0]
+            circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, rows / 8,
+                                param1=100, param2=30,
+                                minRadius=200, maxRadius=500)
+
+            if circles is not None:
+                r_largest = 0
+                center_largest = None
+                circles = np.uint16(np.around(circles))
+                for i in circles[0, :]:
+                    center = (i[0], i[1])
+                    radius = i[2]
+                    print(radius)
+
+                    if radius > r_largest:
+                        r_largest = radius
+                        center_largest = center
+
+            circle_mask = np.zeros((720,1280), np.uint8)
+            cv.circle(circle_mask, center_largest, int(r_largest * 1.01), (255, 0, 255), cv.FILLED)
+
+            helipad = cv.bitwise_and(img,img, mask=circle_mask)
+
+            helipad_gray = cv.cvtColor(helipad, cv.COLOR_BGR2GRAY)
+            blur = cv.medianBlur(helipad_gray, 11)
+
+            blur = cv.GaussianBlur(blur,(5,5),0)
+            blur = cv.bilateralFilter(blur,9,75,75)
+            output = helipad_gray
+
+        else:
+            output = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
         return output
 
@@ -257,13 +308,15 @@ def main():
 
     corner_detector = CornerDetector(config)
 
-    img = cv.imread("test_images/half_circle_5.png")
+    img = cv.imread("test_images/test1.png")
+    # img = cv.imread("../../data/test_images_real/real_test_2.png")
     img_gray = corner_detector.preprocess_image(img)
     cv.imshow("test", img_gray)
     # corners = corner_detector.find_corners_harris(img_gray)
     # corner_detector.show_corners_found(img, corners)
     corners = corner_detector.find_corners_shi_tomasi(img_gray)
     corner_detector.show_corners_found(img, corners, color="red")
+
     cv.waitKey()
 
 if __name__ == "__main__":

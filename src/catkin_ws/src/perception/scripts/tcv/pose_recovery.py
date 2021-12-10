@@ -149,23 +149,27 @@ def main():
     ])
     pose_recoverer = PoseRecovery(K)
 
-    img = cv.imread("test_images/test1.png")
+    img = cv.imread("test_images/test2.png")
 
     img_processed = detector.preprocess_image(img)
 
     corners = detector.find_corners_shi_tomasi(img_processed)
+    # detector.show_corners_found(img, corners, color="red")
 
     features_image = detector.find_arrow_and_H(corners, features_metric)
 
-    H = pose_recoverer.find_homography(features_image, features_metric)
-    R, t = pose_recoverer.find_R_t(features_image, features_metric, H)
-    R_LM, t_LM = pose_recoverer.optimize_R_t(features_image, features_metric, R, t)
+    detector.show_known_points(img, features_image)
+    cv.waitKey()
 
-    pose_recoverer.evaluate_reprojection(img, features_image, features_metric,
-        H, R, t, R_LM, t_LM
-    )
+    # H = pose_recoverer.find_homography(features_image, features_metric)
+    # R, t = pose_recoverer.find_R_t(features_image, features_metric, H)
+    # R_LM, t_LM = pose_recoverer.optimize_R_t(features_image, features_metric, R, t)
 
-    pose = pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
+    # pose_recoverer.evaluate_reprojection(img, features_image, features_metric,
+    #     H, R, t, R_LM, t_LM
+    # )
+
+    # pose = pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
 
 if __name__ == "__main__":
     main()
