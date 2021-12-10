@@ -119,7 +119,8 @@ def calculate_errors(object_points, image_points, rvecs, tvecs, camera_matrix,
         print(f"Reprojection error for image {valid_images[i]}: {image_errors[i]}")
 
     # Plot reprojection errors per image
-    x_labels = [img[:-4] for img in valid_images]  # remove .jpg
+    # x_labels = [img[:-4] for img in valid_images]  # remove .jpg
+    x_labels = np.arange(0, len(image_errors), 1)
     plt.figure()
     plt.bar(x_labels, image_errors)
     plt.xticks(np.arange(len(image_errors)), x_labels, rotation="vertical")
@@ -161,7 +162,7 @@ def calculate_errors(object_points, image_points, rvecs, tvecs, camera_matrix,
     print(
         f"Focal length (pixels): \n\tfx = {fx:.2f} +/- {std_fx:.2f} \n\tfy = {fy:.2f} +/- {std_fy:.2f}")
     print(
-        f"Optical centers/principal point (pixels): \n\tcx = {cx:.2f} +/- {std_cx:.2f} \n\tcy = {cy:.2f} +/- {std_cx:.2f}")
+        f"Optical centers/principal point (pixels): \n\tcx = {cx:.2f} +/- {std_cx:.2f} \n\tcy = {cy:.2f} +/- {std_cy:.2f}")
     print(
         f"Radial distortion: \n\tk1 = {k1:.2f} +/- {std_k1:.2f} \n\tk2 = {k2:.2f} +/- {std_k2:.2f} \n\tk3 = {k3:.2f} +/- {std_k3:.2f}")
     print(
