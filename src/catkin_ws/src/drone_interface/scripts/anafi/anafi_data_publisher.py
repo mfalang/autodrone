@@ -91,42 +91,48 @@ class TelemetryPublisher():
         # Topics to publish to
         self.telemetry_publishers.append(GenericMessagePublisher(
             "drone/out/attitude_quat", geometry_msgs.msg.QuaternionStamped,
-            self._collect_attitude_quat, publish_rate=500
+            self._collect_attitude_quat, publish_rate=-1
         ))
+        self.prev_attitude_quat = None
 
         self.telemetry_publishers.append(GenericMessagePublisher(
             "drone/out/attitude_euler", drone_interface.msg.AttitudeEuler,
-            self._collect_attitude_euler, publish_rate=500
+            self._collect_attitude_euler, publish_rate=-1
         ))
+        self.prev_attitude_euler = None
 
         self.telemetry_publishers.append(GenericMessagePublisher(
             "drone/out/velocity_body", geometry_msgs.msg.PointStamped,
-            self._collect_velocity, publish_rate=500
+            self._collect_velocity, publish_rate=-1
         ))
+        self.prev_velocity = None
 
         self.telemetry_publishers.append(GenericMessagePublisher(
             "drone/out/relative_altitude", geometry_msgs.msg.PointStamped,
-            self._collect_relative_altitude, publish_rate=500
+            self._collect_relative_altitude, publish_rate=-1
         ))
+        self.prev_relative_altitude = None
 
         self.telemetry_publishers.append(GenericMessagePublisher(
             "drone/out/gps_data", sensor_msgs.msg.NavSatFix,
-            self._collect_gps_data, publish_rate=10
+            self._collect_gps_data, publish_rate=-1
         ))
+        self.prev_gps_data = None
 
         self.telemetry_publishers.append(GenericMessagePublisher(
             "drone/out/flying_state", drone_interface.msg.FlyingState,
-            self._collect_flying_state, publish_rate=10
+            self._collect_flying_state, publish_rate=-1
         ))
 
         self.telemetry_publishers.append(GenericMessagePublisher(
             "drone/out/gimbal_attitude", drone_interface.msg.GimbalAttitude,
-            self._collect_gimbal_attitude, publish_rate=10
+            self._collect_gimbal_attitude, publish_rate=-1
         ))
+        self.prev_gimbal_attitude_data = None
 
         self.telemetry_publishers.append(GenericMessagePublisher(
             "drone/out/battery_data", sensor_msgs.msg.BatteryState,
-            self._collect_battery_data, publish_rate=0.2
+            self._collect_battery_data, publish_rate=-1
         ))
 
         self.telemetry_publishers.append(GenericMessagePublisher(
@@ -138,6 +144,7 @@ class TelemetryPublisher():
             "drone/out/ekf_input", drone_interface.msg.EkfInput,
             self._collect_ekf_input, publish_rate=500, queue_size=1
         ))
+        self.prev_ekf_input_data = None
 
         rospy.loginfo("Initialized telemetry publisher")
 
@@ -179,6 +186,13 @@ class TelemetryPublisher():
             degrees=False
         ).as_quat()
 
+        if self.prev_attitude_quat is None:
+            self.prev_attitude_quat = [attitude_msg.quaternion.x, attitude_msg.quaternion.y, attitude_msg.quaternion.z, attitude_msg.quaternion.w]
+        elif self.prev_attitude_quat == [attitude_msg.quaternion.x, attitude_msg.quaternion.y, attitude_msg.quaternion.z, attitude_msg.quaternion.w]:
+            return None
+        else:
+            self.prev_attitude_quat = [attitude_msg.quaternion.x, attitude_msg.quaternion.y, attitude_msg.quaternion.z, attitude_msg.quaternion.w]
+
         return attitude_msg
 
     def _collect_attitude_euler(self):
@@ -201,6 +215,13 @@ class TelemetryPublisher():
         attitude_msg.roll = att_euler["roll"]*180/3.14159
         attitude_msg.pitch = att_euler["pitch"]*180/3.14159
         attitude_msg.yaw = att_euler["yaw"]*180/3.14159
+
+        if self.prev_attitude_euler is None:
+            self.prev_attitude_euler = [attitude_msg.roll, attitude_msg.pitch, attitude_msg.yaw]
+        elif self.prev_attitude_euler == [attitude_msg.roll, attitude_msg.pitch, attitude_msg.yaw]:
+            return None
+        else:
+            self.prev_attitude_euler = [attitude_msg.roll, attitude_msg.pitch, attitude_msg.yaw]
 
         return attitude_msg
 
@@ -239,6 +260,13 @@ class TelemetryPublisher():
 
         velocity_body = R_ned_to_body @ velocity_ned
 
+        if self.prev_velocity is None:
+            self.prev_velocity = velocity_body
+        elif np.all(self.prev_velocity == velocity_body):
+            return None
+        else:
+            self.prev_velocity = velocity_body
+
         [
             velocity_msg.point.x,
             velocity_msg.point.y,
@@ -264,6 +292,13 @@ class TelemetryPublisher():
         relative_altitude = self.drone.get_state(
             olympe_msgs.ardrone3.PilotingState.AltitudeChanged
         )["altitude"]
+
+        if self.prev_relative_altitude is None:
+            self.prev_relative_altitude = relative_altitude
+        elif self.prev_relative_altitude == relative_altitude:
+            return None
+        else:
+            self.prev_relative_altitude = relative_altitude
 
         relative_altitude_msg.point.z = relative_altitude
 
@@ -301,6 +336,22 @@ class TelemetryPublisher():
             0, gps_pos["longitude_accuracy"], 0,
             0, 0, gps_pos["altitude_accuracy"]
         ]
+
+        gps_data = self.prev_gps_data = [
+                gps_pos["latitude"],
+                gps_pos["longitude"],
+                gps_pos["altitude"],
+                gps_pos["latitude_accuracy"],
+                gps_pos["longitude_accuracy"],
+                gps_pos["altitude_accuracy"]
+        ]
+
+        if self.prev_gps_data is None:
+            self.prev_gps_data = gps_data
+        elif self.prev_gps_data == gps_data:
+            return None
+        else:
+            self.prev_gps_data = gps_data
 
         gps_data_msg.position_covariance_type = sensor_msgs.msg.NavSatFix.COVARIANCE_TYPE_DIAGONAL_KNOWN
 
@@ -347,6 +398,13 @@ class TelemetryPublisher():
         gimbal_attitude_msg.roll = gimbal_attitude[0]["roll_relative"]
         gimbal_attitude_msg.pitch = gimbal_attitude[0]["pitch_relative"]
         gimbal_attitude_msg.yaw = gimbal_attitude[0]["yaw_relative"]
+
+        if self.prev_gimbal_attitude_data is None:
+            self.prev_gimbal_attitude_data = [gimbal_attitude_msg.roll, gimbal_attitude_msg.pitch, gimbal_attitude_msg.yaw]
+        elif self.prev_gimbal_attitude_data == [gimbal_attitude_msg.roll, gimbal_attitude_msg.pitch, gimbal_attitude_msg.yaw]:
+            return None
+        else:
+            self.prev_gimbal_attitude_data = [gimbal_attitude_msg.roll, gimbal_attitude_msg.pitch, gimbal_attitude_msg.yaw]
 
         return gimbal_attitude_msg
 
@@ -462,6 +520,13 @@ class TelemetryPublisher():
         ekf_msg.v_y = velocity_body[1]
         ekf_msg.v_z = velocity_body[2]
         ekf_msg.psi = -att_euler["yaw"]*180/3.14159 # positive rotation counter clockwise
+
+        if self.prev_ekf_input_data is None:
+            self.prev_ekf_input_data = [ekf_msg.v_x, ekf_msg.v_y, ekf_msg.v_z, ekf_msg.psi]
+        elif self.prev_ekf_input_data == [ekf_msg.v_x, ekf_msg.v_y, ekf_msg.v_z, ekf_msg.psi]:
+            return None
+        else:
+            self.prev_ekf_input_data = [ekf_msg.v_x, ekf_msg.v_y, ekf_msg.v_z, ekf_msg.psi]
 
         return ekf_msg
 
