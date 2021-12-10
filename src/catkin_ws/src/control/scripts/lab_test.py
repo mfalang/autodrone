@@ -214,13 +214,40 @@ class SmallSquare(Mission):
         self._get_keyboard_input("Land? (yes) ", "yes")
         self._land()
 
+class FlyLong(Mission):
+
+    def __init__(self):
+        super().__init__()
+
+    def start(self):
+        self._get_keyboard_input("Ready to take off? (yes) ", "yes")
+        self._takeoff()
+
+        self._get_keyboard_input("Go up 2m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -2, 0)
+        self.setpoint_publisher.publish(msg)
+
+        # Move in a square
+        self._get_keyboard_input("Go to fly 100m forward (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(100, 0, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go to fly 100m backward (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, -100, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        # Land
+        self._get_keyboard_input("Land? (yes) ", "yes")
+        self._land()
+
 def main():
     ans = input("Choose mission\n" \
         "(1 = takeoff - landing)\n" \
         "(2 = takeoff - 0.5m up - 1m forward - 2m backward - 1m forwards - landing)\n" \
         "(3 = takeoff - fly square (2x2m) - landing)\n" \
         "(4 = takeoff - rotate - landing)\n" \
-        "(5 = takeoff - small square - landing)\n")
+        "(5 = takeoff - small square - landing)\n" \
+        "(6 = takeoff - 100m forward - 100m backward - landing)\n")
 
     if ans == "1":
         mission = TakeoffLand()
@@ -232,6 +259,8 @@ def main():
         mission = RotateMission()
     elif ans == "5":
         mission = SmallSquare()
+    elif ans == "6":
+        mission = FlyLong()
     else:
         print(f"Invalid choice {ans}")
         sys.exit(0)

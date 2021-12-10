@@ -337,7 +337,7 @@ class TelemetryPublisher():
             0, 0, gps_pos["altitude_accuracy"]
         ]
 
-        gps_data = self.prev_gps_data = [
+        gps_data = [
                 gps_pos["latitude"],
                 gps_pos["longitude"],
                 gps_pos["altitude"],
