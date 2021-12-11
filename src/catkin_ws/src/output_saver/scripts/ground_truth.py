@@ -68,10 +68,19 @@ class GroundTruthDataSaver(GenericOutputSaver):
         euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
 
         if self.environment == "real":
+            # res = np.array([
+            #     msg.header.stamp.to_sec(),
+            #     -msg.pose.position.y, # conversion between frames
+            #     msg.pose.position.x, # conversion between framess
+            #     -msg.pose.position.z,
+            #     euler[0],
+            #     euler[1],
+            #     euler[2]
+            # ])
             res = np.array([
                 msg.header.stamp.to_sec(),
-                -msg.pose.position.y, # conversion between frames
-                msg.pose.position.x, # conversion between framess
+                -msg.pose.position.x,
+                -msg.pose.position.y,
                 -msg.pose.position.z,
                 euler[0],
                 euler[1],

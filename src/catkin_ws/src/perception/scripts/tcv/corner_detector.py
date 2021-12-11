@@ -37,8 +37,8 @@ class CornerDetector():
             # # Reduce the noise to avoid false circle detection
             blur = cv.medianBlur(img, 5)
 
-            blur = cv.GaussianBlur(blur,(5,5),0)
-            blur = cv.bilateralFilter(blur,9,75,75)
+            # blur = cv.GaussianBlur(blur,(5,5),0)
+            # blur = cv.bilateralFilter(blur,9,75,75)
 
             hsv = cv.cvtColor(blur, cv.COLOR_BGR2HSV)
 
@@ -51,38 +51,43 @@ class CornerDetector():
 
             cv.imshow("segmented", segmented)
 
+            find_circle = False
+            if find_circle:
+
             # Make image grayscale
-            gray = cv.cvtColor(segmented, cv.COLOR_BGR2GRAY)
+                gray = cv.cvtColor(segmented, cv.COLOR_BGR2GRAY)
 
-            rows = gray.shape[0]
-            circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, rows / 8,
-                                param1=100, param2=30,
-                                minRadius=200, maxRadius=500)
+                rows = gray.shape[0]
+                circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, rows / 8,
+                                    param1=100, param2=30,
+                                    minRadius=200, maxRadius=500)
 
-            if circles is not None:
-                r_largest = 0
-                center_largest = None
-                circles = np.uint16(np.around(circles))
-                for i in circles[0, :]:
-                    center = (i[0], i[1])
-                    radius = i[2]
-                    print(radius)
+                if circles is not None:
+                    r_largest = 0
+                    center_largest = None
+                    circles = np.uint16(np.around(circles))
+                    for i in circles[0, :]:
+                        center = (i[0], i[1])
+                        radius = i[2]
+                        print(radius)
 
-                    if radius > r_largest:
-                        r_largest = radius
-                        center_largest = center
+                        if radius > r_largest:
+                            r_largest = radius
+                            center_largest = center
 
-            circle_mask = np.zeros((720,1280), np.uint8)
-            cv.circle(circle_mask, center_largest, int(r_largest * 1.01), (255, 0, 255), cv.FILLED)
+                    circle_mask = np.zeros((720,1280), np.uint8)
+                    cv.circle(circle_mask, center_largest, int(r_largest * 1.01), (255, 0, 255), cv.FILLED)
 
-            helipad = cv.bitwise_and(img,img, mask=circle_mask)
+                    helipad = cv.bitwise_and(img,img, mask=circle_mask)
 
-            helipad_gray = cv.cvtColor(helipad, cv.COLOR_BGR2GRAY)
-            blur = cv.medianBlur(helipad_gray, 11)
+                    helipad_gray = cv.cvtColor(helipad, cv.COLOR_BGR2GRAY)
+                    blur = cv.medianBlur(helipad_gray, 11)
 
-            blur = cv.GaussianBlur(blur,(5,5),0)
-            blur = cv.bilateralFilter(blur,9,75,75)
-            output = helipad_gray
+                    blur = cv.GaussianBlur(blur,(5,5),0)
+                    blur = cv.bilateralFilter(blur,9,75,75)
+                    output = helipad_gray
+            else:
+                output = cv.cvtColor(segmented, cv.COLOR_BGR2GRAY)
 
         else:
             output = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -103,7 +108,10 @@ class CornerDetector():
             gradientSize=self._gradient_size, useHarrisDetector=False, k=self._k
         )
 
-        return corners.reshape(corners.shape[0], 2)
+        if corners is not None:
+            return corners.reshape(corners.shape[0], 2)
+        else:
+            return np.array([])
 
     def find_arrow_and_H(self, corners, helipad_dists_metric):
 
@@ -299,10 +307,10 @@ class CornerDetector():
 def main():
     config = {
         "max_corners" : 13,
-        "quality_level" : 0.001,
-        "min_distance" : 10,
-        "block_size" : 3,
-        "gradient_size" : 3,
+        "quality_level" : 0.01,
+        "min_distance" : 30,
+        "block_size" : 20,
+        "gradient_size" : 30,
         "k" : 0.04
     }
 

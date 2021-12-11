@@ -185,8 +185,8 @@ class SmallSquare(Mission):
         self._get_keyboard_input("Ready to take off? (yes) ", "yes")
         self._takeoff()
 
-        self._get_keyboard_input("Go up 2m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(0, 0, -2, 0)
+        self._get_keyboard_input("Go up 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -1, 0)
         self.setpoint_publisher.publish(msg)
 
         # Move in a square
