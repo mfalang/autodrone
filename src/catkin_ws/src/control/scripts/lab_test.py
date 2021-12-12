@@ -185,8 +185,8 @@ class SmallSquare(Mission):
         self._get_keyboard_input("Ready to take off? (yes) ", "yes")
         self._takeoff()
 
-        self._get_keyboard_input("Go up 1m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(0, 0, -1, 0)
+        self._get_keyboard_input("Go up 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -0.5, 0)
         self.setpoint_publisher.publish(msg)
 
         # Move in a square
@@ -240,6 +240,74 @@ class FlyLong(Mission):
         self._get_keyboard_input("Land? (yes) ", "yes")
         self._land()
 
+class ForwardBackwardSideways(Mission):
+    def __init__(self):
+        super().__init__()
+
+    def start(self):
+
+        self._get_keyboard_input("Ready to take off? (yes) ", "yes")
+        self._takeoff()
+
+        self._get_keyboard_input("Go up 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -0.5, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go right 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 1, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go left 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, -1, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Land? (yes) ", "yes")
+        self._land()
+
+class NewSquare(Mission):
+    def __init__(self):
+        super().__init__()
+
+    def start(self):
+
+        self._get_keyboard_input("Ready to take off? (yes) ", "yes")
+        self._takeoff()
+
+        self._get_keyboard_input("Go up 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -0.5, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go right 0.3m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0.3, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go forward 0.3m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0.3, 0, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go left 0.6m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, -0.6, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go backward 0.6m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(-0.6, 0, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go right 0.6m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0.6, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go forward 0.3m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0.3, 0, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go left 0.3m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, -0.3, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Land? (yes) ", "yes")
+        self._land()
+
 def main():
     ans = input("Choose mission\n" \
         "(1 = takeoff - landing)\n" \
@@ -247,7 +315,9 @@ def main():
         "(3 = takeoff - fly square (2x2m) - landing)\n" \
         "(4 = takeoff - rotate - landing)\n" \
         "(5 = takeoff - small square - landing)\n" \
-        "(6 = takeoff - 100m forward - 100m backward - landing)\n")
+        "(6 = takeoff - 100m forward - 100m backward - landing)\n" \
+        "(7 = takeoff - forward - backward - forward - right - left - landing)\n" \
+        "(8 = takeoff - new square - landing)\n")
 
     if ans == "1":
         mission = TakeoffLand()
@@ -261,6 +331,10 @@ def main():
         mission = SmallSquare()
     elif ans == "6":
         mission = FlyLong()
+    elif ans == "7":
+        mission = ForwardBackwardSideways()
+    elif ans == "8":
+        mission = NewSquare()
     else:
         print(f"Invalid choice {ans}")
         sys.exit(0)

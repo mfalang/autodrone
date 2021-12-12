@@ -22,9 +22,10 @@ class Plotter():
         self.pose3D_ax.set_ylim(-2, 2)
 
         self.orientation_fig, self.orientation_ax = plt.subplots(3, 1)
-        self.orientation_ax[0].set_title("Estimated vs. ground truth roll")
-        self.orientation_ax[1].set_title("Estimated vs. ground truth pitch")
-        self.orientation_ax[2].set_title("Estimated vs. ground truth yaw")
+        self.orientation_fig.suptitle("Estimated (homography) vs. ground truth angles")
+        # self.orientation_ax[0].set_title("Estimated vs. ground truth roll")
+        # self.orientation_ax[1].set_title("Estimated vs. ground truth pitch")
+        # self.orientation_ax[2].set_title("Estimated vs. ground truth yaw")
         self.orientation_ax[0].set_xlabel("Time [sec]")
         self.orientation_ax[0].set_ylabel("Roll angle [deg]")
         self.orientation_ax[1].set_xlabel("Time [sec]")
@@ -32,18 +33,37 @@ class Plotter():
         self.orientation_ax[2].set_xlabel("Time [sec]")
         self.orientation_ax[2].set_ylabel("Yaw angle [deg]")
 
+        self.pos2D_fig, self.pos2D_ax = plt.subplots(3, 1)
+        self.pos2D_fig.suptitle("Estimated (homography) vs. ground truth position")
+        self.pos2D_ax[0].set_xlabel("Time [sec]")
+        self.pos2D_ax[0].set_ylabel("North [m]")
+        self.pos2D_ax[1].set_xlabel("Time [sec]")
+        self.pos2D_ax[1].set_ylabel("East [m]")
+        self.pos2D_ax[2].set_xlabel("Time [sec]")
+        self.pos2D_ax[2].set_ylabel("Down [m]")
+
+        self.gt_first_index = 0
+        self.tcv_first_index = 0
+
     def plot_drone_ground_truth(self):
         print("Plotting drone ground truth")
         # skiprows=2 instead of 1 because for some reason the first timestamp is negative so skip it
         pose = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose.txt", skiprows=2)
         self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone ground truth")
         self.pose3D_figure.legend()
-        self.orientation_ax[0].plot(pose[:,0] - pose[0,0], pose[:,4], label="GT")
-        self.orientation_ax[1].plot(pose[:,0] - pose[0,0], pose[:,5], label="GT")
-        self.orientation_ax[2].plot(pose[:,0] - pose[0,0], pose[:,6], label="GT")
-        self.orientation_ax[0].legend()
-        self.orientation_ax[1].legend()
-        self.orientation_ax[2].legend()
+        self.orientation_ax[0].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,4], label="GT")
+        self.orientation_ax[1].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,5], label="GT")
+        self.orientation_ax[2].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,6], label="GT")
+        self.orientation_ax[0].legend(loc="lower right")
+        self.orientation_ax[1].legend(loc="lower right")
+        self.orientation_ax[2].legend(loc="lower right")
+
+        self.pos2D_ax[0].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,1], label="GT")
+        self.pos2D_ax[1].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,2], label="GT")
+        self.pos2D_ax[2].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,3], label="GT")
+        self.pos2D_ax[0].legend(loc="lower right")
+        self.pos2D_ax[1].legend(loc="lower right")
+        self.pos2D_ax[2].legend(loc="lower right")
 
     def plot_helipad_ground_truth(self):
         print("Plotting helipad ground truth")
@@ -63,11 +83,18 @@ class Plotter():
         self.pose3D_ax.scatter(pose[:,1], pose[:,2], -pose[:,3], s=1, c="red", label="Drone TCV estimate")
         self.pose3D_figure.legend()
         self.orientation_ax[0].scatter(pose[:,0] - pose[0,0], pose[:,4], s=5, c="red", label="TCV")
-        self.orientation_ax[1].scatter(pose[:,0] - pose[0,0], pose[:,5], s=5, c="green", label="TCV")
-        self.orientation_ax[2].scatter(pose[:,0] - pose[0,0], pose[:,6], s=5, c="blue", label="TCV")
-        self.orientation_ax[0].legend()
-        self.orientation_ax[1].legend()
-        self.orientation_ax[2].legend()
+        self.orientation_ax[1].scatter(pose[:,0] - pose[0,0], pose[:,5], s=5, c="red", label="TCV")
+        self.orientation_ax[2].scatter(pose[:,0] - pose[0,0], pose[:,6], s=5, c="red", label="TCV")
+        self.orientation_ax[0].legend(loc="lower right")
+        self.orientation_ax[1].legend(loc="lower right")
+        self.orientation_ax[2].legend(loc="lower right")
+
+        self.pos2D_ax[0].scatter(pose[:,0] - pose[0,0], pose[:,1], s=5, c="red", label="TCV")
+        self.pos2D_ax[1].scatter(pose[:,0] - pose[0,0], pose[:,2], s=5, c="red", label="TCV")
+        self.pos2D_ax[2].scatter(pose[:,0] - pose[0,0], pose[:,3], s=5, c="red", label="TCV")
+        self.pos2D_ax[0].legend(loc="lower right")
+        self.pos2D_ax[1].legend(loc="lower right")
+        self.pos2D_ax[2].legend(loc="lower right")
 
     def plot_drone_pose_ekf(self):
         print("Plotting drone estimate from EKF and covariance")
@@ -87,6 +114,15 @@ class Plotter():
         # self.pose3D_ax.plot3D(pose[:,1], pose[:,2], pose[:,3], label="Helipad estimate")
         # plt.legend()
 
+    def synch_tcv_and_gt_timestamps(self):
+        tcv_timestamps = np.loadtxt(f"{self.data_dir}/estimates/tcv_pose.txt", skiprows=1)[:,0]
+        gt_timestamps = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose.txt", skiprows=2)[:,0]
+
+        tcv_first_timestamp = tcv_timestamps[0]
+        self.gt_first_index = np.argmin(np.abs(gt_timestamps-tcv_first_timestamp))
+        self.tcv_first_index = 0
+
+
 
 def main():
     parser = argparse.ArgumentParser(description="Visualize data.")
@@ -101,6 +137,9 @@ def main():
     args = parser.parse_args()
 
     plotter = Plotter(args.data_dir)
+
+    # if args.gt_plots == "drone_pose" and args.estimate_plots == "tcv_pose":
+    #     plotter.synch_tcv_and_gt_timestamps()
 
     if args.gt_plots == "all":
         plotter.plot_drone_ground_truth()

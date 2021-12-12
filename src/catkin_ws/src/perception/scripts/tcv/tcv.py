@@ -38,6 +38,7 @@ class TcvPoseEstimator():
             self._new_image_cb
         )
 
+        self.env = rospy.get_param("~environment")
         self.img_height = rospy.get_param("/drone/camera/img_height")
         self.img_width = rospy.get_param("/drone/camera/img_width")
         self.focal_length = rospy.get_param("/drone/camera/focal_length")
@@ -45,11 +46,9 @@ class TcvPoseEstimator():
         self.camera_offset_y_mm = rospy.get_param("/drone/camera/offset_y_mm")
         self.camera_offset_z_mm = rospy.get_param("/drone/camera/offset_z_mm")
 
-        self.K = np.array([
-            [941.22, 0, 580.66],
-            [0, 932.66, 375.35],
-            [0, 0, 1]
-        ])
+        self.K = np.loadtxt(
+            f"{script_dir}/../../{self.config['camera_matrix']['path']}"
+        )
 
         self.feature_dists_metric = np.loadtxt(
             f"{script_dir}/../../{self.config['feature_dists_metric']['path']}"
@@ -77,19 +76,23 @@ class TcvPoseEstimator():
 
         rospy.loginfo("Starting TCV pose estimator")
 
+        if self.env == "sim":
+            segment = False
+        else:
+            segment = True
+
         while not rospy.is_shutdown():
 
             if self.new_image_available:
 
                 img = self.latest_image.astype(np.uint8)
-                img_processed = self.corner_detector.preprocess_image(img, segment=True)
+                img_processed = self.corner_detector.preprocess_image(img, segment=segment)
 
                 corners = self.corner_detector.find_corners_shi_tomasi(img_processed)
                 self.corner_detector.show_corners_found(img, corners, color="red")
 
                 cv.waitKey(1)
-                continue
-
+                # continue
                 if corners is None:
                     continue
 
@@ -104,9 +107,9 @@ class TcvPoseEstimator():
                 R, t = self.pose_recoverer.find_R_t(features_image, self.feature_dists_metric, H)
                 R_LM, t_LM = self.pose_recoverer.optimize_R_t(features_image, self.feature_dists_metric, R, t)
 
-                pose_camera = self.pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
+                pose_ned = self.pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
 
-                pose_ned = self._pose_camera_to_ned(pose_camera)
+                # pose_ned = self._pose_camera_to_ned(pose_camera)
                 print(f"Pos: {pose_ned[0:3]} Orientation: {pose_ned[3:]}")
 
                 self._publish_pose(pose_ned)

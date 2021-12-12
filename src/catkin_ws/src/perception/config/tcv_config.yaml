@@ -7,4 +7,7 @@ shi_tomasi:
   k: 0.04
 
 feature_dists_metric:
-  path: "data/helipad_dists_metric.txt"
+  path: "data/helipad_dists_origin_center_enu_metric.txt"
+
+camera_matrix:
+  path: "data/camera_matrix.txt"
