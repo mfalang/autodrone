@@ -56,7 +56,7 @@ class Plotter():
         print("Plotting drone ground truth")
         # skiprows=2 instead of 1 because for some reason the first timestamp is negative so skip it
         pose = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose.txt", skiprows=2)
-        self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone ground truth")
+        self.pose3D_ax.plot3D(-pose[:,1], pose[:,2], -pose[:,3], label="Drone ground truth")
         # self.pose3D_figure.legend()
         self.orientation_ax[0].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,4], label="GT")
         self.orientation_ax[1].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,5], label="GT")
@@ -65,7 +65,7 @@ class Plotter():
         self.orientation_ax[1].legend(loc="lower right")
         self.orientation_ax[2].legend(loc="lower right")
 
-        self.pos2D_ax[0].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,1], label="GT")
+        self.pos2D_ax[0].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], -pose[self.gt_first_index:,1], label="GT")
         self.pos2D_ax[1].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,2], label="GT")
         self.pos2D_ax[2].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,3], label="GT")
         self.pos2D_ax[0].legend(loc="lower right")
