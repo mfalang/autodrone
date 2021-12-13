@@ -145,8 +145,8 @@ class RotateMission(Mission):
         self._get_keyboard_input("Ready to take off? (yes) ", "yes")
         self._takeoff()
 
-        self._get_keyboard_input("Go up 0.5m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(0, 0, -0.5, 0)
+        self._get_keyboard_input("Go up 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -1, 0)
         self.setpoint_publisher.publish(msg)
 
         self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")

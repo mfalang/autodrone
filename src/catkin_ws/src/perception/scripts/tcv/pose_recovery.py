@@ -231,7 +231,7 @@ def main():
 
     pose_recoverer = PoseRecovery(K)
 
-    img = cv.imread("test_images/test2.png")
+    img = cv.imread("test_images/test4.png")
 
     img_processed = detector.preprocess_image(img)
 
@@ -240,8 +240,8 @@ def main():
 
     features_image = detector.find_arrow_and_H(corners, features_metric)
 
-    # detector.show_known_points(img, features_image)
-    # cv.waitKey()
+    detector.show_known_points(img, features_image)
+    cv.waitKey()
 
     H = pose_recoverer.find_homography(features_image, features_metric)
     start = time.time()
