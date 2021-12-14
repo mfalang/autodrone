@@ -105,7 +105,7 @@ class TelemetryPublisher():
             "drone/out/velocity_body", geometry_msgs.msg.PointStamped,
             self._collect_velocity, publish_rate=-1
         ))
-        self.prev_velocity = None
+        self.prev_velocity_ned = None
 
         self.telemetry_publishers.append(GenericMessagePublisher(
             "drone/out/relative_altitude", geometry_msgs.msg.PointStamped,
@@ -242,6 +242,19 @@ class TelemetryPublisher():
         velocity_msg = geometry_msgs.msg.PointStamped()
         velocity_msg.header.stamp = rospy.Time.now()
 
+        speed = self.drone.get_state(
+            olympe_msgs.ardrone3.PilotingState.SpeedChanged
+        )
+
+        velocity_ned = np.array([speed["speedX"], speed["speedY"], speed["speedZ"]])
+
+        if self.prev_velocity_ned is None:
+            self.prev_velocity_ned = velocity_ned
+        elif np.all(self.prev_velocity_ned == velocity_ned):
+            return None
+        else:
+            self.prev_velocity_ned = velocity_ned
+
         att_euler = self.drone.get_state(
             olympe_msgs.ardrone3.PilotingState.AttitudeChanged
         )
@@ -252,20 +265,7 @@ class TelemetryPublisher():
             degrees=False
         ).as_matrix().T
 
-        speed = self.drone.get_state(
-            olympe_msgs.ardrone3.PilotingState.SpeedChanged
-        )
-
-        velocity_ned = np.array([speed["speedX"], speed["speedY"], speed["speedZ"]])
-
         velocity_body = R_ned_to_body @ velocity_ned
-
-        if self.prev_velocity is None:
-            self.prev_velocity = velocity_body
-        elif np.all(self.prev_velocity == velocity_body):
-            return None
-        else:
-            self.prev_velocity = velocity_body
 
         [
             velocity_msg.point.x,
