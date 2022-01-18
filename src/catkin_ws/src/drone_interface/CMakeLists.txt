@@ -56,6 +56,7 @@ add_message_files(
   SaturationLimits.msg
   AttitudeEuler.msg
   EkfInput.msg
+  AnafiTelemetry.msg
 )
 
 ## Generate services in the 'srv' folder

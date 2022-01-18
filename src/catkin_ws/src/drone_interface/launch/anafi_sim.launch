@@ -1,4 +1,11 @@
 <launch>
-    <rosparam command="load" file="$(find drone_interface)/config/anafi_params.yaml" />
-    <node name="anafi_interface" pkg="drone_interface" type="olympe_ros_bridge.py" args="simulation" output="screen" />
+    <rosparam command="load" file="$(find drone_interface)/config/anafi.yaml" />
+    <node
+        name="anafi_interface"
+        pkg="drone_interface"
+        type="olympe_ros_bridge.py"
+        output="screen">
+        <param name="drone_ip" value="10.202.0.1" />
+        <param name="config_file" value="anafi.yaml" />
+    </node>
 </launch>

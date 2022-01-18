@@ -7,3 +7,6 @@ drone:
     offset_x_mm: 200
     offset_y_mm: 0
     offset_z_mm: 0
+  topics:
+    telemetry: "/drone/out/telemetry"
+    gnss: "/drone/out/gps"

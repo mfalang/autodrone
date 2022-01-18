@@ -16,6 +16,7 @@ import olympe.messages as olympe_msgs
 import olympe.enums as olympe_enums
 
 import cv2 as cv
+import numpy as np
 import cv_bridge
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -73,247 +74,487 @@ class GenericMessagePublisher():
             return rospy.Time.now().to_time() >= self.prev_publish_time.to_time() + 1/self.rate
 
 
-class TelemetryPublisher():
-    """
-    Class to publish telemetry data from Anafi drone
-    """
-    def __init__(self, drone):
+# class TelemetryPublisher():
+#     """
+#     Class to publish telemetry data from Anafi drone
+#     """
+#     def __init__(self, drone):
 
+#         self.drone = drone
+#         self.image_dir = ""
+
+#         # Queue for storing messages ready for publishing
+#         self.publish_queue = queue.Queue()
+
+#         # List of all telemetry publishers
+#         self.telemetry_publishers = []
+
+#         # Topics to publish to
+#         self.telemetry_publishers.append(GenericMessagePublisher(
+#             "drone/out/attitude_quat", geometry_msgs.msg.QuaternionStamped,
+#             self._collect_attitude_quat, publish_rate=-1
+#         ))
+#         self.prev_attitude_quat = None
+
+#         self.telemetry_publishers.append(GenericMessagePublisher(
+#             "drone/out/attitude_euler", drone_interface.msg.AttitudeEuler,
+#             self._collect_attitude_euler, publish_rate=-1
+#         ))
+#         self.prev_attitude_euler = None
+
+#         self.telemetry_publishers.append(GenericMessagePublisher(
+#             "drone/out/velocity_body", geometry_msgs.msg.PointStamped,
+#             self._collect_velocity, publish_rate=-1
+#         ))
+#         self.prev_velocity_ned = None
+
+#         self.telemetry_publishers.append(GenericMessagePublisher(
+#             "drone/out/relative_altitude", geometry_msgs.msg.PointStamped,
+#             self._collect_relative_altitude, publish_rate=-1
+#         ))
+#         self.prev_relative_altitude = None
+
+#         self.telemetry_publishers.append(GenericMessagePublisher(
+#             "drone/out/gps_data", sensor_msgs.msg.NavSatFix,
+#             self._collect_gps_data, publish_rate=-1
+#         ))
+#         self.prev_gps_data = None
+
+#         self.telemetry_publishers.append(GenericMessagePublisher(
+#             "drone/out/flying_state", drone_interface.msg.FlyingState,
+#             self._collect_flying_state, publish_rate=-1
+#         ))
+
+#         self.telemetry_publishers.append(GenericMessagePublisher(
+#             "drone/out/gimbal_attitude", drone_interface.msg.GimbalAttitude,
+#             self._collect_gimbal_attitude, publish_rate=-1
+#         ))
+#         self.prev_gimbal_attitude_data = None
+
+#         self.telemetry_publishers.append(GenericMessagePublisher(
+#             "drone/out/battery_data", sensor_msgs.msg.BatteryState,
+#             self._collect_battery_data, publish_rate=-1
+#         ))
+
+#         self.telemetry_publishers.append(GenericMessagePublisher(
+#             "drone/out/saturation_limits", drone_interface.msg.SaturationLimits,
+#             self._collect_saturation_limits, publish_rate=2
+#         ))
+
+#         self.telemetry_publishers.append(GenericMessagePublisher(
+#             "drone/out/ekf_input", drone_interface.msg.EkfInput,
+#             self._collect_ekf_input, publish_rate=500, queue_size=1
+#         ))
+#         self.prev_ekf_input_data = None
+
+#         rospy.loginfo("Initialized telemetry publisher")
+
+#     def publish(self):
+#         """
+#         Publish telemetry data from the Anafi drone. This function blocks so it
+#         should be run in its own thread.
+#         """
+#         while not rospy.is_shutdown():
+#             for publisher in self.telemetry_publishers:
+#                 if publisher.should_publish():
+#                     publisher.publish()
+
+#     def _collect_attitude_quat(self):
+#         """
+#         Get the attitude of the drone in Euler angles and convert a quaternion
+#         used in the ROS message for attitude.
+
+#         Returns
+#         -------
+#         geometry_msgs.msg.QuaternionStamped
+#             ROS message with drone attitude in quaternions
+#         """
+#         attitude_msg = geometry_msgs.msg.QuaternionStamped()
+#         attitude_msg.header.stamp = rospy.Time.now()
+
+#         att_euler = self.drone.get_state(
+#             olympe_msgs.ardrone3.PilotingState.AttitudeChanged
+#         )
+
+#         [
+#             attitude_msg.quaternion.x,
+#             attitude_msg.quaternion.y,
+#             attitude_msg.quaternion.z,
+#             attitude_msg.quaternion.w
+#         ] = Rotation.from_euler(
+#             "XYZ",
+#             [att_euler["roll"], att_euler["pitch"], att_euler["yaw"]],
+#             degrees=False
+#         ).as_quat()
+
+#         if self.prev_attitude_quat is None:
+#             self.prev_attitude_quat = [attitude_msg.quaternion.x, attitude_msg.quaternion.y, attitude_msg.quaternion.z, attitude_msg.quaternion.w]
+#         elif self.prev_attitude_quat == [attitude_msg.quaternion.x, attitude_msg.quaternion.y, attitude_msg.quaternion.z, attitude_msg.quaternion.w]:
+#             return None
+#         else:
+#             self.prev_attitude_quat = [attitude_msg.quaternion.x, attitude_msg.quaternion.y, attitude_msg.quaternion.z, attitude_msg.quaternion.w]
+
+#         return attitude_msg
+
+#     def _collect_attitude_euler(self):
+#         """
+#         Get the attitude of the drone in Euler angles and put this into a ROS
+#         message.
+
+#         Returns
+#         -------
+#         drone_interface.msg.AttitudeEuler
+#             ROS message with drone attitude in Euler angles
+#         """
+#         attitude_msg = drone_interface.msg.AttitudeEuler()
+#         attitude_msg.header.stamp = rospy.Time.now()
+
+#         att_euler = self.drone.get_state(
+#             olympe_msgs.ardrone3.PilotingState.AttitudeChanged
+#         )
+
+#         attitude_msg.roll = att_euler["roll"]*180/3.14159
+#         attitude_msg.pitch = att_euler["pitch"]*180/3.14159
+#         attitude_msg.yaw = att_euler["yaw"]*180/3.14159
+
+#         if self.prev_attitude_euler is None:
+#             self.prev_attitude_euler = [attitude_msg.roll, attitude_msg.pitch, attitude_msg.yaw]
+#         elif self.prev_attitude_euler == [attitude_msg.roll, attitude_msg.pitch, attitude_msg.yaw]:
+#             return None
+#         else:
+#             self.prev_attitude_euler = [attitude_msg.roll, attitude_msg.pitch, attitude_msg.yaw]
+
+#         return attitude_msg
+
+#     def _collect_velocity(self):
+#         """
+#         Get the body velocity of the the drone and put this in a ROS message.
+#         The format for the velocity is
+
+#         x = forward velocity
+#         y = left velocity
+#         z = down velocity
+
+#         Returns
+#         -------
+#         geometry_msgs.msg.PointStamped
+#             ROS message with drone body velocity
+#         """
+#         velocity_msg = geometry_msgs.msg.PointStamped()
+#         velocity_msg.header.stamp = rospy.Time.now()
+
+#         speed = self.drone.get_state(
+#             olympe_msgs.ardrone3.PilotingState.SpeedChanged
+#         )
+
+#         velocity_ned = np.array([speed["speedX"], speed["speedY"], speed["speedZ"]])
+
+#         if self.prev_velocity_ned is None:
+#             self.prev_velocity_ned = velocity_ned
+#         elif np.all(self.prev_velocity_ned == velocity_ned):
+#             return None
+#         else:
+#             self.prev_velocity_ned = velocity_ned
+
+#         att_euler = self.drone.get_state(
+#             olympe_msgs.ardrone3.PilotingState.AttitudeChanged
+#         )
+
+#         R_ned_to_body = Rotation.from_euler(
+#             "xyz",
+#             [att_euler["roll"], att_euler["pitch"], att_euler["yaw"]],
+#             degrees=False
+#         ).as_matrix().T
+
+#         velocity_body = R_ned_to_body @ velocity_ned
+
+#         [
+#             velocity_msg.point.x,
+#             velocity_msg.point.y,
+#             velocity_msg.point.z
+#         ] = velocity_body
+
+#         return velocity_msg
+
+#     def _collect_relative_altitude(self):
+#         """
+#         Get the drone altitude relative to launch and store this in a ROS
+#         message.
+
+#         Returns
+#         -------
+#         geometry_msgs.msg.PointStamped
+#             ROS message containing drone altitude relative launch as
+#             z-parameter. Note that x and y parameters are not used.
+#         """
+#         relative_altitude_msg = geometry_msgs.msg.PointStamped()
+#         relative_altitude_msg.header.stamp = rospy.Time.now()
+
+#         relative_altitude = self.drone.get_state(
+#             olympe_msgs.ardrone3.PilotingState.AltitudeChanged
+#         )["altitude"]
+
+#         if self.prev_relative_altitude is None:
+#             self.prev_relative_altitude = relative_altitude
+#         elif self.prev_relative_altitude == relative_altitude:
+#             return None
+#         else:
+#             self.prev_relative_altitude = relative_altitude
+
+#         relative_altitude_msg.point.z = relative_altitude
+
+#         return relative_altitude_msg
+
+#     def _collect_gps_data(self):
+#         """
+#         Get drone GPS position and other data and store this in a ROS message.
+
+#         Returns
+#         -------
+#         sensor_msgs.msg.NavSatFix
+#             ROS message containing drone location as well as other GPS related
+#             data
+#         """
+#         gps_data_msg = sensor_msgs.msg.NavSatFix()
+#         gps_data_msg.header.stamp = rospy.Time.now()
+
+#         gps_fix = self.drone.get_state(
+#             olympe_msgs.ardrone3.GPSSettingsState.GPSFixStateChanged
+#         )["fixed"]
+
+#         gps_pos = self.drone.get_state(
+#             olympe_msgs.ardrone3.PilotingState.GpsLocationChanged
+#         )
+
+#         gps_data_msg.status.status = gps_fix
+#         gps_data_msg.status.service = sensor_msgs.msg.NavSatStatus.SERVICE_GPS
+#         gps_data_msg.latitude = gps_pos["latitude"]
+#         gps_data_msg.longitude = gps_pos["longitude"]
+#         gps_data_msg.altitude = gps_pos["altitude"]
+
+#         gps_data_msg.position_covariance = [
+#             gps_pos["latitude_accuracy"], 0, 0,
+#             0, gps_pos["longitude_accuracy"], 0,
+#             0, 0, gps_pos["altitude_accuracy"]
+#         ]
+
+#         gps_data = [
+#                 gps_pos["latitude"],
+#                 gps_pos["longitude"],
+#                 gps_pos["altitude"],
+#                 gps_pos["latitude_accuracy"],
+#                 gps_pos["longitude_accuracy"],
+#                 gps_pos["altitude_accuracy"]
+#         ]
+
+#         if self.prev_gps_data is None:
+#             self.prev_gps_data = gps_data
+#         elif self.prev_gps_data == gps_data:
+#             return None
+#         else:
+#             self.prev_gps_data = gps_data
+
+#         gps_data_msg.position_covariance_type = sensor_msgs.msg.NavSatFix.COVARIANCE_TYPE_DIAGONAL_KNOWN
+
+#         return gps_data_msg
+
+#     def _collect_flying_state(self):
+#         """
+#         Get the flying state of the Anafi and store this in a ROS message.
+
+#         Returns
+#         -------
+#         drone_interface.msg.PositionSetpointRelative
+#             ROS message containing the flying state of the drone
+#         """
+
+#         flying_state_msg = drone_interface.msg.FlyingState()
+#         flying_state_msg.header.stamp = rospy.Time.now()
+#         flying_state = self.drone.get_state(
+#             olympe_msgs.ardrone3.PilotingState.FlyingStateChanged
+#         )["state"].name
+#         flying_state_msg.flying_state = flying_state
+
+#         return flying_state_msg
+
+#     def _collect_gimbal_attitude(self):
+#         """
+#         Get the gimbal attitude of the drone. Attitude is relative to the
+#         drone body frame (roll axis forward, pitch axis left, yaw-axis down).
+#         Counter clockwise angle positive. All angles zero when camera is
+#         pointing straight ahead.
+
+#         Returns
+#         -------
+#         drone_interface.msg.GimbalAttitude
+#             ROS message containing the gimbal attitude
+#         """
+#         gimbal_attitude_msg = drone_interface.msg.GimbalAttitude()
+#         gimbal_attitude_msg.header.stamp = rospy.Time.now()
+
+#         gimbal_attitude = self.drone.get_state(
+#             olympe_msgs.gimbal.attitude
+#         )
+
+#         gimbal_attitude_msg.roll = gimbal_attitude[0]["roll_relative"]
+#         gimbal_attitude_msg.pitch = gimbal_attitude[0]["pitch_relative"]
+#         gimbal_attitude_msg.yaw = gimbal_attitude[0]["yaw_relative"]
+
+#         if self.prev_gimbal_attitude_data is None:
+#             self.prev_gimbal_attitude_data = [gimbal_attitude_msg.roll, gimbal_attitude_msg.pitch, gimbal_attitude_msg.yaw]
+#         elif self.prev_gimbal_attitude_data == [gimbal_attitude_msg.roll, gimbal_attitude_msg.pitch, gimbal_attitude_msg.yaw]:
+#             return None
+#         else:
+#             self.prev_gimbal_attitude_data = [gimbal_attitude_msg.roll, gimbal_attitude_msg.pitch, gimbal_attitude_msg.yaw]
+
+#         return gimbal_attitude_msg
+
+#     def _collect_battery_data(self):
+#         """
+#         Get battery information about the drone and store this in a ROS message.
+
+#         Returns
+#         -------
+#         sensor_msgs.msg.BatteryState
+#             ROS message containing information about the drone battery
+#         """
+#         battery_msg = sensor_msgs.msg.BatteryState()
+#         battery_msg.header.stamp = rospy.Time.now()
+
+#         battery_msg.voltage = self.drone.get_state(
+#             olympe_msgs.battery.voltage
+#         )["voltage"]
+
+#         battery_msg.percentage = self.drone.get_state(
+#             olympe_msgs.common.CommonState.BatteryStateChanged
+#         )["percent"]/100
+
+#         battery_msg.power_supply_status = sensor_msgs.msg.BatteryState.POWER_SUPPLY_STATUS_DISCHARGING
+
+#         battery_alert = self.drone.get_state(
+#             olympe_msgs.battery.alert
+#         )
+
+#         no_alert = olympe_enums.battery.alert_level.none
+#         if battery_alert[olympe_enums.battery.alert.power_level]["level"] != no_alert:
+#             battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_DEAD
+#         elif battery_alert[olympe_enums.battery.alert.too_hot]["level"] != no_alert:
+#             battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_OVERHEAT
+#         elif battery_alert[olympe_enums.battery.alert.too_cold]["level"] != no_alert:
+#             battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_COLD
+#         else:
+#             battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_GOOD
+
+#         battery_msg.present = True
+
+#         battery_msg.serial_number = self.drone.get_state(olympe_msgs.battery.serial)["serial"]
+
+#         return battery_msg
+
+#     def _collect_saturation_limits(self):
+#         """
+#         Get the saturation limits for the different parameters attributed to
+#         control of the drone.
+
+#         Returns
+#         -------
+#         drone_interface.msg.SaturationLimits
+#             Message containing saturation limits
+#         """
+#         max_tilt = self.drone.get_state(
+#             olympe_msgs.ardrone3.PilotingSettingsState.MaxTiltChanged
+#         )["current"]
+
+#         max_yaw_rot_speed = self.drone.get_state(
+#             olympe_msgs.ardrone3.SpeedSettingsState.MaxRotationSpeedChanged
+#         )["current"]
+
+#         max_roll_pitch_rot_speed = self.drone.get_state(
+#             olympe_msgs.ardrone3.SpeedSettingsState.MaxPitchRollRotationSpeedChanged
+#         )["current"]
+
+#         max_vertical_speed = self.drone.get_state(
+#             olympe_msgs.ardrone3.SpeedSettingsState.MaxVerticalSpeedChanged
+#         )["current"]
+
+#         saturation_limits_msg = drone_interface.msg.SaturationLimits()
+#         saturation_limits_msg.header.stamp = rospy.Time.now()
+#         saturation_limits_msg.max_tilt_angle = max_tilt
+#         saturation_limits_msg.max_yaw_rotation_speed = max_yaw_rot_speed
+#         saturation_limits_msg.max_roll_pitch_rotation_speed = max_roll_pitch_rot_speed
+#         saturation_limits_msg.max_vertical_speed = max_vertical_speed
+
+#         return saturation_limits_msg
+
+#     def _collect_ekf_input(self):
+        # """
+        # Get the velocity and heading of the drone.
+
+        # Returns
+        # -------
+        # drone_interface.msg.EkfInput
+        #     Message containing ekf input
+        # """
+
+        # ekf_msg = drone_interface.msg.EkfInput()
+        # ekf_msg.header.stamp = rospy.Time.now()
+
+        # att_euler = self.drone.get_state(
+        #     olympe_msgs.ardrone3.PilotingState.AttitudeChanged
+        # )
+
+        # R_ned_to_body = Rotation.from_euler(
+        #     "xyz",
+        #     [att_euler["roll"], att_euler["pitch"], att_euler["yaw"]],
+        #     degrees=False
+        # ).as_matrix().T
+
+        # speed = self.drone.get_state(
+        #     olympe_msgs.ardrone3.PilotingState.SpeedChanged
+        # )
+
+
+        # velocity_ned = np.array([speed["speedX"], speed["speedY"], speed["speedZ"]])
+
+        # velocity_body = R_ned_to_body @ velocity_ned
+        # ekf_msg.v_x = velocity_body[0]
+        # ekf_msg.v_y = velocity_body[1]
+        # ekf_msg.v_z = velocity_body[2]
+        # ekf_msg.psi = -att_euler["yaw"]*180/3.14159 # positive rotation counter clockwise
+
+        # if self.prev_ekf_input_data is None:
+        #     self.prev_ekf_input_data = [ekf_msg.v_x, ekf_msg.v_y, ekf_msg.v_z, ekf_msg.psi]
+        # elif self.prev_ekf_input_data == [ekf_msg.v_x, ekf_msg.v_y, ekf_msg.v_z, ekf_msg.psi]:
+        #     return None
+        # else:
+        #     self.prev_ekf_input_data = [ekf_msg.v_x, ekf_msg.v_y, ekf_msg.v_z, ekf_msg.psi]
+
+        # return ekf_msg
+
+class GpsPublisher():
+
+    def __init__(self, drone, topic_name) -> None:
         self.drone = drone
-        self.image_dir = ""
 
-        # Queue for storing messages ready for publishing
-        self.publish_queue = queue.Queue()
+        self.publisher = rospy.Publisher(
+            topic_name, sensor_msgs.msg.NavSatFix, queue_size=1
+        )
 
-        # List of all telemetry publishers
-        self.telemetry_publishers = []
-
-        # Topics to publish to
-        self.telemetry_publishers.append(GenericMessagePublisher(
-            "drone/out/attitude_quat", geometry_msgs.msg.QuaternionStamped,
-            self._collect_attitude_quat, publish_rate=-1
-        ))
-        self.prev_attitude_quat = None
-
-        self.telemetry_publishers.append(GenericMessagePublisher(
-            "drone/out/attitude_euler", drone_interface.msg.AttitudeEuler,
-            self._collect_attitude_euler, publish_rate=-1
-        ))
-        self.prev_attitude_euler = None
-
-        self.telemetry_publishers.append(GenericMessagePublisher(
-            "drone/out/velocity_body", geometry_msgs.msg.PointStamped,
-            self._collect_velocity, publish_rate=-1
-        ))
-        self.prev_velocity_ned = None
-
-        self.telemetry_publishers.append(GenericMessagePublisher(
-            "drone/out/relative_altitude", geometry_msgs.msg.PointStamped,
-            self._collect_relative_altitude, publish_rate=-1
-        ))
-        self.prev_relative_altitude = None
-
-        self.telemetry_publishers.append(GenericMessagePublisher(
-            "drone/out/gps_data", sensor_msgs.msg.NavSatFix,
-            self._collect_gps_data, publish_rate=-1
-        ))
         self.prev_gps_data = None
 
-        self.telemetry_publishers.append(GenericMessagePublisher(
-            "drone/out/flying_state", drone_interface.msg.FlyingState,
-            self._collect_flying_state, publish_rate=-1
-        ))
-
-        self.telemetry_publishers.append(GenericMessagePublisher(
-            "drone/out/gimbal_attitude", drone_interface.msg.GimbalAttitude,
-            self._collect_gimbal_attitude, publish_rate=-1
-        ))
-        self.prev_gimbal_attitude_data = None
-
-        self.telemetry_publishers.append(GenericMessagePublisher(
-            "drone/out/battery_data", sensor_msgs.msg.BatteryState,
-            self._collect_battery_data, publish_rate=-1
-        ))
-
-        self.telemetry_publishers.append(GenericMessagePublisher(
-            "drone/out/saturation_limits", drone_interface.msg.SaturationLimits,
-            self._collect_saturation_limits, publish_rate=2
-        ))
-
-        self.telemetry_publishers.append(GenericMessagePublisher(
-            "drone/out/ekf_input", drone_interface.msg.EkfInput,
-            self._collect_ekf_input, publish_rate=500, queue_size=1
-        ))
-        self.prev_ekf_input_data = None
-
-        rospy.loginfo("Initialized telemetry publisher")
-
     def publish(self):
-        """
-        Publish telemetry data from the Anafi drone. This function blocks so it
-        should be run in its own thread.
-        """
+
         while not rospy.is_shutdown():
-            for publisher in self.telemetry_publishers:
-                if publisher.should_publish():
-                    publisher.publish()
-
-    def _collect_attitude_quat(self):
-        """
-        Get the attitude of the drone in Euler angles and convert a quaternion
-        used in the ROS message for attitude.
-
-        Returns
-        -------
-        geometry_msgs.msg.QuaternionStamped
-            ROS message with drone attitude in quaternions
-        """
-        attitude_msg = geometry_msgs.msg.QuaternionStamped()
-        attitude_msg.header.stamp = rospy.Time.now()
-
-        att_euler = self.drone.get_state(
-            olympe_msgs.ardrone3.PilotingState.AttitudeChanged
-        )
-
-        [
-            attitude_msg.quaternion.x,
-            attitude_msg.quaternion.y,
-            attitude_msg.quaternion.z,
-            attitude_msg.quaternion.w
-        ] = Rotation.from_euler(
-            "XYZ",
-            [att_euler["roll"], att_euler["pitch"], att_euler["yaw"]],
-            degrees=False
-        ).as_quat()
-
-        if self.prev_attitude_quat is None:
-            self.prev_attitude_quat = [attitude_msg.quaternion.x, attitude_msg.quaternion.y, attitude_msg.quaternion.z, attitude_msg.quaternion.w]
-        elif self.prev_attitude_quat == [attitude_msg.quaternion.x, attitude_msg.quaternion.y, attitude_msg.quaternion.z, attitude_msg.quaternion.w]:
-            return None
-        else:
-            self.prev_attitude_quat = [attitude_msg.quaternion.x, attitude_msg.quaternion.y, attitude_msg.quaternion.z, attitude_msg.quaternion.w]
-
-        return attitude_msg
-
-    def _collect_attitude_euler(self):
-        """
-        Get the attitude of the drone in Euler angles and put this into a ROS
-        message.
-
-        Returns
-        -------
-        drone_interface.msg.AttitudeEuler
-            ROS message with drone attitude in Euler angles
-        """
-        attitude_msg = drone_interface.msg.AttitudeEuler()
-        attitude_msg.header.stamp = rospy.Time.now()
-
-        att_euler = self.drone.get_state(
-            olympe_msgs.ardrone3.PilotingState.AttitudeChanged
-        )
-
-        attitude_msg.roll = att_euler["roll"]*180/3.14159
-        attitude_msg.pitch = att_euler["pitch"]*180/3.14159
-        attitude_msg.yaw = att_euler["yaw"]*180/3.14159
-
-        if self.prev_attitude_euler is None:
-            self.prev_attitude_euler = [attitude_msg.roll, attitude_msg.pitch, attitude_msg.yaw]
-        elif self.prev_attitude_euler == [attitude_msg.roll, attitude_msg.pitch, attitude_msg.yaw]:
-            return None
-        else:
-            self.prev_attitude_euler = [attitude_msg.roll, attitude_msg.pitch, attitude_msg.yaw]
-
-        return attitude_msg
-
-    def _collect_velocity(self):
-        """
-        Get the body velocity of the the drone and put this in a ROS message.
-        The format for the velocity is
-
-        x = forward velocity
-        y = left velocity
-        z = down velocity
-
-        Returns
-        -------
-        geometry_msgs.msg.PointStamped
-            ROS message with drone body velocity
-        """
-        velocity_msg = geometry_msgs.msg.PointStamped()
-        velocity_msg.header.stamp = rospy.Time.now()
-
-        speed = self.drone.get_state(
-            olympe_msgs.ardrone3.PilotingState.SpeedChanged
-        )
-
-        velocity_ned = np.array([speed["speedX"], speed["speedY"], speed["speedZ"]])
-
-        if self.prev_velocity_ned is None:
-            self.prev_velocity_ned = velocity_ned
-        elif np.all(self.prev_velocity_ned == velocity_ned):
-            return None
-        else:
-            self.prev_velocity_ned = velocity_ned
-
-        att_euler = self.drone.get_state(
-            olympe_msgs.ardrone3.PilotingState.AttitudeChanged
-        )
-
-        R_ned_to_body = Rotation.from_euler(
-            "xyz",
-            [att_euler["roll"], att_euler["pitch"], att_euler["yaw"]],
-            degrees=False
-        ).as_matrix().T
-
-        velocity_body = R_ned_to_body @ velocity_ned
-
-        [
-            velocity_msg.point.x,
-            velocity_msg.point.y,
-            velocity_msg.point.z
-        ] = velocity_body
-
-        return velocity_msg
-
-    def _collect_relative_altitude(self):
-        """
-        Get the drone altitude relative to launch and store this in a ROS
-        message.
-
-        Returns
-        -------
-        geometry_msgs.msg.PointStamped
-            ROS message containing drone altitude relative launch as
-            z-parameter. Note that x and y parameters are not used.
-        """
-        relative_altitude_msg = geometry_msgs.msg.PointStamped()
-        relative_altitude_msg.header.stamp = rospy.Time.now()
-
-        relative_altitude = self.drone.get_state(
-            olympe_msgs.ardrone3.PilotingState.AltitudeChanged
-        )["altitude"]
-
-        if self.prev_relative_altitude is None:
-            self.prev_relative_altitude = relative_altitude
-        elif self.prev_relative_altitude == relative_altitude:
-            return None
-        else:
-            self.prev_relative_altitude = relative_altitude
-
-        relative_altitude_msg.point.z = relative_altitude
-
-        return relative_altitude_msg
+            gps_data = self._collect_gps_data()
+            if gps_data is not None:
+                self.publisher.publish(gps_data)
+                rospy.sleep(0.99) # Sleep for 990 ms to be ready for new data after 1 second
 
     def _collect_gps_data(self):
         """
         Get drone GPS position and other data and store this in a ROS message.
-
-        Returns
-        -------
-        sensor_msgs.msg.NavSatFix
-            ROS message containing drone location as well as other GPS related
-            data
         """
+
         gps_data_msg = sensor_msgs.msg.NavSatFix()
         gps_data_msg.header.stamp = rospy.Time.now()
 
@@ -357,178 +598,124 @@ class TelemetryPublisher():
 
         return gps_data_msg
 
-    def _collect_flying_state(self):
-        """
-        Get the flying state of the Anafi and store this in a ROS message.
+class TelemetryPublisher():
 
-        Returns
-        -------
-        drone_interface.msg.PositionSetpointRelative
-            ROS message containing the flying state of the drone
-        """
+    def __init__(self, drone, topic_name) -> None:
+        self.drone = drone
 
-        flying_state_msg = drone_interface.msg.FlyingState()
-        flying_state_msg.header.stamp = rospy.Time.now()
-        flying_state = self.drone.get_state(
-            olympe_msgs.ardrone3.PilotingState.FlyingStateChanged
-        )["state"].name
-        flying_state_msg.flying_state = flying_state
-
-        return flying_state_msg
-
-    def _collect_gimbal_attitude(self):
-        """
-        Get the gimbal attitude of the drone. Attitude is relative to the
-        drone body frame (roll axis forward, pitch axis left, yaw-axis down).
-        Counter clockwise angle positive. All angles zero when camera is
-        pointing straight ahead.
-
-        Returns
-        -------
-        drone_interface.msg.GimbalAttitude
-            ROS message containing the gimbal attitude
-        """
-        gimbal_attitude_msg = drone_interface.msg.GimbalAttitude()
-        gimbal_attitude_msg.header.stamp = rospy.Time.now()
-
-        gimbal_attitude = self.drone.get_state(
-            olympe_msgs.gimbal.attitude
+        self.publisher = rospy.Publisher(
+            topic_name, drone_interface.msg.AnafiTelemetry, queue_size=1
         )
 
-        gimbal_attitude_msg.roll = gimbal_attitude[0]["roll_relative"]
-        gimbal_attitude_msg.pitch = gimbal_attitude[0]["pitch_relative"]
-        gimbal_attitude_msg.yaw = gimbal_attitude[0]["yaw_relative"]
+        # Assumed that all telemetry is update at the same time so that it is
+        # enough to check if one has changed
+        self.prev_attitude = None
 
-        if self.prev_gimbal_attitude_data is None:
-            self.prev_gimbal_attitude_data = [gimbal_attitude_msg.roll, gimbal_attitude_msg.pitch, gimbal_attitude_msg.yaw]
-        elif self.prev_gimbal_attitude_data == [gimbal_attitude_msg.roll, gimbal_attitude_msg.pitch, gimbal_attitude_msg.yaw]:
-            return None
-        else:
-            self.prev_gimbal_attitude_data = [gimbal_attitude_msg.roll, gimbal_attitude_msg.pitch, gimbal_attitude_msg.yaw]
+        rospy.loginfo("Initialized telemetry publisher")
 
-        return gimbal_attitude_msg
+    def publish(self):
 
-    def _collect_battery_data(self):
-        """
-        Get battery information about the drone and store this in a ROS message.
+        while not rospy.is_shutdown():
+            telemetry = self._collect_telemetry()
+            if telemetry is not None:
+                self.publisher.publish(telemetry)
+                rospy.sleep(0.19) # Sleep for 190 ms to be ready for new data after 200 ms
 
-        Returns
-        -------
-        sensor_msgs.msg.BatteryState
-            ROS message containing information about the drone battery
-        """
-        battery_msg = sensor_msgs.msg.BatteryState()
-        battery_msg.header.stamp = rospy.Time.now()
+    def _collect_telemetry(self):
+        telemetry_msg = drone_interface.msg.AnafiTelemetry()
 
-        battery_msg.voltage = self.drone.get_state(
-            olympe_msgs.battery.voltage
-        )["voltage"]
+        telemetry_msg.header.stamp = rospy.Time.now()
 
-        battery_msg.percentage = self.drone.get_state(
-            olympe_msgs.common.CommonState.BatteryStateChanged
-        )["percent"]/100
-
-        battery_msg.power_supply_status = sensor_msgs.msg.BatteryState.POWER_SUPPLY_STATUS_DISCHARGING
-
-        battery_alert = self.drone.get_state(
-            olympe_msgs.battery.alert
-        )
-
-        no_alert = olympe_enums.battery.alert_level.none
-        if battery_alert[olympe_enums.battery.alert.power_level]["level"] != no_alert:
-            battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_DEAD
-        elif battery_alert[olympe_enums.battery.alert.too_hot]["level"] != no_alert:
-            battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_OVERHEAT
-        elif battery_alert[olympe_enums.battery.alert.too_cold]["level"] != no_alert:
-            battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_COLD
-        else:
-            battery_msg.power_supply_health = sensor_msgs.msg.BatteryState.POWER_SUPPLY_HEALTH_GOOD
-
-        battery_msg.present = True
-
-        battery_msg.serial_number = self.drone.get_state(olympe_msgs.battery.serial)["serial"]
-
-        return battery_msg
-
-    def _collect_saturation_limits(self):
-        """
-        Get the saturation limits for the different parameters attributed to
-        control of the drone.
-
-        Returns
-        -------
-        drone_interface.msg.SaturationLimits
-            Message containing saturation limits
-        """
-        max_tilt = self.drone.get_state(
-            olympe_msgs.ardrone3.PilotingSettingsState.MaxTiltChanged
-        )["current"]
-
-        max_yaw_rot_speed = self.drone.get_state(
-            olympe_msgs.ardrone3.SpeedSettingsState.MaxRotationSpeedChanged
-        )["current"]
-
-        max_roll_pitch_rot_speed = self.drone.get_state(
-            olympe_msgs.ardrone3.SpeedSettingsState.MaxPitchRollRotationSpeedChanged
-        )["current"]
-
-        max_vertical_speed = self.drone.get_state(
-            olympe_msgs.ardrone3.SpeedSettingsState.MaxVerticalSpeedChanged
-        )["current"]
-
-        saturation_limits_msg = drone_interface.msg.SaturationLimits()
-        saturation_limits_msg.header.stamp = rospy.Time.now()
-        saturation_limits_msg.max_tilt_angle = max_tilt
-        saturation_limits_msg.max_yaw_rotation_speed = max_yaw_rot_speed
-        saturation_limits_msg.max_roll_pitch_rotation_speed = max_roll_pitch_rot_speed
-        saturation_limits_msg.max_vertical_speed = max_vertical_speed
-
-        return saturation_limits_msg
-
-    def _collect_ekf_input(self):
-        """
-        Get the velocity and heading of the drone.
-
-        Returns
-        -------
-        drone_interface.msg.EkfInput
-            Message containing ekf input
-        """
-
-        ekf_msg = drone_interface.msg.EkfInput()
-        ekf_msg.header.stamp = rospy.Time.now()
-
+        # Attitude
         att_euler = self.drone.get_state(
             olympe_msgs.ardrone3.PilotingState.AttitudeChanged
         )
 
+        telemetry_msg.roll = np.rad2deg(att_euler["roll"])
+        telemetry_msg.pitch = np.rad2deg(att_euler["pitch"])
+        telemetry_msg.yaw = np.rad2deg(att_euler["yaw"])
+
+        # Check if new 5 Hz data has arrived
+        if self.prev_attitude is None:
+            self.prev_attitude = [telemetry_msg.roll, telemetry_msg.pitch, telemetry_msg.yaw]
+        elif self.prev_attitude == [telemetry_msg.roll, telemetry_msg.pitch, telemetry_msg.yaw]:
+            return None
+        else:
+            self.prev_attitude = [telemetry_msg.roll, telemetry_msg.pitch, telemetry_msg.yaw]
+
+        # Body velocity
+        speed = self.drone.get_state(
+            olympe_msgs.ardrone3.PilotingState.SpeedChanged
+        )
+
+        velocity_ned = np.array([speed["speedX"], speed["speedY"], speed["speedZ"]])
         R_ned_to_body = Rotation.from_euler(
             "xyz",
             [att_euler["roll"], att_euler["pitch"], att_euler["yaw"]],
             degrees=False
         ).as_matrix().T
 
-        speed = self.drone.get_state(
-            olympe_msgs.ardrone3.PilotingState.SpeedChanged
+        velocity_body = R_ned_to_body @ velocity_ned
+
+        [
+            telemetry_msg.vx,
+            telemetry_msg.vy,
+            telemetry_msg.vz
+        ] = velocity_body
+
+        # Relative altitude
+        relative_altitude = self.drone.get_state(
+            olympe_msgs.ardrone3.PilotingState.AltitudeChanged
+        )["altitude"]
+
+        telemetry_msg.relative_altitude = relative_altitude
+
+        # Gimbal attitude
+        gimbal_attitude = self.drone.get_state(
+            olympe_msgs.gimbal.attitude
         )
 
+        # TODO: Check that these actually work
+        telemetry_msg.gimbal_roll = gimbal_attitude[0]["roll_relative"]
+        telemetry_msg.gimbal_pitch = gimbal_attitude[0]["pitch_relative"]
+        telemetry_msg.gimbal_yaw = gimbal_attitude[0]["yaw_relative"]
 
-        velocity_ned = np.array([speed["speedX"], speed["speedY"], speed["speedZ"]])
+        # Battery information
+        telemetry_msg.battery_percentage = self.drone.get_state(
+            olympe_msgs.common.CommonState.BatteryStateChanged
+        )["percent"]
 
-        velocity_body = R_ned_to_body @ velocity_ned
-        ekf_msg.v_x = velocity_body[0]
-        ekf_msg.v_y = velocity_body[1]
-        ekf_msg.v_z = velocity_body[2]
-        ekf_msg.psi = -att_euler["yaw"]*180/3.14159 # positive rotation counter clockwise
+        battery_alert = self.drone.get_state(
+            olympe_msgs.battery.alert
+        )
 
-        if self.prev_ekf_input_data is None:
-            self.prev_ekf_input_data = [ekf_msg.v_x, ekf_msg.v_y, ekf_msg.v_z, ekf_msg.psi]
-        elif self.prev_ekf_input_data == [ekf_msg.v_x, ekf_msg.v_y, ekf_msg.v_z, ekf_msg.psi]:
-            return None
+        no_alert = olympe_enums.battery.alert_level.none
+        battery_warnings = []
+
+        power_alert_level = battery_alert[olympe_enums.battery.alert.power_level]["level"]
+        if power_alert_level != no_alert:
+            battery_warnings.append(f"low power: {power_alert_level}")
+        cold_alert_level = battery_alert[olympe_enums.battery.alert.too_hot]["level"]
+        if cold_alert_level != no_alert:
+            battery_warnings.append(f"too cold: {cold_alert_level}")
+        hot_alert_level = battery_alert[olympe_enums.battery.alert.too_cold]["level"]
+        if hot_alert_level != no_alert:
+            battery_warnings.append(f"too hot: {hot_alert_level}")
+
+        if len(battery_warnings) == 0:
+            telemetry_msg.battery_health = "good"
         else:
-            self.prev_ekf_input_data = [ekf_msg.v_x, ekf_msg.v_y, ekf_msg.v_z, ekf_msg.psi]
+            telemetry_msg.battery_health = ", ".join(battery_warnings)
 
-        return ekf_msg
+        telemetry_msg.battery_serial_number = self.drone.get_state(olympe_msgs.battery.serial)["serial"]
+
+        # Flying state
+        telemetry_msg.flying_state = self.drone.get_state(
+            olympe_msgs.ardrone3.PilotingState.FlyingStateChanged
+        )["state"].name
+
+        # Publish message
+        return telemetry_msg
 
 class CameraPublisher():
     """
