@@ -111,6 +111,7 @@ class StreamingExample(threading.Thread):
 
         # Compute some stats and dump them in a csv file
         info = h264_frame.info()
+        print(f"Has errors: {info['has_errors']} is silent: {info['is_silent']}")
         frame_ts = info["ntp_raw_timestamp"]
         if not bool(info["h264"]["is_sync"]):
             if len(self.h264_frame_stats) > 0:

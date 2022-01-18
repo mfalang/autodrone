@@ -354,6 +354,12 @@ class CameraPublisher():
 
                 # Convert yuv frame to OpenCV compatible image array
                 info = yuv_frame.info()
+
+                # Skip if image has errors from transmission
+                # if info["has_errors"] or info["is_silent"]:
+                    # return None
+                # print(info["has_errors"])
+
                 cv_cvt_color_flag = {
                     olympe.PDRAW_YUV_FORMAT_I420: cv.COLOR_YUV2BGR_I420,
                     olympe.PDRAW_YUV_FORMAT_NV12: cv.COLOR_YUV2BGR_NV12,
@@ -373,3 +379,16 @@ class CameraPublisher():
                 return image_msg
             else:
                 return None
+
+
+def main():
+    drone_ip = "10.202.0.1"
+    drone = olympe.Drone(drone_ip)
+    drone.logger.setLevel(40)
+    drone.connect()
+
+    camera_publisher = CameraPublisher(drone, "/image_test")
+    camera_publisher.publish()
+
+if __name__ == "__main__":
+    main()
