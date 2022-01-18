@@ -49,14 +49,10 @@ catkin_python_setup()
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  PositionSetpointRelative.msg
-  FlyingState.msg
-  GimbalAttitude.msg
-  AttitudeSetpoint.msg
-  SaturationLimits.msg
-  AttitudeEuler.msg
-  EkfInput.msg
   AnafiTelemetry.msg
+  AttitudeSetpoint.msg
+  PositionSetpointRelative.msg
+  SaturationLimits.msg
 )
 
 ## Generate services in the 'srv' folder

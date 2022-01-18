@@ -47,7 +47,9 @@ class OlympeRosBridge():
         self.gps_publisher = GpsPublisher(
             self.drone, self.config["drone"]["topics"]["gnss"]
         )
-        self.camera_streamer = CameraPublisher(self.drone)
+        self.camera_streamer = CameraPublisher(
+            self.drone, self.config["drone"]["topics"]["camera"]
+        )
 
     def start(self):
         """
@@ -60,7 +62,7 @@ class OlympeRosBridge():
 
         threading.Thread(target=self.telemetry_publisher.publish, args=(), daemon=True).start()
         threading.Thread(target=self.gps_publisher.publish, args=(), daemon=True).start()
-        # threading.Thread(target=self.camera_streamer.publish, args=(), daemon=True).start()
+        threading.Thread(target=self.camera_streamer.publish, args=(), daemon=True).start()
 
         rospy.spin()
 
