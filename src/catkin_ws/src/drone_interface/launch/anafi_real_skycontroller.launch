@@ -1,5 +1,5 @@
 <launch>
-    <rosparam command="load" file="$(find drone_interface)/config/anafi_params.yaml" />
+    <rosparam command="load" file="$(find drone_interface)/config/anafi.yaml" />
     <node
         name="anafi_interface"
         pkg="drone_interface"
