@@ -9,15 +9,18 @@ of graphics card on the machine.
 
         sudo apt purge nvidia* libnvidia*
         apt list --installed | grep nvidia  // to verify that all is removed
+        sudo apt autoremove
 
 3. Install correct drivers
 
         sudo add-apt-repository ppa:graphics-drivers
         sudo apt update
-        sudo apt install nvidia-driver-470
+        sudo apt install nvidia-driver-xxx // where xxx is driver number from Nvidia page
 
-4. Reboot machine
-5. Verify that information about the graphics card appears when running. If 
+4. Reboot machine and remember to enroll the changes in secureboot as asked
+by the installation. This is done by clicking on "Enroll" or something like
+that in the secure boot menu.
+6. Verify that information about the graphics card appears when running. If 
 not, see troubleshooting below.
 
         nvidia-smi
