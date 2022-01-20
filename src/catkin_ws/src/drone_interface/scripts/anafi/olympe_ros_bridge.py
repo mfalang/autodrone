@@ -41,10 +41,16 @@ class OlympeRosBridge():
 
         # Options for using SkyController as relay
         if drone_ip == "192.168.53.1":
-            self.drone(olympe.messages.skyctrl.CoPiloting.setPilotingSource(
+            assert self.drone(olympe.messages.skyctrl.CoPiloting.setPilotingSource(
                 source="Controller"
-            ))
+            )).wait().success(), "Failed to set piloting source to Olympe"
             rospy.logwarn("Drone controlled from Olympe, disconnect SkyController to resume control.")
+
+        # Set reject_jitter variable for images based on environment
+        if drone_ip == "10.202.0.1": # simulation
+            reject_jitter = False
+        else: # real life
+            reject_jitter = True
 
         self.command_listener = CommandListener(self.drone)
 
@@ -55,7 +61,8 @@ class OlympeRosBridge():
             self.drone, self.config["drone"]["topics"]["gnss"]
         )
         self.camera_streamer = CameraPublisher(
-            self.drone, self.config["drone"]["topics"]["camera"]
+            self.drone, self.config["drone"]["topics"]["camera"],
+            reject_jitter=reject_jitter
         )
 
     def start(self):

@@ -252,8 +252,10 @@ class CameraPublisher():
     - Rectified, color image of Anafi front camera
     """
 
-    def __init__(self, drone, topic_name, visualize=True):
+    def __init__(self, drone, topic_name, reject_jitter=True, visualize=True):
         self.drone = drone
+
+        self.reject_jitter = reject_jitter
 
         self.visualize = visualize
         if self.visualize:
@@ -355,10 +357,10 @@ class CameraPublisher():
                 # Convert yuv frame to OpenCV compatible image array
                 info = yuv_frame.info()
 
-                # Skip if image has errors from transmission
-                # if info["has_errors"] or info["is_silent"]:
-                    # return None
-                # print(info["has_errors"])
+                # Skip if image has errors from transmission. This does not work in simulation
+                if self.reject_jitter and (info["has_errors"] or info["is_silent"]):
+                    yuv_frame.unref()
+                    return None
 
                 cv_cvt_color_flag = {
                     olympe.PDRAW_YUV_FORMAT_I420: cv.COLOR_YUV2BGR_I420,
