@@ -39,8 +39,15 @@ class OlympeRosBridge():
         self.drone.logger.setLevel(40)
         self.drone.connect()
 
+        # Options for using SkyController as relay
+        if drone_ip == "192.168.53.1":
+            self.drone(olympe.messages.skyctrl.CoPiloting.setPilotingSource(
+                source="Controller"
+            ))
+            rospy.logwarn("Drone controlled from Olympe, disconnect SkyController to resume control.")
+
         self.command_listener = CommandListener(self.drone)
-        # self.telemetry_publisher = TelemetryPublisher(self.drone)
+
         self.telemetry_publisher = TelemetryPublisher(
             self.drone, self.config["drone"]["topics"]["telemetry"]
         )
