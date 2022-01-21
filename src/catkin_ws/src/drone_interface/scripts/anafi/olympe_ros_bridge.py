@@ -40,7 +40,9 @@ class OlympeRosBridge():
         self.drone.connect()
 
         # Options for using SkyController as relay
+        self.use_skycontroller = False
         if drone_ip == "192.168.53.1":
+            self.use_skycontroller = True
             assert self.drone(olympe.messages.skyctrl.CoPiloting.setPilotingSource(
                 source="Controller"
             )).wait().success(), "Failed to set piloting source to Olympe"
@@ -74,11 +76,25 @@ class OlympeRosBridge():
         self.command_listener.init(camera_angle=-90)
         rospy.sleep(1)
 
+        if self.use_skycontroller:
+            threading.Thread(target=self.switch_piloting_mode, args=(), daemon=True).start()
         threading.Thread(target=self.telemetry_publisher.publish, args=(), daemon=True).start()
         threading.Thread(target=self.gps_publisher.publish, args=(), daemon=True).start()
         threading.Thread(target=self.camera_streamer.publish, args=(), daemon=True).start()
 
         rospy.spin()
+
+    def switch_piloting_mode(self):
+        rospy.logwarn("Press enter to switch do SkyController")
+        input()
+        # Stop the drone if flying in attitude control
+        self.drone(olympe.messages.ardrone3.Piloting.PCMD(
+            0, 0, 0, 0, 0, 0
+        ))
+        assert self.drone(olympe.messages.skyctrl.CoPiloting.setPilotingSource(
+                source="SkyController"
+        )).wait().success(), "Failed to set piloting source to SkyController"
+        rospy.logwarn("SkyController control engaged.")
 
 def main():
     anafi_interface = OlympeRosBridge()
