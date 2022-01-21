@@ -77,7 +77,7 @@ class CommandListener():
             gimbal_id=0,
             # roll_relative=0,
             # roll_frame_of_reference="relative",
-            pitch_absolute=camera_angle,
+            pitch_absolute=camera_angle, # TODO: This might have to be relative instead
             pitch_frame_of_reference="relative",
             yaw_relative=0,
             yaw_frame_of_reference="relative"
