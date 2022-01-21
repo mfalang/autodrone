@@ -204,9 +204,9 @@ class TelemetryPublisher():
         )
 
         # TODO: Check that these actually work
-        telemetry_msg.gimbal_roll = gimbal_attitude[0]["roll_relative"]
-        telemetry_msg.gimbal_pitch = gimbal_attitude[0]["pitch_relative"]
-        telemetry_msg.gimbal_yaw = gimbal_attitude[0]["yaw_relative"]
+        telemetry_msg.gimbal_roll = gimbal_attitude[0]["roll_absolute"]
+        telemetry_msg.gimbal_pitch = gimbal_attitude[0]["pitch_absolute"]
+        telemetry_msg.gimbal_yaw = gimbal_attitude[0]["yaw_absolute"]
 
         # Battery information
         telemetry_msg.battery_percentage = self.drone.get_state(

@@ -65,19 +65,19 @@ class CommandListener():
         self.drone(olympe_msgs.gimbal.set_target(
             gimbal_id=0,
             control_mode="position",
-            pitch_frame_of_reference="relative",
-            pitch=camera_angle,
             roll_frame_of_reference="relative",
             roll=0,
+            pitch_frame_of_reference="relative",
+            pitch=camera_angle,
             yaw_frame_of_reference="relative",
             yaw=0
         ))
 
         assert self.drone(olympe_msgs.gimbal.attitude(
             gimbal_id=0,
-            roll_relative=0,
-            roll_frame_of_reference="relative",
-            pitch_relative=camera_angle,
+            # roll_relative=0,
+            # roll_frame_of_reference="relative",
+            pitch_absolute=camera_angle,
             pitch_frame_of_reference="relative",
             yaw_relative=0,
             yaw_frame_of_reference="relative"
