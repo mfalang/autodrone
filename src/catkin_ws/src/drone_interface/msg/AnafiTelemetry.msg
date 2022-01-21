@@ -14,7 +14,7 @@ float64 vy # positive right
 float64 vz # positive down
 
 # Relative altitude
-float64 relative_altitude # TODO: Find out direction and comment on it
+float64 relative_altitude # negative, as in NED
 
 # Gimbal attitude
 float64 gimbal_roll

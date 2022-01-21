@@ -195,7 +195,8 @@ class TelemetryPublisher():
             olympe_msgs.ardrone3.PilotingState.AltitudeChanged
         )["altitude"]
 
-        telemetry_msg.relative_altitude = relative_altitude
+        # Use negative as this corresponds with NED coordinate system
+        telemetry_msg.relative_altitude = -relative_altitude
 
         # Gimbal attitude
         gimbal_attitude = self.drone.get_state(
