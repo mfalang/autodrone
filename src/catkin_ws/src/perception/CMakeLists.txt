@@ -51,6 +51,7 @@ add_message_files(
   FILES
   EkfOutput.msg
   EulerPose.msg
+  DnnCvPoseEstimate.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -161,7 +162,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  scripts/dnnCV.py
+  scripts/dnn_cv/dnncv.py
   scripts/run_ekf.py
   scripts/tcv/tcv.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
