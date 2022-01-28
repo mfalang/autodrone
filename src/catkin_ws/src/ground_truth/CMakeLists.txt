@@ -160,6 +160,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/sphinx_ros_bridge.py
+  scripts/coordinate_transform.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
