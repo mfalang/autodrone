@@ -1,8 +1,12 @@
 topics:
-  drone_pose:
+  drone_pose_ned:
     sim: "/ground_truth/pose/drone"
     real: /qualisys/anafi/pose
 
-  helipad_pose:
+  helipad_pose_ned:
     sim: "/ground_truth/pose/helipad"
     real: /qualisys/helipad/pose
+
+  drone_pose_helipad_frame:
+    sim: "/ground_truth/helipad_frame/drone_pose"
+    real: "/ground_truth/helipad_frame/drone_pose"
