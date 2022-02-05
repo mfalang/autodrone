@@ -9,6 +9,7 @@ from scipy.spatial.transform import Rotation
 
 import rospy
 import geometry_msgs.msg
+import ground_truth.msg
 
 class CoordinateTransform():
 
@@ -46,7 +47,7 @@ class CoordinateTransform():
         # Set up publisher for new drone pose relative to helipad
         self.drone_pose_helipad_frame_publisher = rospy.Publisher(
             self.config["topics"]["drone_pose_helipad_frame"][self.environment],
-            geometry_msgs.msg.PoseStamped, queue_size=1
+            ground_truth.msg.PoseStampedEuler, queue_size=1
         )
 
 
@@ -60,33 +61,43 @@ class CoordinateTransform():
 
     def _ned_to_helipad_frame(self, drone_pose_ned: np.ndarray, helipad_pose_ned: np.ndarray):
 
+        # Create rotation matrix between NED and Helipad frame
         helipad_rotation = helipad_pose_ned[5]
-
         R_ned_to_heli = np.array([
-            [np.cos(helipad_rotation), np.sin(helipad_rotation), 0],
-            [-np.sin(helipad_rotation), np.cos(helipad_rotation), 0],
+            [np.cos(helipad_rotation), -np.sin(helipad_rotation), 0],
+            [np.sin(helipad_rotation), np.cos(helipad_rotation), 0],
             [0, 0, 1]
         ])
 
-        t_heli_to_ned = -np.array([
+        # print(R_ned_to_heli)
+
+        # Translation between Helipad and NED frame (negative since this by definition
+        # is the translation Helipad->NED expressed in the Helipad frame, but the
+        # simulator and motion capture system gives the distance expressed in the
+        # NED frame).
+        t_heli_to_ned_in_heli = - R_ned_to_heli @ np.array([
             helipad_pose_ned[0],
             helipad_pose_ned[1],
             helipad_pose_ned[2]
         ])
+        # print(t_heli_to_ned_in_heli)
 
-
+        # Convert position
         drone_position_ned = np.array([
             drone_pose_ned[0],
             drone_pose_ned[1],
             drone_pose_ned[2]
         ])
+        drone_position_helipad = R_ned_to_heli @ drone_position_ned + t_heli_to_ned_in_heli
+        print(drone_position_helipad)
+        # Convert orientation
+        # TODO
 
-        drone_position_helipad = R_ned_to_heli @ drone_position_ned + t_heli_to_ned
-
+        # Store result
         drone_pose_helipad = np.array([
             drone_position_helipad[0],
-            drone_position_helipad[0],
-            drone_position_helipad[0],
+            drone_position_helipad[1],
+            drone_position_helipad[2],
             drone_pose_ned[3],
             drone_pose_ned[4],
             drone_pose_ned[5],
@@ -94,19 +105,19 @@ class CoordinateTransform():
 
         return drone_pose_helipad
 
-    def _geometry_msg_pose_to_array(self, pose: geometry_msgs.msg.PoseStamped()):
+    def _geometry_msg_pose_to_array(self, pose: geometry_msgs.msg.PoseStamped):
 
-        quat = [pose.orientation.x,
-            pose.orientation.y,
-            pose.orientation.z,
-            pose.orientation.w
+        quat = [pose.pose.orientation.x,
+            pose.pose.orientation.y,
+            pose.pose.orientation.z,
+            pose.pose.orientation.w
         ]
         euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
 
         ret = np.array([
-            pose.position.x,
-            pose.position.y,
-            pose.position.z,
+            pose.pose.position.x,
+            pose.pose.position.y,
+            pose.pose.position.z,
             euler[0],
             euler[1],
             euler[2]
@@ -114,10 +125,15 @@ class CoordinateTransform():
 
         return ret
 
-    def _publish_drone_helipad_frame_pose(self, pose: geometry_msgs.msg.PoseStamped().pose):
-        msg = geometry_msgs.msg.PoseStamped()
+    def _publish_drone_helipad_frame_pose(self, pose: np.ndarray):
+        msg = ground_truth.msg.PoseStampedEuler()
         msg.header.stamp = rospy.Time.now()
-        msg.pose = pose
+        msg.x = pose[0]
+        msg.y = pose[1]
+        msg.z = pose[2]
+        msg.phi = pose[3]
+        msg.theta = pose[4]
+        msg.psi = pose[5]
         self.drone_pose_helipad_frame_publisher.publish(msg)
 
     def start(self):
@@ -129,10 +145,12 @@ class CoordinateTransform():
             if not (self.new_drone_gt_pose and self.new_helipad_gt_pose):
                 continue
 
-            drone_pose_helipad_frame = self._ned_to_helipad_frame(self.newest_drone_pose_msg.pose)
+            drone_pose_ned_frame = self._geometry_msg_pose_to_array(self.newest_drone_pose_msg)
+            helipad_pose_ned_frame = self._geometry_msg_pose_to_array(self.newest_helipad_pose_msg)
+            drone_pose_helipad_frame = self._ned_to_helipad_frame(drone_pose_ned_frame, helipad_pose_ned_frame)
             self._publish_drone_helipad_frame_pose(drone_pose_helipad_frame)
 
-            print(f"Difference: {(self.newest_drone_pose_msg.header.stamp - self.newest_helipad_pose_msg.header.stamp).to_sec()*1000}")
+            # print(f"Difference: {(self.newest_drone_pose_msg.header.stamp - self.newest_helipad_pose_msg.header.stamp).to_sec()*1000}")
 
 
 
