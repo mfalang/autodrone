@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 from subprocess import PIPE, Popen
+import os
 import sys
+import yaml
 import rospy
 import geometry_msgs.msg
 
@@ -13,11 +15,25 @@ class SphinxRosBridge():
         truth pose of the drone and the helipad.
         """
         rospy.init_node("sphinx_ros_bridge", anonymous=False)
+
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+
+        config_file = rospy.get_param("~config_file")
+
+        try:
+            with open(f"{script_dir}/../config/{config_file}") as f:
+                self.config = yaml.safe_load(f)
+        except Exception as e:
+            rospy.logerr(f"Failed to load config: {e}")
+            sys.exit()
+
         self.anafi_pose_publisher = rospy.Publisher(
-            "ground_truth/pose/drone", geometry_msgs.msg.PoseStamped, queue_size=10
+            self.config["topics"]["drone_pose_ned"]["sim"],
+            geometry_msgs.msg.PoseStamped, queue_size=10
         )
         self.helipad_pose_publisher = rospy.Publisher(
-            "ground_truth/pose/helipad", geometry_msgs.msg.PoseStamped, queue_size=10
+            self.config["topics"]["helipad_pose_ned"]["sim"],
+            geometry_msgs.msg.PoseStamped, queue_size=10
         )
 
         self.data = {
@@ -189,11 +205,11 @@ class SphinxRosBridge():
             return None
 
         model_pose = geometry_msgs.msg.PoseStamped()
-        
+
         # model_pose.header.stamp.secs = self.data["timestamp"]["sec"]
         # model_pose.header.stamp.nsecs = self.data["timestamp"]["nsec"]
-        # Using rospy.Time.now() will give a timestamp consistent with the 
-        # timestamps from all the other packages. The timestamp from the 
+        # Using rospy.Time.now() will give a timestamp consistent with the
+        # timestamps from all the other packages. The timestamp from the
         # Gazebo-topic gives only the simulation time. The timestamp is left in
         # in case it will be useful in the future
         model_pose.header.stamp = rospy.Time.now()

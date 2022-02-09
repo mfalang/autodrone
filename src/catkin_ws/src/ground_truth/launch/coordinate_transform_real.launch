@@ -4,7 +4,7 @@
         pkg="ground_truth"
         type="coordinate_transform.py"
         output="screen">
-        <param name="config_file" value="coordinate_transform_config.yaml" />
+        <param name="config_file" value="config.yaml" />
         <param name="environment" value="real" />
     </node>
 </launch>
