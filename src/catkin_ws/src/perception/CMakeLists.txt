@@ -51,7 +51,7 @@ add_message_files(
   FILES
   EkfOutput.msg
   EulerPose.msg
-  DnnCvPoseEstimate.msg
+  Heading.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -2,4 +2,5 @@ topics:
   input:
     bounding_boxes: "/darknet_ros/bounding_boxes"
   output:
-    pose_estimate: "/estimate/dnn_cv_pose"
+    position: "/estimate/dnn_cv/position"
+    heading: "/estimate/dnn_cv/heading"

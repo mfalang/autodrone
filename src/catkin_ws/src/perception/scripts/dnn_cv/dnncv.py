@@ -8,6 +8,7 @@ import bb_pose_estimate
 
 import rospy
 import perception.msg
+import geometry_msgs.msg
 import darknet_ros_msgs.msg
 
 class DnnPoseEstimator():
@@ -47,9 +48,14 @@ class DnnPoseEstimator():
             darknet_ros_msgs.msg.BoundingBoxes, self._get_bounding_box_cb
         )
 
-        self.pose_estimate_publisher = rospy.Publisher(
-            self.config["topics"]["output"]["pose_estimate"],
-            perception.msg.DnnCvPoseEstimate, queue_size=1
+        self.position_estimate_publisher = rospy.Publisher(
+            self.config["topics"]["output"]["position"],
+            geometry_msgs.msg.PointStamped, queue_size=1
+        )
+
+        self.heading_estimate_publisher = rospy.Publisher(
+            self.config["topics"]["output"]["heading"],
+            perception.msg.Heading, queue_size=1
         )
 
     def start(self):
@@ -64,33 +70,29 @@ class DnnPoseEstimator():
                 rate.sleep()
                 continue
 
-
             bounding_boxes = self.bb_pose_estimator.remove_bad_bounding_boxes(self.latest_bounding_boxes)
 
-            pose_msg = perception.msg.DnnCvPoseEstimate()
-            pose_msg.header.stamp = rospy.Time.now()
-
             # Position
-            pos_ned = self.bb_pose_estimator.estimate_position_from_helipad_perimeter(bounding_boxes)
+            pos_helipad_frame = self.bb_pose_estimator.estimate_position_from_helipad_perimeter(bounding_boxes)
 
-            if pos_ned is not None:
-                pose_msg.position_available = True
-                pose_msg.x_n = pos_ned[0]
-                pose_msg.y_n = pos_ned[1]
-                pose_msg.z_n = pos_ned[2]
-            else:
-                pose_msg.position_available = False
+            if pos_helipad_frame is not None:
+                position_msg = geometry_msgs.msg.PointStamped()
+                position_msg.header.stamp = rospy.Time.now()
+                position_msg.header.frame_id = "helipad"
+                position_msg.point.x = pos_helipad_frame[0]
+                position_msg.point.y = pos_helipad_frame[1]
+                position_msg.point.z = pos_helipad_frame[2]
+                self.position_estimate_publisher.publish(position_msg)
 
             # Heading
             heading = self.bb_pose_estimator.estimate_rotation_from_helipad_arrow(bounding_boxes)
 
             if heading is not None:
-                pose_msg.heading_available = True
-                pose_msg.psi = heading
-            else:
-                pose_msg.heading_available = False
-
-            self.pose_estimate_publisher.publish(pose_msg)
+                heading_msg = perception.msg.Heading()
+                heading_msg.header.stamp = rospy.Time.now()
+                heading_msg.header.frame_id = "helipad"
+                heading_msg.heading = heading
+                self.heading_estimate_publisher.publish(heading_msg)
 
             self.new_bounding_boxes_available = False
             rate.sleep()

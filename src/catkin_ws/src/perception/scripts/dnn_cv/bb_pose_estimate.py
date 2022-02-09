@@ -27,7 +27,7 @@ class BoundingBoxPoseEstimator():
             return None
 
         x_cam, y_cam, z_cam = self._pixel_to_camera_coordinates(center_px, radius_px, perimeter_radius_mm)
-        x_ned_mm, y_ned_mm, z_ned_mm = self._camera_to_ned_coordinates(x_cam, y_cam, z_cam)
+        x_ned_mm, y_ned_mm, z_ned_mm = self._camera_to_helipad_coordinates(x_cam, y_cam, z_cam)
 
         # Convert to meters
         x_ned = x_ned_mm / 1000
@@ -69,6 +69,8 @@ class BoundingBoxPoseEstimator():
             rotation = rotation_perimeter
         elif helipad_h_bb is not None:
             rotation = rotation_h
+        else:
+            return None
 
         return rotation
 
@@ -91,7 +93,7 @@ class BoundingBoxPoseEstimator():
 
         return x_camera, y_camera, z_camera
 
-    def _camera_to_ned_coordinates(self, x_camera, y_camera, z_camera):
+    def _camera_to_helipad_coordinates(self, x_camera, y_camera, z_camera):
         # TODO: These must be investigated. Maybe using a transformation matrix that
         # accounts for the rotation of the camera in addition to its linear offset.
         x_ned = x_camera
@@ -156,9 +158,8 @@ class BoundingBoxPoseEstimator():
         output:
             degs: float - estimated yaw angle of the quadcopter
         """
-        dy = center[1] - Arrow[1]
         dx = Arrow[0] - center[0]
-        rads = np.arctan2(dy,dx)
-        degs = rads*180 / np.pi
-        degs *= -1
+        dy = center[1] - Arrow[1]
+        rads = np.arctan2(dx, dy)
+        degs = (rads*180 / np.pi - 180) % 360 - 180
         return degs
