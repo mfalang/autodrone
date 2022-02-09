@@ -93,16 +93,20 @@ class CoordinateTransform():
         drone_position_helipad = R_ned_to_heli @ drone_position_ned + t_heli_to_ned_in_heli
 
         # Convert orientation
-        # TODO
+        drone_orientation_helipad = np.array([
+            drone_pose_ned[0],
+            drone_pose_ned[2],
+            (drone_pose_ned[5] - helipad_rotation + 180) % 360 - 180 # Use smalles signed angle
+        ])
 
         # Store result
         drone_pose_helipad = np.array([
             drone_position_helipad[0],
             drone_position_helipad[1],
             drone_position_helipad[2],
-            drone_pose_ned[3],
-            drone_pose_ned[4],
-            drone_pose_ned[5],
+            drone_orientation_helipad[0],
+            drone_orientation_helipad[1],
+            drone_orientation_helipad[2],
         ])
 
         return drone_pose_helipad
