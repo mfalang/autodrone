@@ -8,7 +8,7 @@ import shutil
 
 import rospy
 
-import ground_truth
+import ground_truths
 import estimates
 
 class OutputSaver():
@@ -37,8 +37,12 @@ class OutputSaver():
     def start(self):
         rospy.loginfo(f"Saving output to {self.output_base_dir}")
 
-        estimates.DNNCVDataSaver(self.config, self.output_base_dir,
-            "estimates", "dnn_cv_pose", self.environment
+        estimates.DnnCvPositionSaver(self.config, self.output_base_dir,
+            "estimates", "dnn_cv_position", self.environment
+        )
+
+        estimates.DnnCvHeadingSaver(self.config, self.output_base_dir,
+            "estimates", "dnn_cv_heading", self.environment
         )
 
         estimates.TcvDataSaver(self.config, self.output_base_dir,
@@ -49,12 +53,12 @@ class OutputSaver():
             "estimates", "ekf_output", self.environment
         )
 
-        ground_truth.DronePoseDataSaver(self.config, self.output_base_dir,
+        ground_truths.DronePoseDataSaver(self.config, self.output_base_dir,
             "ground_truths", "drone_pose", self.environment
         )
-        ground_truth.HelipadPoseDataSaver(self.config, self.output_base_dir,
-            "ground_truths", "helipad_pose", self.environment
-        )
+        # ground_truth.HelipadPoseDataSaver(self.config, self.output_base_dir,
+        #     "ground_truths", "helipad_pose", self.environment
+        # )
 
         rospy.on_shutdown(self._on_shutdown)
         rospy.spin()

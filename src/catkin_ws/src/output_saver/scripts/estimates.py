@@ -5,21 +5,34 @@ import perception.msg
 
 from generic_output_saver import GenericOutputSaver
 
-class DNNCVDataSaver(GenericOutputSaver):
+class DnnCvPositionSaver(GenericOutputSaver):
 
     def __init__(self, config, base_dir, output_category, output_type, environment):
         super().__init__(config, base_dir, output_category, output_type, environment)
 
-        rospy.Subscriber(self.topic_name, geometry_msgs.msg.TwistStamped, self._dnn_cv_pose_cb)
+        rospy.Subscriber(self.topic_name, geometry_msgs.msg.PointStamped, self._dnn_cv_position_cb)
 
-    def _dnn_cv_pose_cb(self, msg):
+    def _dnn_cv_position_cb(self, msg: geometry_msgs.msg.PointStamped):
 
         self._save_output([
             msg.header.stamp.to_sec(),
-            msg.twist.linear.x,
-            msg.twist.linear.y,
-            msg.twist.linear.z,
-            msg.twist.angular.z
+            msg.point.x,
+            msg.point.y,
+            msg.point.z
+        ])
+
+class DnnCvHeadingSaver(GenericOutputSaver):
+
+    def __init__(self, config, base_dir, output_category, output_type, environment):
+        super().__init__(config, base_dir, output_category, output_type, environment)
+
+        rospy.Subscriber(self.topic_name, perception.msg.Heading, self._dnn_cv_heading_cb)
+
+    def _dnn_cv_heading_cb(self, msg: perception.msg.Heading):
+
+        self._save_output([
+            msg.header.stamp.to_sec(),
+            msg.heading
         ])
 
 class TcvDataSaver(GenericOutputSaver):

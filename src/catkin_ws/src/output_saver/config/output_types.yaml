@@ -3,7 +3,7 @@ ground_truths:
     name: drone_pose
     num_states: 6
     topic:
-      sim: /ground_truth/pose/drone
+      sim: /ground_truth/helipad_frame/drone_pose
       real: /qualisys/anafi/pose
     file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
     max_values_stored_in_buffer: 10
@@ -12,20 +12,29 @@ ground_truths:
     name: helipad_pose
     num_states: 6
     topic:
-      sim: /ground_truth/pose/helipad
+      sim: /ground_truth/ned_frame/helipad_pose
       real: /qualisys/helipad/pose
     file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
     max_values_stored_in_buffer: 10
 
 estimates:
-  dnn_cv_pose:
-    name: dnn_cv_pose
-    num_states: 4
+  dnn_cv_position:
+    name: dnn_cv_position
+    num_states: 3
     topic:
-      sim: /estimate/drone_pose/dnnCV
-      real: /estimate/drone_pose/dnnCV
-    file_header: "Format: timestamp[sec] [x[m], y[m], z[m], psi[deg]]\n"
+      sim: /estimate/dnn_cv/position
+      real: /estimate/dnn_cv/position
+    file_header: "Format: timestamp[sec] [x[m], y[m], z[m]]\n"
     max_values_stored_in_buffer: 10
+
+  dnn_cv_heading:
+    name: dnn_cv_heading
+    num_states: 1
+    topic:
+      sim: /estimate/dnn_cv/heading
+      real: /estimate/dnn_cv/heading
+    file_header: "Format: timestamp[sec] psi[deg]]\n"
+    max_values_stored_in_buffer: 5
 
   tcv_pose:
     name: tcv_pose
