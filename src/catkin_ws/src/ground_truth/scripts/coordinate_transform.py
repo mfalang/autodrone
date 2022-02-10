@@ -96,7 +96,7 @@ class CoordinateTransform():
         drone_orientation_helipad = np.array([
             drone_pose_ned[0],
             drone_pose_ned[2],
-            (drone_pose_ned[5] - helipad_rotation + 180) % 360 - 180 # Use smalles signed angle
+            (drone_pose_ned[5] - helipad_rotation + 180) % 360 - 180 # Use smallest signed angle
         ])
 
         # Store result
@@ -118,7 +118,10 @@ class CoordinateTransform():
             pose.pose.orientation.z,
             pose.pose.orientation.w
         ]
-        euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
+
+        # Minus sign because positive rotation is defined counter clockwise, but
+        # simulator outputs positive rotation as clockwise rotations
+        euler = -Rotation.from_quat(quat).as_euler("xyz", degrees=True)
 
         ret = np.array([
             pose.pose.position.x,
