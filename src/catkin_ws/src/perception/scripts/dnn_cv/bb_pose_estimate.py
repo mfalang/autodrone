@@ -27,14 +27,14 @@ class BoundingBoxPoseEstimator():
             return None
 
         x_cam, y_cam, z_cam = self._pixel_to_camera_coordinates(center_px, radius_px, perimeter_radius_mm)
-        x_ned_mm, y_ned_mm, z_ned_mm = self._camera_to_helipad_coordinates(x_cam, y_cam, z_cam)
+        x_helipad_mm, y_helipad_mm, z_helipad_mm = self._camera_to_helipad_coordinates(x_cam, y_cam, z_cam)
 
         # Convert to meters
-        x_ned = x_ned_mm / 1000
-        y_ned = y_ned_mm / 1000
-        z_ned = z_ned_mm / 1000
+        x_helipad = x_helipad_mm / 1000
+        y_helipad = y_helipad_mm / 1000
+        z_helipad = z_helipad_mm / 1000
 
-        return x_ned, y_ned, z_ned
+        return x_helipad, y_helipad, z_helipad
 
     def estimate_rotation_from_helipad_arrow(self, bounding_boxes):
 
@@ -87,8 +87,10 @@ class BoundingBoxPoseEstimator():
         # Find altitude from similar triangles
         z_camera = self.focal_length * radius_mm / radius_px
 
-        # Find x and y coordiantes using similar triangles as well
-        x_camera = -(z_camera * d_x / self.focal_length)
+        # Find x and y coordiantes using similar triangles as well. The signs are
+        # used so that the x-coordinate is positive to the right and the y-coordinate
+        # is positive upwards
+        x_camera = z_camera * d_x / self.focal_length
         y_camera = -(z_camera * d_y / self.focal_length)
 
         return x_camera, y_camera, z_camera
@@ -96,11 +98,13 @@ class BoundingBoxPoseEstimator():
     def _camera_to_helipad_coordinates(self, x_camera, y_camera, z_camera):
         # TODO: These must be investigated. Maybe using a transformation matrix that
         # accounts for the rotation of the camera in addition to its linear offset.
-        x_ned = x_camera
-        y_ned = y_camera
-        z_ned = z_camera
 
-        return x_ned, y_ned, z_ned
+        # Convert camera coordinates (in ENU) to helipad coordinates (in NED)
+        x_helipad = y_camera
+        y_helipad = x_camera
+        z_helipad = -z_camera
+
+        return x_helipad, y_helipad, z_helipad
 
     def _is_good_bb(self, bb):
         """

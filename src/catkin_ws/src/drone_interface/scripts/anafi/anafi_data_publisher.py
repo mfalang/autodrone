@@ -62,9 +62,13 @@ class GpsPublisher():
         gps_data_msg = sensor_msgs.msg.NavSatFix()
         gps_data_msg.header.stamp = rospy.Time.now()
 
-        gps_fix = self.drone.get_state(
-            olympe_msgs.ardrone3.GPSSettingsState.GPSFixStateChanged
-        )["fixed"]
+        try: gps_fix = self.drone.get_state(
+                olympe_msgs.ardrone3.GPSSettingsState.GPSFixStateChanged
+            )["fixed"]
+        except RuntimeError:
+            rospy.logwarn("Failed to get GPS Fix state. Assuming no fix.")
+            gps_fix = 0
+
 
         gps_pos = self.drone.get_state(
             olympe_msgs.ardrone3.PilotingState.GpsLocationChanged
@@ -220,7 +224,11 @@ class TelemetryPublisher():
         no_alert = olympe_enums.battery.alert_level.none
         battery_warnings = []
 
-        power_alert_level = battery_alert[olympe_enums.battery.alert.power_level]["level"]
+        try:
+            power_alert_level = battery_alert[olympe_enums.battery.alert.power_level]["level"]
+        except KeyError:
+            rospy.logwarn("Failed to get power alert level. Assuming battery is good, no action taken.")
+            power_alert_level = no_alert
         if power_alert_level != no_alert:
             battery_warnings.append(f"low power: {power_alert_level}")
         cold_alert_level = battery_alert[olympe_enums.battery.alert.too_hot]["level"]
