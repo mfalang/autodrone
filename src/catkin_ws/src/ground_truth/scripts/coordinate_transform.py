@@ -96,7 +96,7 @@ class CoordinateTransform():
         drone_orientation_helipad = np.array([
             drone_pose_ned[0],
             drone_pose_ned[2],
-            (drone_pose_ned[5] - helipad_rotation + 180) % 360 - 180 # Use smallest signed angle
+            (helipad_rotation - drone_pose_ned[5] + 180) % 360 - 180 # Use smallest signed angle
         ])
 
         # Store result
