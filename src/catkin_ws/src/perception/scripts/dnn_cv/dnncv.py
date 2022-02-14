@@ -32,16 +32,16 @@ class DnnPoseEstimator():
         self.focal_length = rospy.get_param("/drone/camera/focal_length")
         self.image_width = rospy.get_param("/drone/camera/img_width")
         self.image_height = rospy.get_param("/drone/camera/img_height")
-        self.camera_offset_x_mm = rospy.get_param("/drone/camera/offset_x_mm")
-        self.camera_offset_z_mm = rospy.get_param("/drone/camera/offset_z_mm")
+        camera_offset_x_mm = rospy.get_param("/drone/camera/offset_x_mm")
+        camera_offset_y_mm = rospy.get_param("/drone/camera/offset_y_mm")
+        camera_offset_z_mm = rospy.get_param("/drone/camera/offset_z_mm")
+        self.camera_offsets = [camera_offset_x_mm, camera_offset_y_mm, camera_offset_z_mm]
 
         self.latest_bounding_boxes = None
         self.new_bounding_boxes_available = False
 
-        self.latest_orientation = None # Format: TODO
-
         self.bb_pose_estimator = bb_pose_estimate.BoundingBoxPoseEstimator(
-            self.image_height, self.image_width, self.focal_length
+            self.image_height, self.image_width, self.focal_length, self.camera_offsets
         )
 
         rospy.Subscriber(self.config["topics"]["input"]["bounding_boxes"],

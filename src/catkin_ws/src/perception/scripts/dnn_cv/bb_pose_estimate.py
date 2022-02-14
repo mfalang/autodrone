@@ -3,10 +3,11 @@ import numpy as np
 
 class BoundingBoxPoseEstimator():
 
-    def __init__(self, image_height, image_width, focal_length):
+    def __init__(self, image_height, image_width, focal_length, camera_offsets):
         self.img_height = image_height
         self.img_width = image_width
         self.focal_length = focal_length
+        self.camera_offsets = camera_offsets
 
     def remove_bad_bounding_boxes(self, bounding_boxes):
         """
@@ -100,9 +101,9 @@ class BoundingBoxPoseEstimator():
         # accounts for the rotation of the camera in addition to its linear offset.
 
         # Convert camera coordinates (in ENU) to helipad coordinates (in NED)
-        x_helipad = y_camera
-        y_helipad = x_camera
-        z_helipad = -z_camera
+        x_helipad = y_camera - self.camera_offsets[0]
+        y_helipad = x_camera - self.camera_offsets[1]
+        z_helipad = -(z_camera - self.camera_offsets[2])
 
         return x_helipad, y_helipad, z_helipad
 
