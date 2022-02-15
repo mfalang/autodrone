@@ -31,7 +31,7 @@ rosbag record -O $OUTPUT_DIR/$TIME \
     /drone/out/image_rect_color \
     /drone/out/gps \
     /ground_truth/helipad_frame/drone_pose \
+    /ground_truth/body_frame/helipad_pose \
     /ground_truth/ned_frame/drone_pose \
     /ground_truth/ned_frame/helipad_pose \
     /darknet_ros/bounding_boxes \
-    /darknet_ros/detection_image

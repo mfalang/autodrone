@@ -10,3 +10,7 @@ topics:
   drone_pose_helipad_frame:
     sim: "/ground_truth/helipad_frame/drone_pose"
     real: "/ground_truth/helipad_frame/drone_pose"
+
+  helipad_pose_body_frame:
+    sim: "/ground_truth/body_frame/helipad_pose"
+    real: "/ground_truth/body_frame/helipad_pose"

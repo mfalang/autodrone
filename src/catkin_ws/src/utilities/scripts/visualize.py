@@ -55,8 +55,8 @@ class Plotter():
     def plot_drone_ground_truth(self):
         print("Plotting drone ground truth")
         # skiprows=2 instead of 1 because for some reason the first timestamp is negative so skip it
-        pose = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose.txt", skiprows=2)
-        self.pose3D_ax.plot3D(pose[:,1], pose[:,2], -pose[:,3], label="Drone ground truth")
+        pose = np.loadtxt(f"{self.data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
+        self.pose3D_ax.plot3D(pose[:,1], pose[:,2], pose[:,3], label="Drone ground truth")
         # self.pose3D_figure.legend()
         self.orientation_ax[0].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,4], label="GT")
         self.orientation_ax[1].plot(pose[self.gt_first_index:,0] - pose[self.gt_first_index,0], pose[self.gt_first_index:,5], label="GT")
@@ -80,7 +80,7 @@ class Plotter():
         position = np.loadtxt(f"{self.data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
 
         # Plot in 3D plot
-        self.pose3D_ax.scatter(position[:,1], position[:,2], -position[:,3], s=1, c="red", label="Drone DNN CV estimate")
+        self.pose3D_ax.scatter(position[:,1], position[:,2], position[:,3], s=1, c="red", label="Drone DNN CV estimate")
         self.pose3D_figure.legend()
 
         # Plot each component individually
@@ -174,7 +174,7 @@ class Plotter():
 
     def synch_dnn_cv_and_gt_timestamps(self):
         dnn_cv_timestamps = np.loadtxt(f"{self.data_dir}/estimates/dnn_cv_position.txt", skiprows=1)[:,0]
-        gt_timestamps = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose.txt", skiprows=2)[:,0]
+        gt_timestamps = np.loadtxt(f"{self.data_dir}/ground_truths/drone_pose_helipad_frame.txt", skiprows=2)[:,0]
 
         dnn_cv_first_timestamp = dnn_cv_timestamps[0]
         self.gt_first_index = np.argmin(np.abs(gt_timestamps-dnn_cv_first_timestamp))

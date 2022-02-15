@@ -11,6 +11,33 @@ import rospy
 import geometry_msgs.msg
 import ground_truth.msg
 
+def Rx(degrees):
+    radians = np.deg2rad(degrees)
+    c = np.cos(radians)
+    s = np.sin(radians)
+
+    return np.array([[1, 0, 0],
+                     [0, c, -s],
+                     [0, s, c]])
+
+def Ry(degrees):
+    radians = np.deg2rad(degrees)
+    c = np.cos(radians)
+    s = np.sin(radians)
+
+    return np.array([[c, 0, s],
+                     [0, 1, 0],
+                     [-s, 0, c]])
+
+def Rz(degrees):
+    radians = np.deg2rad(degrees)
+    c = np.cos(radians)
+    s = np.sin(radians)
+
+    return np.array([[c, -s, 0],
+                     [s, c, 0],
+                     [0, 0, 1]])
+
 class CoordinateTransform():
 
     def __init__(self):
@@ -44,9 +71,15 @@ class CoordinateTransform():
         self.new_helipad_gt_pose = False
         self.newest_helipad_pose_msg: geometry_msgs.msg.PoseStamped = None
 
-        # Set up publisher for new drone pose relative to helipad
+        # Set up publisher for new drone pose relative to helipad in the helipad frame
         self.drone_pose_helipad_frame_publisher = rospy.Publisher(
             self.config["topics"]["drone_pose_helipad_frame"][self.environment],
+            ground_truth.msg.PoseStampedEuler, queue_size=1
+        )
+
+        # Set up publisher for new drone pose realtive to the helipad in the body frame
+        self.helipad_pose_body_frame_publisher = rospy.Publisher(
+            self.config["topics"]["helipad_pose_body_frame"][self.environment],
             ground_truth.msg.PoseStampedEuler, queue_size=1
         )
 
@@ -59,7 +92,9 @@ class CoordinateTransform():
             drone_pose_ned_frame = self._geometry_msg_pose_to_array(msg)
             helipad_pose_ned_frame = self._geometry_msg_pose_to_array(self.newest_helipad_pose_msg)
             drone_pose_helipad_frame = self._ned_to_helipad_frame(drone_pose_ned_frame, helipad_pose_ned_frame)
-            self._publish_drone_helipad_frame_pose(drone_pose_helipad_frame)
+            helipad_pose_body_frame = self._ned_to_body_frame(drone_pose_ned_frame, helipad_pose_ned_frame)
+            self._publish_drone_pose(drone_pose_helipad_frame, "helipad")
+            self._publish_drone_pose(helipad_pose_body_frame, "drone_body")
 
     def _helipad_gt_pose_cb(self, msg: geometry_msgs.msg.PoseStamped):
         self.newest_helipad_pose_msg = msg
@@ -68,11 +103,8 @@ class CoordinateTransform():
 
         # Create rotation matrix between NED and Helipad frame
         helipad_rotation = helipad_pose_ned[5]
-        R_ned_to_heli = np.array([
-            [np.cos(helipad_rotation), -np.sin(helipad_rotation), 0],
-            [np.sin(helipad_rotation), np.cos(helipad_rotation), 0],
-            [0, 0, 1]
-        ])
+
+        R_ned_to_heli = Rz(helipad_rotation)
 
         # Translation between Helipad and NED frame (negative since this by definition
         # is the translation Helipad->NED expressed in the Helipad frame, but the
@@ -94,8 +126,8 @@ class CoordinateTransform():
 
         # Convert orientation
         drone_orientation_helipad = np.array([
-            drone_pose_ned[0],
-            drone_pose_ned[2],
+            drone_pose_ned[3],
+            drone_pose_ned[4],
             (helipad_rotation - drone_pose_ned[5] + 180) % 360 - 180 # Use smallest signed angle
         ])
 
@@ -111,6 +143,48 @@ class CoordinateTransform():
 
         return drone_pose_helipad
 
+    def _ned_to_body_frame(self, drone_pose_ned: np.ndarray, helipad_pose_ned: np.ndarray):
+
+        # Create rotation matrix between NED and drone body frame
+        R_ned_to_body = Rz(drone_pose_ned[5]) @ Ry(drone_pose_ned[4]) @ Rx(drone_pose_ned[3])
+
+        # Translation between body and NED frame (negative since this by definition
+        # is the translation body->NED expressed in the body frame, but the
+        # simulator and motion capture system gives the distance expressed in the
+        # NED frame).
+        t_body_to_ned_in_body = - R_ned_to_body @ np.array([
+            drone_pose_ned[0],
+            drone_pose_ned[1],
+            drone_pose_ned[2]
+        ])
+
+        # Convert position
+        helipad_position_ned = np.array([
+            helipad_pose_ned[0],
+            helipad_pose_ned[1],
+            helipad_pose_ned[2]
+        ])
+        helipad_position_body = R_ned_to_body @ helipad_position_ned + t_body_to_ned_in_body
+
+        # Use orientation straight from NED as this is not really that important here
+        helipad_orientation_body = np.array([
+            helipad_pose_ned[3],
+            helipad_pose_ned[4],
+            helipad_pose_ned[5]
+        ])
+
+        # Store result
+        helipad_pose_body = np.array([
+            helipad_position_body[0],
+            helipad_position_body[1],
+            helipad_position_body[2],
+            helipad_orientation_body[0],
+            helipad_orientation_body[1],
+            helipad_orientation_body[2],
+        ])
+
+        return helipad_pose_body
+
     def _geometry_msg_pose_to_array(self, pose: geometry_msgs.msg.PoseStamped):
 
         quat = [pose.pose.orientation.x,
@@ -119,9 +193,11 @@ class CoordinateTransform():
             pose.pose.orientation.w
         ]
 
-        # Minus sign because positive rotation is defined counter clockwise, but
-        # simulator outputs positive rotation as clockwise rotations
-        euler = -Rotation.from_quat(quat).as_euler("xyz", degrees=True)
+        euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
+
+        # Redefine heading angle to be relative to North axis instead of East axis
+        # as is given by the simulator
+        euler[2] = (euler[2] - 90 + 180) % 360 - 180
 
         ret = np.array([
             pose.pose.position.x,
@@ -134,16 +210,27 @@ class CoordinateTransform():
 
         return ret
 
-    def _publish_drone_helipad_frame_pose(self, pose: np.ndarray):
+    def _publish_drone_pose(self, pose: np.ndarray, frame_id: str):
+
+        if frame_id == "helipad":
+            publisher = self.drone_pose_helipad_frame_publisher
+        elif frame_id == "drone_body":
+            publisher = self.helipad_pose_body_frame_publisher
+        else:
+            rospy.logerr("Invalid frame ID, no such publisher available.")
+            return
+
         msg = ground_truth.msg.PoseStampedEuler()
         msg.header.stamp = rospy.Time.now()
+        msg.header.frame_id = frame_id
         msg.x = pose[0]
         msg.y = pose[1]
         msg.z = pose[2]
         msg.phi = pose[3]
         msg.theta = pose[4]
         msg.psi = pose[5]
-        self.drone_pose_helipad_frame_publisher.publish(msg)
+
+        publisher.publish(msg)
 
     def start(self):
         rospy.loginfo("Starting ground truth coordinate frame alignment")

@@ -54,8 +54,13 @@ class OutputSaver():
         )
 
         ground_truths.DronePoseDataSaver(self.config, self.output_base_dir,
-            "ground_truths", "drone_pose", self.environment
+            "ground_truths", "drone_pose_helipad_frame", self.environment
         )
+
+        ground_truths.DronePoseDataSaver(self.config, self.output_base_dir,
+            "ground_truths", "helipad_pose_body_frame", self.environment
+        )
+
         # ground_truth.HelipadPoseDataSaver(self.config, self.output_base_dir,
         #     "ground_truths", "helipad_pose", self.environment
         # )

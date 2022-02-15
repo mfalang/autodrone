@@ -1,9 +1,18 @@
 ground_truths:
-  drone_pose:
-    name: drone_pose
+  drone_pose_helipad_frame:
+    name: drone_pose_helipad_frame
     num_states: 6
     topic:
       sim: /ground_truth/helipad_frame/drone_pose
+      real: /qualisys/anafi/pose
+    file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
+    max_values_stored_in_buffer: 10
+
+  helipad_pose_body_frame:
+    name: helipad_pose_body_frame
+    num_states: 6
+    topic:
+      sim: /ground_truth/body_frame/helipad_pose
       real: /qualisys/anafi/pose
     file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
     max_values_stored_in_buffer: 10

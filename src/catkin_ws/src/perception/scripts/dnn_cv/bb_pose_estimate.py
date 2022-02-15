@@ -28,7 +28,7 @@ class BoundingBoxPoseEstimator():
             return None
 
         x_cam, y_cam, z_cam = self._pixel_to_camera_coordinates(center_px, radius_px, perimeter_radius_mm)
-        x_helipad_mm, y_helipad_mm, z_helipad_mm = self._camera_to_helipad_coordinates(x_cam, y_cam, z_cam)
+        x_helipad_mm, y_helipad_mm, z_helipad_mm = self._camera_to_drone_body_coordinates(x_cam, y_cam, z_cam)
 
         # Convert to meters
         x_helipad = x_helipad_mm / 1000
@@ -91,19 +91,39 @@ class BoundingBoxPoseEstimator():
         # Find x and y coordiantes using similar triangles as well. The signs are
         # used so that the x-coordinate is positive to the right and the y-coordinate
         # is positive upwards
-        x_camera = z_camera * d_x / self.focal_length
-        y_camera = -(z_camera * d_y / self.focal_length)
+        x_camera = -(z_camera * d_x / self.focal_length)
+        y_camera = z_camera * d_y / self.focal_length
 
         return x_camera, y_camera, z_camera
 
-    def _camera_to_helipad_coordinates(self, x_camera, y_camera, z_camera):
+    def _camera_to_drone_body_coordinates(self, x_camera, y_camera, z_camera):
         # TODO: These must be investigated. Maybe using a transformation matrix that
         # accounts for the rotation of the camera in addition to its linear offset.
 
         # Convert camera coordinates (in ENU) to helipad coordinates (in NED)
+
+        # Camera coordinates are in ENU with positive x right, and positive y up.
+        # Since we are estimating the position of the helipad relative to the drone
+        # body frame, the x and y-axis are changed, since the body frame is defined
+        # using NED axis. As it is the helipad position and not the drone position
+        # we are after, the helipad will have a positive x-value when it is high in
+        # the picture, and a negative when low. It will similarly have a positive
+        # y-value when it is to the right and the picture and a negative when to the
+        # left. The z-value will be positive always as the helipad is beneath the
+        # drone (i.e. along the drone z-axis in the body frame) and will just be left
+        # as it is.
+
+        # Since we are estimating the position of the helipad relative to the drone
+        # body frame, the axis will be the following:
+        #   x: positive up, negative down
+        #   y: positive right, negative left
+        #   z: positve down, never negative
+        # Given the axes definitions in the camera frame, the new axis will thus be
+        # the following:
+
         x_helipad = y_camera - self.camera_offsets[0]
         y_helipad = x_camera - self.camera_offsets[1]
-        z_helipad = -(z_camera - self.camera_offsets[2])
+        z_helipad = z_camera - self.camera_offsets[2]
 
         return x_helipad, y_helipad, z_helipad
 
