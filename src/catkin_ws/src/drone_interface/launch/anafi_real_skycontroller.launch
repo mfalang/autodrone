@@ -6,6 +6,6 @@
         type="olympe_ros_bridge.py"
         output="screen">
         <param name="drone_ip" value="192.168.53.1" />
-        <param name="config_file" value="anafi.yaml" />
+        <param name="config_file" value="anafi/params.yaml" />
     </node>
 </launch>

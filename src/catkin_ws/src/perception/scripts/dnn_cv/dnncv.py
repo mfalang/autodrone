@@ -11,6 +11,8 @@ import perception.msg
 import geometry_msgs.msg
 import darknet_ros_msgs.msg
 
+import numpy as np
+
 class DnnPoseEstimator():
 
     def __init__(self, config_file=None):
@@ -29,7 +31,9 @@ class DnnPoseEstimator():
             rospy.logerr(f"Failed to load config: {e}")
             sys.exit()
 
-        self.focal_length = rospy.get_param("/drone/camera/focal_length")
+        self.camera_matrix = np.array(rospy.get_param("/drone/camera/camera_matrix")).reshape(3,3)
+        self.focal_length = (self.camera_matrix[0,0] + self.camera_matrix[1,1])/2
+
         self.image_width = rospy.get_param("/drone/camera/img_width")
         self.image_height = rospy.get_param("/drone/camera/img_height")
         camera_offset_x_mm = rospy.get_param("/drone/camera/offset_x_mm")
