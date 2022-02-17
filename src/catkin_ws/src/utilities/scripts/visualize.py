@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
+from audioop import rms
 import os
 import argparse
+from cv2 import merge
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
@@ -32,15 +35,6 @@ class Plotter():
         self.orientation_ax[1].set_ylabel("Pitch angle [deg]")
         self.orientation_ax[2].set_xlabel("Time [sec]")
         self.orientation_ax[2].set_ylabel("Yaw angle [deg]")
-
-        self.pos2D_fig, self.pos2D_ax = plt.subplots(3, 1)
-        self.pos2D_fig.suptitle("Estimated (DNN CV) vs. ground truth position")
-        self.pos2D_ax[0].set_xlabel("Time [sec]")
-        self.pos2D_ax[0].set_ylabel("North [m]")
-        self.pos2D_ax[1].set_xlabel("Time [sec]")
-        self.pos2D_ax[1].set_ylabel("East [m]")
-        self.pos2D_ax[2].set_xlabel("Time [sec]")
-        self.pos2D_ax[2].set_ylabel("Down [m]")
 
         self.dnn_cv_yaw_fig = plt.figure(2)
         self.dnn_cv_yaw_ax = plt.axes()
@@ -180,6 +174,70 @@ class Plotter():
         self.gt_first_index = np.argmin(np.abs(gt_timestamps-dnn_cv_first_timestamp))
         self.dnn_cv_first_index = 0
 
+    def sync_dnncv_and_gt_data(self):
+        dnncv_data = np.loadtxt(f"{self.data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
+        gt_data = np.loadtxt(f"{self.data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
+
+        dnncv_df = pd.DataFrame()
+        # dnncv_df["time"] = pd.to_datetime(dnncv_data[:,0], unit="s")
+        dnncv_df["time"] = dnncv_data[:,0]
+        dnncv_df["est_x"] = dnncv_data[:,1]
+        dnncv_df["est_y"] = dnncv_data[:,2]
+        dnncv_df["est_z"] = dnncv_data[:,3]
+
+        gt_df = pd.DataFrame()
+        # gt_df["time"] = pd.to_datetime(gt_data[:,0], unit="s")
+        gt_df["time"] = gt_data[:,0]
+        gt_df["gt_x"] = gt_data[:,1]
+        gt_df["gt_y"] = gt_data[:,2]
+        gt_df["gt_z"] = gt_data[:,3]
+
+        merged = pd.merge_asof(dnncv_df, gt_df, on="time", allow_exact_matches=True, direction="nearest")
+
+        timestamps = merged["time"].to_numpy()
+        estimates = np.array([merged["est_x"].to_numpy(), merged["est_y"].to_numpy(), merged["est_z"].to_numpy()]).T
+        ground_truths = np.array([merged["gt_x"].to_numpy(), merged["gt_y"].to_numpy(), merged["gt_z"].to_numpy()]).T
+
+        np.savetxt("ground_truths_from_pandas.txt", ground_truths)
+
+        return estimates, ground_truths, timestamps
+
+    def plot_dnncv_estimate_vs_ground_truth(self, estimates, ground_truths, timestamps):
+
+        rmse_all = np.sqrt(np.mean((estimates - ground_truths)**2))
+        rmse_x = np.sqrt(np.mean((estimates[:,0] - ground_truths[:,0])**2))
+        rmse_y = np.sqrt(np.mean((estimates[:,1] - ground_truths[:,1])**2))
+        rmse_z = np.sqrt(np.mean((estimates[:,2] - ground_truths[:,2])**2))
+
+        pos2D_fig, pos2D_ax = plt.subplots(3, 1)
+        pos2D_fig.suptitle(f"DNN CV helipad position estimate vs. ground truth. Total RMSE: {rmse_all:.3f}m")
+        # pos2D_ax[0].set_xlabel("Time [sec]")
+        pos2D_ax[0].set_ylabel("x [m]")
+        pos2D_ax[0].set_title(f"RMSE: {rmse_x:.3f}m")
+        # pos2D_ax[1].set_xlabel("Time [sec]")
+        pos2D_ax[1].set_ylabel("y [m]")
+        pos2D_ax[1].set_title(f"RMSE: {rmse_y:.3f}m")
+        pos2D_ax[2].set_xlabel("Time [sec]")
+        pos2D_ax[2].set_ylabel("z [m]")
+        pos2D_ax[2].set_title(f"RMSE: {rmse_z:.3f}m")
+
+        # Estimates
+        pos2D_ax[0].scatter(timestamps - timestamps[0], estimates[:,0], s=5, c="red", label="DNN CV")
+        pos2D_ax[1].scatter(timestamps - timestamps[0], estimates[:,1], s=5, c="red", label="DNN CV")
+        pos2D_ax[2].scatter(timestamps - timestamps[0], estimates[:,2], s=5, c="red", label="DNN CV")
+
+        # Ground truths
+        pos2D_ax[0].plot(timestamps - timestamps[0], ground_truths[:,0], label="GT")
+        pos2D_ax[1].plot(timestamps - timestamps[0], ground_truths[:,1], label="GT")
+        pos2D_ax[2].plot(timestamps - timestamps[0], ground_truths[:,2], label="GT")
+
+        pos2D_ax[0].legend(loc="lower right")
+        pos2D_ax[1].legend(loc="lower right")
+        pos2D_ax[2].legend(loc="lower right")
+
+
+
+
 def main():
     parser = argparse.ArgumentParser(description="Visualize data.")
     parser.add_argument("data_dir", metavar="data_dir", type=str, help="Base directory of data")
@@ -192,9 +250,11 @@ def main():
     plotter = Plotter(args.data_dir)
 
     if (args.plots == "dnncv" and args.plots == "drone_gt") or args.plots == "all":
-        plotter.synch_dnn_cv_and_gt_timestamps()
-        plotter.plot_drone_dnncv_estimates()
-        plotter.plot_drone_ground_truth()
+        est, gt, ts = plotter.sync_dnncv_and_gt_data()
+        plotter.plot_dnncv_estimate_vs_ground_truth(est, gt, ts)
+        # plotter.synch_dnn_cv_and_gt_timestamps()
+        # plotter.plot_drone_dnncv_estimates()
+        # plotter.plot_drone_ground_truth()
 
 
     # if args.gt_plots == "drone_pose" and args.estimate_plots == "tcv_pose":
