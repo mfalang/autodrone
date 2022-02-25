@@ -1,7 +1,7 @@
 
-from numpy.testing._private.utils import measure
 import scipy.linalg as la
 import numpy as np
+from measurement_models import MeasurementModel
 
 class EKFState():
 
@@ -12,11 +12,11 @@ class EKFState():
 
 class EKF():
 
-    def __init__(self, dynamic_model, measurement_model):
+    def __init__(self, dynamic_model, measurement_models: dict):
         self.dynamic_model = dynamic_model
-        self.measurement_model = measurement_model
+        self.measurement_models = measurement_models
 
-    def predict(self, ekfstate, u, dt):
+    def predict(self, ekfstate: EKFState, u: np.ndarray, dt: float):
         """Predict the EKF state dt seconds ahead."""
         x = ekfstate.mean
         P = ekfstate.cov
@@ -36,46 +36,48 @@ class EKF():
 
         return state_pred
 
-    def innovation_mean(self, z, ekfstate):
+    def innovation_mean(self, z, ekfstate, measurement_model: MeasurementModel):
         """Calculate the innovation mean for ekfstate at z."""
 
         x = ekfstate.mean
 
-        zbar = self.measurement_model.h(x)
+        zbar = measurement_model.h(x)
 
         v = z - zbar
 
         return v
 
-    def innovation_cov(self, ekfstate):
+    def innovation_cov(self, ekfstate, measurement_model: MeasurementModel):
         """Calculate the innovation covariance for ekfstate at z."""
 
         x = ekfstate.mean
         P = ekfstate.cov
 
-        H = self.measurement_model.H()
-        R = self.measurement_model.R()
+        H = measurement_model.H()
+        R = measurement_model.R()
         S = H @ P @ H.T + R
 
         return S
 
-    def innovation(self, z, ekfstate):
+    def innovation(self, z, ekfstate, measurement_model):
         """Calculate the innovation for ekfstate at z in sensor_state."""
 
-        v = self.innovation_mean(z, ekfstate)
-        S = self.innovation_cov(ekfstate)
+        v = self.innovation_mean(z, ekfstate, measurement_model)
+        S = self.innovation_cov(ekfstate, measurement_model)
 
         return v, S
 
-    def update(self, z, ekfstate):
+    def update(self, z: np.ndarray, ekfstate: EKFState, measurement_type: str):
         """Update ekfstate with z in sensor_state"""
+
+        measurement_model = self.measurement_models[measurement_type]
 
         x = ekfstate.mean
         P = ekfstate.cov
 
-        v, S = self.innovation(z, ekfstate)
+        v, S = self.innovation(z, ekfstate, measurement_model)
 
-        H = self.measurement_model.H()
+        H = measurement_model.H()
         W = P @ la.solve(S, H).T
 
         x_upd = x + W @ v
@@ -83,7 +85,7 @@ class EKF():
 
         # this version of getting P_upd is more numerically stable
         I = np.eye(*P.shape)
-        R = self.measurement_model.R()
+        R = measurement_model.R()
         P_upd = (I - W @ H) @ P @ (I - W @ H).T + W @ R @ W.T
 
         ekfstate_upd = EKFState(x_upd, P_upd)
