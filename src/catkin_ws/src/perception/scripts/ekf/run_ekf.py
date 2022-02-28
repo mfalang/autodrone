@@ -6,6 +6,7 @@ import yaml
 
 import rospy
 import geometry_msgs.msg
+import perception.msg
 import drone_interface.msg
 import numpy as np
 
@@ -79,7 +80,7 @@ class EKFRosRunner():
         if output_states == "position":
             publisher = rospy.Publisher(
                 self.config["ekf"]["output"]["topic_name"],
-                geometry_msgs.msg.PoseWithCovarianceStamped, queue_size=10
+                perception.msg.PointWithCovarianceStamped, queue_size=10
             )
         else:
             raise NotImplementedError
@@ -115,12 +116,13 @@ class EKFRosRunner():
     def _pack_estimate_msg(self, ekfstate: EKFState, states_type: str):
 
         if states_type == "position":
-            msg = geometry_msgs.msg.PoseWithCovarianceStamped()
+            msg = perception.msg.PointWithCovarianceStamped()
             msg.header.stamp = rospy.Time.now()
-            msg.pose.pose.position.x = ekfstate.mean[0]
-            msg.pose.pose.position.y = ekfstate.mean[1]
-            msg.pose.pose.position.z = ekfstate.mean[2]
-            msg.pose.covariance = ekfstate.cov.flatten().tolist()
+            msg.header.frame_id = "drone_body"
+            msg.position.x = ekfstate.mean[0]
+            msg.position.y = ekfstate.mean[1]
+            msg.position.z = ekfstate.mean[2]
+            msg.covariance = ekfstate.cov[:3,:3].flatten().tolist()
         else:
             raise NotImplementedError
 

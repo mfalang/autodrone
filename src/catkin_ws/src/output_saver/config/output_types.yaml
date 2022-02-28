@@ -54,13 +54,12 @@ estimates:
     file_header: "Format: timestamp[sec] [x[m], y[m], z[m], phi[deg] theta[deg] psi[deg]]\n"
     max_values_stored_in_buffer: 1
 
-  ekf_output:
-    name: ekf_output
-    num_states: 56 # 7 states + 7x7 covariance matrix
+  ekf_position:
+    name: ekf_position
+    num_states: 12 # 3 states + 3x3 covariance matrix
     topic:
       sim: /estimate/ekf
       real: /estimate/ekf
-    file_header: "Format: timestamp[sec] [x_drone[m], y_drone[m], z_drone[m],
-                  psi_drone[deg], vx_helipad[m/s], vx_helipad[m/s], vx_helipad[m/s],
-                  covariance for each state (flattened 7x7 matrix)]\n"
+    file_header: "Format: timestamp[sec] [x[m], y[m], z[m],
+                  covariance for each state (flattened 3x3 matrix)]\n"
     max_values_stored_in_buffer: 10

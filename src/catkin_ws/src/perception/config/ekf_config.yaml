@@ -15,7 +15,7 @@ dynamic_models:
     init_values:
       x0: [0, 0, 0, 0, 0, 0]
       P0: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
-    output_type: geometry_msgs.msg.PoseWithCovarianceStamped
+    output_type: perception.msg.PointWithCovarianceStamped
 
 measurements:
   dnn_cv_position:

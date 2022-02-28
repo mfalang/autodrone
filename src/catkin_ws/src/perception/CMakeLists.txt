@@ -10,6 +10,7 @@ project(perception)
 find_package(catkin REQUIRED
   rospy
   std_msgs
+  geometry_msgs
   message_generation
 )
 
@@ -52,6 +53,7 @@ add_message_files(
   EkfOutput.msg
   EulerPose.msg
   Heading.msg
+  PointWithCovarianceStamped.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -71,7 +73,8 @@ add_message_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs  # Or other packages containing msgs
+  std_msgs
+  geometry_msgs
 )
 
 ################################################
@@ -163,7 +166,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/dnn_cv/dnncv.py
-  scripts/run_ekf.py
+  scripts/ekf/run_ekf.py
   scripts/tcv/tcv.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

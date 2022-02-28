@@ -35,6 +35,28 @@ class DnnCvHeadingSaver(GenericOutputSaver):
             msg.heading
         ])
 
+class EkfPositionSaver(GenericOutputSaver):
+
+    def __init__(self, config, base_dir, output_category, output_type, environment):
+        super().__init__(config, base_dir, output_category, output_type, environment)
+
+        rospy.Subscriber(self.topic_name, perception.msg.PointWithCovarianceStamped, self._ekf_position_estimate_cb)
+
+    def _ekf_position_estimate_cb(self, msg: perception.msg.PointWithCovarianceStamped):
+
+        output = [
+            msg.header.stamp.to_sec(),
+            msg.position.x,
+            msg.position.y,
+            msg.position.z,
+        ]
+
+        output.extend(msg.covariance)
+
+        self._save_output(output)
+
+
+
 class TcvDataSaver(GenericOutputSaver):
     def __init__(self, config, base_dir, output_category, output_type, environment):
         super().__init__(config, base_dir, output_category, output_type, environment)

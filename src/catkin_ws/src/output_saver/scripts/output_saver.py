@@ -45,13 +45,17 @@ class OutputSaver():
             "estimates", "dnn_cv_heading", self.environment
         )
 
-        estimates.TcvDataSaver(self.config, self.output_base_dir,
-            "estimates", "tcv_pose", self.environment
+        estimates.EkfPositionSaver(self.config, self.output_base_dir,
+            "estimates", "ekf_position", self.environment
         )
 
-        estimates.EkfDataSaver(self.config, self.output_base_dir,
-            "estimates", "ekf_output", self.environment
-        )
+        # estimates.TcvDataSaver(self.config, self.output_base_dir,
+        #     "estimates", "tcv_pose", self.environment
+        # )
+
+        # estimates.EkfDataSaver(self.config, self.output_base_dir,
+        #     "estimates", "ekf_output", self.environment
+        # )
 
         ground_truths.DronePoseDataSaver(self.config, self.output_base_dir,
             "ground_truths", "drone_pose_helipad_frame", self.environment
