@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-from audioop import rms
 import os
 import argparse
-from cv2 import merge
+import functools
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
+
 
 class Plotter():
 
@@ -174,33 +174,113 @@ class Plotter():
         self.gt_first_index = np.argmin(np.abs(gt_timestamps-dnn_cv_first_timestamp))
         self.dnn_cv_first_index = 0
 
-    def sync_dnncv_and_gt_data(self):
-        dnncv_data = np.loadtxt(f"{self.data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
-        gt_data = np.loadtxt(f"{self.data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
+    def sync_two_data_series(self, data1: np.ndarray, data2: np.ndarray):
 
-        dnncv_df = pd.DataFrame()
-        # dnncv_df["time"] = pd.to_datetime(dnncv_data[:,0], unit="s")
-        dnncv_df["time"] = dnncv_data[:,0]
-        dnncv_df["est_x"] = dnncv_data[:,1]
-        dnncv_df["est_y"] = dnncv_data[:,2]
-        dnncv_df["est_z"] = dnncv_data[:,3]
+        if data1.shape[0] > data2.shape[0]:
+            dense = data1
+            dense_prefix = "data1"
+            sparse = data2
+            sparse_prefix = "data2"
+        else:
+            dense = data2
+            dense_prefix = "data2"
+            sparse = data1
+            sparse_prefix = "data1"
 
-        gt_df = pd.DataFrame()
-        # gt_df["time"] = pd.to_datetime(gt_data[:,0], unit="s")
-        gt_df["time"] = gt_data[:,0]
-        gt_df["gt_x"] = gt_data[:,1]
-        gt_df["gt_y"] = gt_data[:,2]
-        gt_df["gt_z"] = gt_data[:,3]
+        dense_df = pd.DataFrame()
+        dense_df["time"] = dense[:,0]
+        for i in range(1, dense.shape[1]):
+            dense_df[f"{dense_prefix}_{i-1}"] = dense[:,i]
 
-        merged = pd.merge_asof(dnncv_df, gt_df, on="time", allow_exact_matches=True, direction="nearest")
+        sparse_df = pd.DataFrame()
+        sparse_df["time"] = sparse[:,0]
+        for i in range(1, sparse.shape[1]):
+            sparse_df[f"{sparse_prefix}_{i-1}"] = sparse[:,i]
+
+        merged = pd.merge_asof(sparse_df, dense_df, on="time", allow_exact_matches=True, direction="nearest")
 
         timestamps = merged["time"].to_numpy()
-        estimates = np.array([merged["est_x"].to_numpy(), merged["est_y"].to_numpy(), merged["est_z"].to_numpy()]).T
-        ground_truths = np.array([merged["gt_x"].to_numpy(), merged["gt_y"].to_numpy(), merged["gt_z"].to_numpy()]).T
 
-        np.savetxt("ground_truths_from_pandas.txt", ground_truths)
+        data1_out = []
+        for i in range(data1.shape[1] - 1):
+            data1_out.append(merged[f"data1_{i}"].to_numpy())
+        data1_out = np.array(data1_out).T
 
-        return estimates, ground_truths, timestamps
+        data2_out = []
+        for i in range(data2.shape[1] - 1):
+            data2_out.append(merged[f"data2_{i}"].to_numpy())
+        data2_out = np.array(data2_out).T
+
+        return timestamps, data1_out, data2_out
+
+    def sync_multiple_data_series(self, data: list):
+
+        data_frames = []
+
+        for i, dataseries in enumerate(data):
+            df = pd.DataFrame()
+            df["time"] = dataseries[:,0]
+            for j in range(1, dataseries.shape[1]):
+                df[f"data_{i}_{j-1}"] = dataseries[:,j]
+            data_frames.append(df)
+
+        df_merged = functools.reduce(lambda left,right: pd.merge(left, right, on="time", how="outer"), data_frames)
+
+        data_out = []
+
+        for i in range(len(data)):
+            data_i = []
+            data_i.append(df_merged["time"])
+
+            num_columns = data[i].shape[1] - 1 # not including time
+            for j in range(num_columns):
+                data_i.append(df_merged[f"data_{i}_{j}"].to_numpy())
+            data_i = np.array(data_i).T
+
+            data_out.append(data_i)
+
+        return data_out
+
+
+
+    def plot_two_data_series(self, timestamps, data1, data2, suptitle="", data1_label="", data2_label="",
+        xlabels=[], ylabels=[], calc_rmse=True
+    ):
+        if calc_rmse and (data1.shape == data2.shape):
+            rmse_all = np.sqrt(np.mean((data1 - data2)**2))
+            rmse_per_column = []
+            for i in range(data1.shape[1]):
+                rmse_per_column.append(np.sqrt(np.mean((data1[:,i] - data2[:,i])**2)))
+
+            print("="*10, f"RMSE calculations ({suptitle})", "="*10)
+            print(f"Total RMSE ({data1.shape[1]} axis): {rmse_all:.4f}\n")
+            for i, rmse in enumerate(rmse_per_column):
+                print(f"Column {i}: {rmse:.4f}")
+
+        fig, ax = plt.subplots(data1.shape[1], 1)
+        fig.suptitle(suptitle)
+
+        for i in range(ax.shape[0]):
+            ax[i].set_ylabel(ylabels[i])
+            ax[i].set_xlabel(xlabels[i])
+            ax[i].plot(timestamps - timestamps[0], data1[:,i], label=data1_label)
+            ax[i].plot(timestamps - timestamps[0], data2[:,i], label=data2_label)
+
+    def plot_multiple_data_series(self, data: list, numplots: int, suptitle: str,
+        legends: list, xlabels: list, ylabels: list, use_scatter: list
+    ):
+        fig, ax = plt.subplots(numplots, 1)
+        fig.suptitle(suptitle)
+        for i in range(ax.shape[0]):
+            ax[i].set_ylabel(ylabels[i])
+            ax[i].set_xlabel(xlabels[i])
+            for j in range(len(data)):
+                if use_scatter[j]:
+                    ax[i].scatter(data[j][:,0] - data[j][0,0], data[j][:,i+1], s=4, label=legends[j])
+                else:
+                    ax[i].plot(data[j][:,0] - data[j][0,0], data[j][:,i+1], label=legends[j])
+            ax[i].legend(loc="lower right")
+
 
     def plot_dnncv_estimate_vs_ground_truth(self, estimates, ground_truths, timestamps):
 
@@ -249,9 +329,53 @@ def main():
 
     plotter = Plotter(args.data_dir)
 
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    data_dir = f"{script_dir}/../../../../../out/{args.data_dir}"
+
     if (args.plots == "dnncv" and args.plots == "drone_gt") or args.plots == "all":
-        est, gt, ts = plotter.sync_dnncv_and_gt_data()
-        plotter.plot_dnncv_estimate_vs_ground_truth(est, gt, ts)
+        dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
+        gt_data = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
+        # ts, dnncv_pos, gt_pos = plotter.sync_two_data_series(dnncv_data, gt_data)
+        # plotter.plot_dnncv_estimate_vs_ground_truth(dnncv_pos, gt_pos[:,:3], ts)
+        # plotter.plot_two_data_series(
+        #     ts,
+        #     dnncv_pos,
+        #     gt_pos[:,:3],
+        #     suptitle="DNN CV pos estimate vs. ground truth",
+        #     data1_label="DNN CV",
+        #     data2_label="GT",
+        #     ylabels=["x[m]", "y[m]", "z[m]"],
+        #     xlabels=["t [sec]", "t [sec]", "t [sec]"]
+        # )
+
+        ekfpos_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
+        # ts, ekf_pos, gt_pos = plotter.sync_two_data_series(ekfpos_data, gt_data)
+        # plotter.plot_two_data_series(
+        #     ts,
+        #     ekf_pos[:,:3],
+        #     gt_pos[:,:3],
+        #     suptitle="EKF pos estimate vs. ground truth",
+        #     data1_label="EKF",
+        #     data2_label="GT",
+        #     ylabels=["x[m]", "y[m]", "z[m]"],
+        #     xlabels=["t [sec]", "t [sec]", "t [sec]"]
+        # )
+
+
+        plotter.plot_multiple_data_series(
+            [gt_data, ekfpos_data, dnncv_data], 3, "Position - GT vs. EKF vs. DNNCV raw",
+            ["GT", "EKF", "DNNCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+            [False, False, True]
+        )
+        synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series([gt_data, ekfpos_data, dnncv_data])
+        plotter.plot_multiple_data_series(
+            synced_gt_dnncv_ekf_data, 3, "Position - GT vs. EKF vs. DNNCV raw",
+            ["GT", "EKF", "DNNCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+            [False, True, True]
+        )
+
+        # est, gt, ts = plotter.sync_dnncv_and_gt_data()
+        # plotter.plot_dnncv_estimate_vs_ground_truth(est, gt, ts)
         # plotter.synch_dnn_cv_and_gt_timestamps()
         # plotter.plot_drone_dnncv_estimates()
         # plotter.plot_drone_ground_truth()
