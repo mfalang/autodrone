@@ -1,5 +1,22 @@
 
+from pyexpat import model
 import numpy as np
+
+def get_measurement_models_from_types(measurement_model_types: list, measurement_models_config: dict):
+
+    measurement_models = {}
+
+    for model_type in measurement_model_types:
+        if model_type == "dnn_cv_position":
+            measurement_model = DnnCvPosition
+        elif model_type == "drone_velocity":
+            measurement_model = DroneVelocity
+        else:
+            raise NotImplementedError
+
+        measurement_models[model_type] = measurement_model(measurement_models_config[model_type]["sigmas"])
+
+    return measurement_models
 
 class MeasurementModel():
 

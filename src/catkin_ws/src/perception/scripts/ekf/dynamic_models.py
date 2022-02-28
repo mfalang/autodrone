@@ -1,6 +1,13 @@
 
 import numpy as np
 
+def get_dynamic_model_from_type(dynamic_model_type: str):
+    if dynamic_model_type == "constant_velocity_no_attitude":
+        return ConstantVelocityModel()
+    else:
+        print(f"Dynamic model type not supported: {dynamic_model_type}")
+        raise NotImplementedError
+
 class ConstantVelocityModelWithAttitude():
 
     _Q = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 5, 5, 5])

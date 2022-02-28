@@ -10,8 +10,8 @@ import drone_interface.msg
 import numpy as np
 
 from ekf import EKF, EKFState
-from dynamic_models.cv_model import ConstantVelocityModel
-from measurement_models import DnnCvPosition, DroneVelocity
+import dynamic_models
+import measurement_models
 
 class EKFRosRunner():
 
@@ -19,6 +19,7 @@ class EKFRosRunner():
 
         rospy.init_node("perception_ekf", anonymous=False)
 
+        # Load config
         config_file = rospy.get_param("~config_file")
         script_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -29,60 +30,99 @@ class EKFRosRunner():
             rospy.logerr(f"Failed to load config: {e}")
             sys.exit()
 
-        self.dnn_cv_sigmas = np.array(self.config["measurements"]["dnn_cv_position"]["sigmas"])
-        self.attitude_and_velocity_sigmas = np.array(self.config["measurements"]["drone_velocity"]["sigmas"])
+        # Get dynamic models based on config file
+        self.dynamic_model_type = self.config["ekf"]["dynamic_model"]
+        self.dynamic_model = dynamic_models.get_dynamic_model_from_type(self.dynamic_model_type)
 
-        self.dt = self.config["ekf"]["dt"]
-
-        self.estimate_publisher = rospy.Publisher(
-            self.config["ekf"]["output"]["topic_name"],
-            geometry_msgs.msg.PoseWithCovarianceStamped, queue_size=10
+        # Get measurement models based on config file
+        self.measurement_model_types = self.config["ekf"]["measurement_models"]
+        self.measurement_models_dict = measurement_models.get_measurement_models_from_types(
+            self.measurement_model_types, self.config["measurements"]
         )
 
-        rospy.Subscriber(
-            self.config["measurements"]["drone_velocity"]["topic_name"],
-            drone_interface.msg.AnafiTelemetry, self._drone_velocity_cb
-        )
+        # Create estimate publisher based on the states used in the dynamic model
+        self.output_states = self.config["dynamic_models"][self.dynamic_model_type]["output_states"]
+        self.estimate_publisher = self._get_estimate_publisher(self.output_states)
 
-        rospy.Subscriber(
-            self.config["measurements"]["dnn_cv_position"]["topic_name"],
-            geometry_msgs.msg.PointStamped, self._dnn_cv_position_cb
-        )
+        # Create ROS subscribers for the input and measurements defined in the config file
+        self.has_inputs = True
+        self._setup_subscribers()
 
         # Set up filter
-        measurement_models = {
-            "dnn_cv_position": DnnCvPosition(self.dnn_cv_sigmas),
-            "drone_velocity": DroneVelocity(self.attitude_and_velocity_sigmas)
-        }
+        self.filter = EKF(self.dynamic_model, self.measurement_models_dict)
 
-        dynamic_model = ConstantVelocityModel()
-
-        self.filter = EKF(dynamic_model, measurement_models)
-
-        x0 = np.array(self.config["ekf"]["init_values"]["x0"])
-        P0 = np.array(self.config["ekf"]["init_values"]["P0"])
+        x0 = np.array(self.config["dynamic_models"][self.dynamic_model_type]["init_values"]["x0"])
+        P0 = np.array(self.config["dynamic_models"][self.dynamic_model_type]["init_values"]["P0"])
 
         self.ekf_estimate = EKFState(x0, P0)
+
+        self.dt = self.config["ekf"]["dt"]
 
     def run(self):
         rospy.loginfo("Starting perception EKF")
 
-        while not rospy.is_shutdown():
+        # If there are inputs coming into the system, the precition step will be
+        # performed each time a new input arrives and this is handled in the respective
+        # input callback
+        if self.has_inputs:
+            rospy.spin()
+        else:
+            while not rospy.is_shutdown():
+                self.ekf_estimate = self.filter.predict(self.ekf_estimate, None, self.dt)
 
-            self.ekf_estimate = self.filter.predict(self.ekf_estimate, None, self.dt)
+                output_msg = self._pack_estimate_msg(self.ekf_estimate, self.output_states)
+                self.estimate_publisher.publish(output_msg)
 
-            output_msg = self._pack_estimate_msg(self.ekf_estimate)
-            self.estimate_publisher.publish(output_msg)
+                rospy.sleep(self.dt)
 
-            rospy.sleep(self.dt)
+    def _get_estimate_publisher(self, output_states: str):
+        if output_states == "position":
+            publisher = rospy.Publisher(
+                self.config["ekf"]["output"]["topic_name"],
+                geometry_msgs.msg.PoseWithCovarianceStamped, queue_size=10
+            )
+        else:
+            raise NotImplementedError
 
-    def _pack_estimate_msg(self, ekfstate: EKFState):
-        msg = geometry_msgs.msg.PoseWithCovarianceStamped()
-        msg.header.stamp = rospy.Time.now()
-        msg.pose.pose.position.x = ekfstate.mean[0]
-        msg.pose.pose.position.y = ekfstate.mean[1]
-        msg.pose.pose.position.z = ekfstate.mean[2]
-        msg.pose.covariance = ekfstate.cov.flatten().tolist()
+        return publisher
+
+    def _setup_subscribers(self):
+
+        input_config = self.config["dynamic_models"][self.dynamic_model_type]["input"]
+
+        if input_config["type"] == "control_inputs":
+            raise NotImplementedError
+        elif input_config["type"] == "none":
+            self.has_inputs = False
+        else:
+            raise NotImplementedError
+
+        for mm in self.measurement_model_types:
+            if mm == "dnn_cv_position":
+                rospy.Subscriber(
+                    self.config["measurements"]["dnn_cv_position"]["topic_name"],
+                    geometry_msgs.msg.PointStamped, self._dnn_cv_position_cb
+                )
+            elif mm == "drone_velocity":
+                rospy.Subscriber(
+                    self.config["measurements"]["drone_velocity"]["topic_name"],
+                    drone_interface.msg.AnafiTelemetry, self._drone_velocity_cb
+                )
+            else:
+                raise NotImplementedError
+
+
+    def _pack_estimate_msg(self, ekfstate: EKFState, states_type: str):
+
+        if states_type == "position":
+            msg = geometry_msgs.msg.PoseWithCovarianceStamped()
+            msg.header.stamp = rospy.Time.now()
+            msg.pose.pose.position.x = ekfstate.mean[0]
+            msg.pose.pose.position.y = ekfstate.mean[1]
+            msg.pose.pose.position.z = ekfstate.mean[2]
+            msg.pose.covariance = ekfstate.cov.flatten().tolist()
+        else:
+            raise NotImplementedError
 
         return msg
 
