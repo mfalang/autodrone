@@ -53,11 +53,15 @@ class EKFRosRunner():
         self.filter = EKF(self.dynamic_model, self.measurement_models_dict)
 
         x0 = np.array(self.config["dynamic_models"][self.dynamic_model_type]["init_values"]["x0"])
-        P0 = np.array(self.config["dynamic_models"][self.dynamic_model_type]["init_values"]["P0"])
+        P0 = np.diag(np.array(self.config["dynamic_models"][self.dynamic_model_type]["init_values"]["P0"]))
 
         self.ekf_estimate = EKFState(x0, P0)
 
         self.dt = self.config["ekf"]["dt"]
+
+        # Keep track of when the first measurement arrives and only then start
+        # the filter
+        self.estimating = False
 
     def run(self):
         rospy.loginfo("Starting perception EKF")
@@ -69,10 +73,11 @@ class EKFRosRunner():
             rospy.spin()
         else:
             while not rospy.is_shutdown():
-                self.ekf_estimate = self.filter.predict(self.ekf_estimate, None, self.dt)
 
-                output_msg = self._pack_estimate_msg(self.ekf_estimate, self.output_states)
-                self.estimate_publisher.publish(output_msg)
+                if self.estimating:
+                    self.ekf_estimate = self.filter.predict(self.ekf_estimate, None, self.dt)
+                    output_msg = self._pack_estimate_msg(self.ekf_estimate, self.output_states)
+                    self.estimate_publisher.publish(output_msg)
 
                 rospy.sleep(self.dt)
 
@@ -134,6 +139,9 @@ class EKFRosRunner():
         self.ekf_estimate = self.filter.update(z, self.ekf_estimate, "dnn_cv_position")
 
     def _drone_velocity_cb(self, msg: drone_interface.msg.AnafiTelemetry):
+        if not self.estimating:
+            self.estimating = True
+
         z = np.array([msg.vx, msg.vy, msg.vz])
 
         self.ekf_estimate = self.filter.update(z, self.ekf_estimate, "drone_velocity")

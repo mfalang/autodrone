@@ -78,7 +78,7 @@ class Plotter():
         return data_out
 
     def calculate_rmse_and_plot(self, timestamps, data1, data2, suptitle="", data1_label="", data2_label="",
-        xlabels=[], ylabels=[]
+        xlabels=[], ylabels=[], plot_std_devs=False, std_devs=[]
     ):
         if data1.shape == data2.shape:
             rmse_all = np.sqrt(np.mean((data1 - data2)**2))
@@ -100,6 +100,10 @@ class Plotter():
             ax[i].plot(timestamps - timestamps[0], data1[:,i], label=data1_label)
             ax[i].plot(timestamps - timestamps[0], data2[:,i], label=data2_label)
             ax[i].legend(loc="lower right")
+
+            if plot_std_devs:
+                ax[i].plot(timestamps - timestamps[0], data1[:,i] + std_devs[i], c="red", ls="--", label="std")
+                ax[i].plot(timestamps - timestamps[0], data1[:,i] - std_devs[i], c="red", ls="--", label="std")
 
     def plot_multiple_data_series(self, data: list, numplots: int, suptitle: str,
         legends: list, xlabels: list, ylabels: list, use_scatter: list
@@ -155,7 +159,9 @@ def main():
         data1_label="EKF",
         data2_label="GT",
         ylabels=["x[m]", "y[m]", "z[m]"],
-        xlabels=["t [sec]", "t [sec]", "t [sec]"]
+        xlabels=["t [sec]", "t [sec]", "t [sec]"],
+        plot_std_devs=True,
+        std_devs = [np.sqrt(ekf_pos[:,3]), np.sqrt(ekf_pos[:,7]), np.sqrt(ekf_pos[:,11])]
     )
 
     # Compare DNNCV and EKF estimate to ground truth
