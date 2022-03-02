@@ -33,7 +33,10 @@ class EKFRosRunner():
 
         # Get dynamic models based on config file
         self.dynamic_model_type = self.config["ekf"]["dynamic_model"]
-        self.dynamic_model = dynamic_models.get_dynamic_model_from_type(self.dynamic_model_type)
+        self.dynamic_model = dynamic_models.get_dynamic_model_from_type(
+            self.dynamic_model_type,
+            self.config["dynamic_models"][self.dynamic_model_type]["sigmas"]
+        )
 
         # Get measurement models based on config file
         self.measurement_model_types = self.config["ekf"]["measurement_models"]
@@ -53,7 +56,7 @@ class EKFRosRunner():
         self.filter = EKF(self.dynamic_model, self.measurement_models_dict)
 
         x0 = np.array(self.config["dynamic_models"][self.dynamic_model_type]["init_values"]["x0"])
-        P0 = np.diag(np.array(self.config["dynamic_models"][self.dynamic_model_type]["init_values"]["P0"]))
+        P0 = np.diag(np.array(self.config["dynamic_models"][self.dynamic_model_type]["init_values"]["P0"]))**2
 
         self.ekf_estimate = EKFState(x0, P0)
 

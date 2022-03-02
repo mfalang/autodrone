@@ -99,11 +99,13 @@ class Plotter():
             ax[i].set_xlabel(xlabels[i])
             ax[i].plot(timestamps - timestamps[0], data1[:,i], label=data1_label)
             ax[i].plot(timestamps - timestamps[0], data2[:,i], label=data2_label)
-            ax[i].legend(loc="lower right")
 
             if plot_std_devs:
                 ax[i].plot(timestamps - timestamps[0], data1[:,i] + std_devs[i], c="red", ls="--", label="std")
                 ax[i].plot(timestamps - timestamps[0], data1[:,i] - std_devs[i], c="red", ls="--", label="std")
+                # ax[i].plot(timestamps - timestamps[0], std_devs[i], c="red", label="std")
+
+            ax[i].legend(loc="lower right")
 
     def plot_multiple_data_series(self, data: list, numplots: int, suptitle: str,
         legends: list, xlabels: list, ylabels: list, use_scatter: list
