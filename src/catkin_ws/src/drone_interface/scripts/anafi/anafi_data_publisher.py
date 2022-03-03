@@ -20,6 +20,34 @@ import cv_bridge
 import numpy as np
 from scipy.spatial.transform import Rotation
 
+# TODO: Get this into a utilities file or something
+def Rx(degrees):
+    radians = np.deg2rad(degrees)
+    c = np.cos(radians)
+    s = np.sin(radians)
+
+    return np.array([[1, 0, 0],
+                     [0, c, -s],
+                     [0, s, c]])
+
+def Ry(degrees):
+    radians = np.deg2rad(degrees)
+    c = np.cos(radians)
+    s = np.sin(radians)
+
+    return np.array([[c, 0, s],
+                     [0, 1, 0],
+                     [-s, 0, c]])
+
+def Rz(degrees):
+    radians = np.deg2rad(degrees)
+    c = np.cos(radians)
+    s = np.sin(radians)
+
+    return np.array([[c, -s, 0],
+                     [s, c, 0],
+                     [0, 0, 1]])
+
 class GpsPublisher():
     """
     Class for publishing GPS data from Anafi drone.
@@ -180,13 +208,19 @@ class TelemetryPublisher():
         )
 
         velocity_ned = np.array([speed["speedX"], speed["speedY"], speed["speedZ"]])
-        R_ned_to_body = Rotation.from_euler(
-            "xyz",
-            [att_euler["roll"], att_euler["pitch"], att_euler["yaw"]],
-            degrees=False
-        ).as_matrix().T
+
+        R_ned_to_body = Rx(telemetry_msg.roll).T @ Ry(telemetry_msg.pitch).T @ Rz(telemetry_msg.yaw).T
+
+        # R_ned_to_body = Rotation.from_euler(
+        #     "xyz",
+        #     [att_euler["roll"], att_euler["pitch"], att_euler["yaw"]],
+        #     degrees=False
+        # ).as_matrix().T
 
         velocity_body = R_ned_to_body @ velocity_ned
+        # print("V NED: ", velocity_ned)
+        # print("V BOD: ", velocity_body)
+        # print()
 
         [
             telemetry_msg.vx,

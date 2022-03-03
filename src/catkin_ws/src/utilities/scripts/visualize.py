@@ -121,6 +121,7 @@ class Plotter():
                 else:
                     ax[i].plot(data[j][:,0] - data[j][0,0], data[j][:,i+1], label=legends[j])
             ax[i].legend(loc="lower right")
+            ax[i].grid()
 
 def main():
     parser = argparse.ArgumentParser(description="Visualize data.")
