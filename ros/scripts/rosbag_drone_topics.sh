@@ -32,6 +32,9 @@ rosbag record -O $OUTPUT_DIR/$TIME \
     /drone/out/gps \
     /ground_truth/helipad_frame/drone_pose \
     /ground_truth/body_frame/helipad_pose \
-    /ground_truth/ned_frame/drone_pose \
-    /ground_truth/ned_frame/helipad_pose \
+    /qualisys/anafi/pose \
+    /qualisys/helipad/pose \
     /darknet_ros/bounding_boxes \
+
+#/ground_truth/ned_frame/drone_pose \
+#/ground_truth/ned_frame/helipad_pose \

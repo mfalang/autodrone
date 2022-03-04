@@ -4,7 +4,7 @@ ground_truths:
     num_states: 6
     topic:
       sim: /ground_truth/helipad_frame/drone_pose
-      real: /qualisys/anafi/pose
+      real: /ground_truth/helipad_frame/drone_pose
     file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
     max_values_stored_in_buffer: 10
 
@@ -13,7 +13,7 @@ ground_truths:
     num_states: 6
     topic:
       sim: /ground_truth/body_frame/helipad_pose
-      real: /qualisys/anafi/pose
+      real: /ground_truth/body_frame/helipad_pose
     file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
     max_values_stored_in_buffer: 10
 
@@ -22,7 +22,7 @@ ground_truths:
     num_states: 6
     topic:
       sim: /ground_truth/ned_frame/helipad_pose
-      real: /qualisys/helipad/pose
+      real: /ground_truth/ned_frame/helipad_pose
     file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
     max_values_stored_in_buffer: 10
 

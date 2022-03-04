@@ -197,7 +197,12 @@ class CoordinateTransform():
 
         # Redefine heading angle to be relative to North axis instead of East axis
         # as is given by the simulator
-        euler[2] = (euler[2] - 90 + 180) % 360 - 180
+        if self.environment == "sim":
+            euler[2] = (euler[2] - 90 + 180) % 360 - 180
+        # This is not needed for the motion capture system since it defines the angle
+        # relative to the North axis
+        elif self.environment == "real":
+            euler[2] = (euler[2] + 180) % 360 - 180
 
         ret = np.array([
             pose.pose.position.x,
