@@ -1,0 +1,3 @@
+<launch>
+    <node name="control_attitude_test" pkg="control" type="attitude_control_test.py" output="screen"/>
+</launch>

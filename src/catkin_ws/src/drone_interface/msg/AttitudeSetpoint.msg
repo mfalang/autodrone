@@ -3,9 +3,9 @@
 Header header
 
 # Attitude setpoint
-float64 roll_angle # in deg
-float64 pitch_angle # in deg
-float64 yaw_speed # in deg/s
+float64 roll # in deg
+float64 pitch # in deg
+float64 yaw_rate # in deg/s
 
 # Throttle setpoint
-float64 throttle # in m/s vertical speed (negative is down)
+float64 climb_rate # in m/s vertical speed (negative is down)

@@ -132,7 +132,7 @@ class CommandListener():
             msg.max_yaw_rotation_speed)
         )
 
-    def _set_attitude_cb(self, msg):
+    def _set_attitude_cb(self, msg: drone_interface.msg.AttitudeSetpoint):
         """
         Callback function to set a desired attitude for the drone. This has the
         same features as a regular radio controller has, namely
@@ -151,10 +151,10 @@ class CommandListener():
         msg : drone_interface.msg.AttitudeSetpoint
             Message including the setpoints for the desired attitude
         """
-        roll_angle_as_percent = int((msg.roll_angle/self.max_tilt)*100)
-        pitch_angle_as_percent = int((msg.pitch_angle/self.max_tilt)*100)
-        yaw_rotation_speed_as_percent = int((msg.yaw_speed/self.max_yaw_rot_speed)*100)
-        throttle_as_percent = int((msg.throttle/self.max_vertical_speed)*100)
+        roll_angle_as_percent = int((msg.roll/self.max_tilt)*100)
+        pitch_angle_as_percent = int((msg.pitch/self.max_tilt)*100)
+        yaw_rotation_speed_as_percent = int((msg.yaw_rate/self.max_yaw_rot_speed)*100)
+        throttle_as_percent = int((msg.climb_rate/self.max_vertical_speed)*100)
 
         self.drone(olympe_msgs.ardrone3.Piloting.PCMD(
             1, roll_angle_as_percent, pitch_angle_as_percent,
