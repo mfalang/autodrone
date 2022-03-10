@@ -65,6 +65,13 @@ class OutputSaver():
             "ground_truths", "helipad_pose_body_frame", self.environment
         )
 
+        # Sphinx simulator does not have velocity output so this is only available
+        # when using the motion capture system
+        if self.environment == "real":
+            ground_truths.DroneVelocityDataSaver(self.config, self.output_base_dir,
+                "ground_truths", "drone_velocity_body_frame_and_attitude", self.environment
+            )
+
         # ground_truth.HelipadPoseDataSaver(self.config, self.output_base_dir,
         #     "ground_truths", "helipad_pose", self.environment
         # )

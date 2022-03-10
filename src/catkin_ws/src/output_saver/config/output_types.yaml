@@ -26,6 +26,15 @@ ground_truths:
     file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
     max_values_stored_in_buffer: 10
 
+  drone_velocity_body_frame_and_attitude:
+    name: drone_velocity_body_frame_and_attitude
+    num_states: 6
+    topic:
+      sim: "none"
+      real: /qualisys/anafi/odometry
+    file_header: "Format: timestamp[sec] vx[m], vy[m], vz[m] phi[deg], theta[deg], psi[deg]\n"
+    max_values_stored_in_buffer: 10
+
 estimates:
   dnn_cv_position:
     name: dnn_cv_position

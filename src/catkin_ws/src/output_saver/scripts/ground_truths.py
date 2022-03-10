@@ -1,11 +1,11 @@
 
+from doctest import OutputChecker
 import rospy
 import ground_truth.msg
+import nav_msgs.msg
 
-# import math
-# import numpy as np
-# import geometry_msgs.msg
-# from scipy.spatial.transform import Rotation
+import numpy as np
+from scipy.spatial.transform import Rotation
 
 from generic_output_saver import GenericOutputSaver
 
@@ -27,6 +27,45 @@ class DronePoseDataSaver(GenericOutputSaver):
             msg.phi,
             msg.theta,
             msg.psi
+        ]
+
+        self._save_output(output)
+
+class DroneVelocityDataSaver(GenericOutputSaver):
+    def __init__(self, config, base_dir, output_category, output_type, environment):
+        super().__init__(config, base_dir, output_category, output_type, environment)
+
+        rospy.Subscriber(self.topic_name, nav_msgs.msg.Odometry, self._drone_gt_velocity_cb)
+
+    def _drone_gt_velocity_cb(self, msg: nav_msgs.msg.Odometry):
+        velocity_ned = np.array([
+            msg.twist.twist.linear.x,
+            msg.twist.twist.linear.y,
+            msg.twist.twist.linear.z
+        ])
+
+        rot_quat = np.array([
+            msg.pose.pose.orientation.x,
+            msg.pose.pose.orientation.y,
+            msg.pose.pose.orientation.z,
+            msg.pose.pose.orientation.w
+        ])
+
+        rot = Rotation.from_quat(rot_quat)
+        R_ned_to_body = rot.as_matrix()
+
+        euler_angles = rot.as_euler("xyz", degrees=True)
+
+        velocity_body = R_ned_to_body @ velocity_ned
+
+        output = [
+            msg.header.stamp.to_sec(),
+            velocity_body[0],
+            velocity_body[1],
+            velocity_body[2],
+            euler_angles[0],
+            euler_angles[1],
+            euler_angles[2],
         ]
 
         self._save_output(output)
