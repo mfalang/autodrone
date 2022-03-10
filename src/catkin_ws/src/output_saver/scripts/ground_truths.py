@@ -31,6 +31,11 @@ class DronePoseDataSaver(GenericOutputSaver):
 
         self._save_output(output)
 
+def ssa(angle):
+    angle = (angle + 180) % 360 - 180
+
+    return angle
+
 class DroneVelocityDataSaver(GenericOutputSaver):
     def __init__(self, config, base_dir, output_category, output_type, environment):
         super().__init__(config, base_dir, output_category, output_type, environment)
@@ -38,25 +43,30 @@ class DroneVelocityDataSaver(GenericOutputSaver):
         rospy.Subscriber(self.topic_name, nav_msgs.msg.Odometry, self._drone_gt_velocity_cb)
 
     def _drone_gt_velocity_cb(self, msg: nav_msgs.msg.Odometry):
-        velocity_ned = np.array([
+        velocity_body = np.array([
             msg.twist.twist.linear.x,
             msg.twist.twist.linear.y,
             msg.twist.twist.linear.z
         ])
 
-        rot_quat = np.array([
-            msg.pose.pose.orientation.x,
-            msg.pose.pose.orientation.y,
-            msg.pose.pose.orientation.z,
-            msg.pose.pose.orientation.w
-        ])
+        rot_quat = [
+        msg.pose.pose.orientation.x,
+        msg.pose.pose.orientation.y,
+        msg.pose.pose.orientation.z,
+        msg.pose.pose.orientation.w
+    ]
 
-        rot = Rotation.from_quat(rot_quat)
-        R_ned_to_body = rot.as_matrix()
+        euler_angles = Rotation.from_quat(rot_quat).as_euler("xyz", degrees=True)
 
-        euler_angles = rot.as_euler("xyz", degrees=True)
+        # Not sure why this axis was 180 deg wrong (tried using different "xyz", but did not find
+        # out what the reason was so just fixed it manually)
+        euler_angles[0] -= 180
 
-        velocity_body = R_ned_to_body @ velocity_ned
+        euler_angles[0] = ssa(euler_angles[0])
+        # For some reason the pitch angle was flipped here. Not sure why, but changed
+        # it manually as well
+        euler_angles[1] = -ssa(euler_angles[1])
+        euler_angles[2] = ssa(euler_angles[2])
 
         output = [
             msg.header.stamp.to_sec(),

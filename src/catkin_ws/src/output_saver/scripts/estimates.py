@@ -2,8 +2,29 @@
 import rospy
 import geometry_msgs.msg
 import perception.msg
+import drone_interface.msg
 
 from generic_output_saver import GenericOutputSaver
+
+class AnafiRawDataSaver(GenericOutputSaver):
+    def __init__(self, config, base_dir, output_category, output_type, environment):
+        super().__init__(config, base_dir, output_category, output_type, environment)
+
+        rospy.Subscriber(self.topic_name, drone_interface.msg.AnafiTelemetry, self._anafi_raw_data_cb)
+
+    def _anafi_raw_data_cb(self, msg: drone_interface.msg.AnafiTelemetry):
+
+        output = [
+            msg.header.stamp.to_sec(),
+            msg.vx,
+            msg.vy,
+            msg.vz,
+            msg.roll,
+            msg.pitch,
+            msg.yaw
+        ]
+
+        self._save_output(output)
 
 class DnnCvPositionSaver(GenericOutputSaver):
 

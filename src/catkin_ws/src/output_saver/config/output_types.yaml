@@ -31,11 +31,20 @@ ground_truths:
     num_states: 6
     topic:
       sim: "none"
-      real: /qualisys/anafi/odometry
+      real: /qualisys/anafi/odom
     file_header: "Format: timestamp[sec] vx[m], vy[m], vz[m] phi[deg], theta[deg], psi[deg]\n"
     max_values_stored_in_buffer: 10
 
 estimates:
+  anafi_raw_data:
+    name: anafi_raw_data
+    num_states: 6
+    topic:
+      sim: /drone/out/telemetry
+      real: /drone/out/telemetry
+    file_header: "Format: timestamp[sec] vx[m], vy[m], vz[m] phi[deg], theta[deg], psi[deg]\n"
+    max_values_stored_in_buffer: 5
+
   dnn_cv_position:
     name: dnn_cv_position
     num_states: 3

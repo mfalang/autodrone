@@ -85,7 +85,7 @@ class OlympeRosBridge():
         rospy.spin()
 
     def switch_piloting_mode(self):
-        rospy.logwarn("Press enter to switch do SkyController")
+        rospy.logwarn("Press enter to switch to SkyController")
         input()
         # Stop the drone if flying in attitude control
         self.drone(olympe.messages.ardrone3.Piloting.PCMD(
