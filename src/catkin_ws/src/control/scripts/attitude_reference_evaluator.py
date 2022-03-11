@@ -9,6 +9,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from attitude_reference_generator import PIDReferenceGenerator
+
 # Load velocity data to be used as reference and attitude data used for evaluation
 data_folder = "2022-3-10/17-52-44"
 
@@ -28,14 +30,10 @@ telemetry_df = pd.read_csv(telemetry_filename, sep=" ", skiprows=1)
 telemetry_df.columns = ["timestamp", "vx", "vy", "vz", "roll", "pitch", "yaw"]
 telemetry_df["time"] = telemetry_df["timestamp"] - telemetry_df["timestamp"][0]
 
-vel_refs = gt_data[:,1:4]
-att_refs = gt_data[:,4:]
-time = gt_data[:,0] - gt_data[0,0]
-
 ## Plotting
 sns.set()
 
-# Plot velocity reference
+# Plot ground truth and drone telemetry velocity and attitude
 fig, ax = plt.subplots(2, 3, sharex=True)
 sns.lineplot(ax=ax[0,0], data=gt_df, x="time", y="vx", label="gt")
 sns.lineplot(ax=ax[1,0], data=gt_df, x="time", y="pitch", label="gt")
@@ -59,16 +57,19 @@ ax[0,2].legend()
 ax[1,2].legend()
 fig.suptitle("Ground truth and telemetry data")
 
-# Plot target attitude
 
-# plt.plot(time, vel_refs)
-# sns.lineplot(time, vel_refs[:,0])
+# Calculate output from PID method
+time = gt_data[:,0] - gt_data[0,0]
+v_ref = gt_data[:,1:3]
 
-# ax = sns.relplot(data=gt_df, x="time", y="vx", kind="line")
-# ax.set_axis_labels()
+att_target = gt_data[:,4:6]
 
+att_ref = np.zeros_like(v_ref)
 
-# Plot attitude reference
+ref_generator = PIDReferenceGenerator(1,2,3)
 
+for i in range(len(v_ref)):
+    # x = ref_generator.get_attitude_reference(v_ref)
+    pass
 
 plt.show()
