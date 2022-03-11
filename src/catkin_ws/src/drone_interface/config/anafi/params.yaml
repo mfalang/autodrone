@@ -13,3 +13,7 @@ drone:
     telemetry: "/drone/out/telemetry"
     gnss: "/drone/out/gps"
     camera: "/drone/out/image_rect_color"
+  attitude_offsets:
+    roll: -0.9
+    pitch: -5.9
+    yaw: 0

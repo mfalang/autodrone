@@ -1,5 +1,4 @@
 
-from doctest import OutputChecker
 import rospy
 import ground_truth.msg
 import nav_msgs.msg
@@ -67,6 +66,15 @@ class DroneVelocityDataSaver(GenericOutputSaver):
         # it manually as well
         euler_angles[1] = -ssa(euler_angles[1])
         euler_angles[2] = ssa(euler_angles[2])
+
+        # Apply attitude offsets
+        roll_offset = rospy.get_param("/drone/attitude_offsets/roll")
+        pitch_offset = rospy.get_param("/drone/attitude_offsets/pitch")
+        yaw_offset = rospy.get_param("/drone/attitude_offsets/yaw")
+
+        euler_angles[0] -= roll_offset
+        euler_angles[1] -= pitch_offset
+        euler_angles[2] -= yaw_offset
 
         output = [
             msg.header.stamp.to_sec(),
