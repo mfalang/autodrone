@@ -1,0 +1,3 @@
+<launch>
+    <node name="attitude_reference_evalutor" pkg="control" type="attitude_reference_evaluator.py" output="screen"/>
+</launch>

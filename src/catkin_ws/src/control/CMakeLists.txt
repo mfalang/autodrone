@@ -158,6 +158,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   scripts/lab_test.py
   scripts/attitude_control_test.py
+  scripts/attitude_reference_evaluator.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

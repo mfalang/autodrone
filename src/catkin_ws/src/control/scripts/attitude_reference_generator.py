@@ -17,8 +17,8 @@ class PIDReferenceGenerator(GenericAttitudeReferenceGenerator):
         self._Ki = Ki
 
         self._prev_timestamp = None
-        self._error_integral = np.zeros((2,1))
-        self._prev_error = np.zeros((2,1))
+        self._error_integral = np.zeros(2)
+        self._prev_error = np.zeros(2)
 
     def get_attitude_reference(self, v_ref: np.ndarray, v_actual: np.ndarray, timestamp: float):
 
@@ -33,7 +33,7 @@ class PIDReferenceGenerator(GenericAttitudeReferenceGenerator):
 
             self._error_integral += self._Ki * dt
         else:
-            derivative = np.zeros((2,1))
+            derivative = np.zeros(2)
 
         attitude_reference = gain + derivative + self._error_integral
 
