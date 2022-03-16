@@ -111,10 +111,22 @@ class AttitudeReferenceEvaluator():
         return msg
 
     def get_reference(self) -> np.ndarray:
-        v_ref = np.zeros((2,180)) # 9 second reference signal
-        v_ref[0,:60] = 1
-        v_ref[1,60:120] = 1
-        v_ref[:, 120:] = 1
+        v_ref = np.zeros((2,900)) # 45 second reference signal
+
+        # Forward backwards x
+        v_ref[0,:100] = 0.5
+        v_ref[0,100:150] = 0
+        v_ref[0, 150:250] = -0.5
+
+        # Forward backwards y
+        v_ref[1,300:400] = 0.5
+        v_ref[1,400:450] = 0
+        v_ref[1,450:550] = -0.5
+
+        # Forward backwards x and y
+        v_ref[:,600:700] = 0.5
+        v_ref[:,700:750] = 0
+        v_ref[:, 750:850] = -0.5
 
         return v_ref
 
@@ -137,10 +149,13 @@ class AttitudeReferenceEvaluator():
         att_ref = np.zeros_like(v_ref)
         time = np.zeros(v_ref.shape[1])
 
-        pitch_gains = (-1, 0, 0)
-        roll_gains = (1, 0, 0)
+        pitch_limits = (-20, 20)
+        roll_limits = (-20, 20)
 
-        ref_generator = PIDReferenceGenerator(roll_gains, pitch_gains)
+        pitch_gains = (-7, -0.001, -10)
+        roll_gains = (7, 0.001, 10)
+
+        ref_generator = PIDReferenceGenerator(roll_gains, pitch_gains, roll_limits, pitch_limits)
 
         self._takeoff()
 
@@ -150,7 +165,8 @@ class AttitudeReferenceEvaluator():
 
         for i in range(v_ref.shape[1]):
             att_ref[:,i] = ref_generator.get_attitude_reference(
-                v_ref[:,i], self._prev_velocity, self._prev_telemetry_timestamp
+                v_ref[:,i], self._prev_velocity, self._prev_telemetry_timestamp,
+                debug=True
             )
             v_actual[:,i] = self._prev_velocity.copy()
             att_actual[:,i] = self._prev_atttiude.copy()
@@ -170,28 +186,31 @@ class AttitudeReferenceEvaluator():
         # np.savetxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/att_actual.txt", att_actual)
         # np.savetxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/time.txt", time)
 
-        self.plot_reference_vs_actual(v_ref, v_actual, att_ref, att_actual, time)
+        self.plot_reference_vs_actual(v_ref, v_actual, att_ref, att_actual, time, roll_gains, pitch_gains)
 
-        return v_ref, v_actual, att_ref, att_actual, time
+        return v_ref, v_actual, att_ref, att_actual, time, roll_gains, pitch_gains
 
-    def plot_reference_vs_actual(self, v_ref, v_actual, att_ref, att_actual, time):
+    def plot_reference_vs_actual(self, v_ref, v_actual, att_ref, att_actual, time, roll_gains, pitch_gains):
         sns.set()
         fig, ax = plt.subplots(2, 2, sharex=True)
 
-        # Velocity references
+        # Vx
         ax[0,0].plot(time - time[0], v_ref[0,:], label="vx_ref")
-        ax[0,1].plot(time - time[0], v_ref[1,:], label="vy_ref")
-
-        # Actual velocities
         ax[0,0].plot(time - time[0], v_actual[0,:], label="vx")
+        ax[0,0].set_title(f"Kp: {pitch_gains[0]} Ki: {pitch_gains[1]} Kd: {pitch_gains[2]}")
+
+        # Vy
+        ax[0,1].plot(time - time[0], v_ref[1,:], label="vy_ref")
         ax[0,1].plot(time - time[0], v_actual[1,:], label="vy")
+        ax[0,1].set_title(f"Kp: {roll_gains[0]} Ki: {roll_gains[1]} Kd: {roll_gains[2]}")
 
-        # Attitude references
+
+        # Pitch
         ax[1,0].plot(time - time[0], att_ref[1,:], label="pitch_ref")
-        ax[1,1].plot(time - time[0], att_ref[0,:], label="roll_ref")
-
-        # Actual attitude
         ax[1,0].plot(time - time[0], att_actual[1,:], label="pitch")
+
+        # Roll
+        ax[1,1].plot(time - time[0], att_ref[0,:], label="roll_ref")
         ax[1,1].plot(time - time[0], att_actual[0,:], label="roll")
 
         # Legends

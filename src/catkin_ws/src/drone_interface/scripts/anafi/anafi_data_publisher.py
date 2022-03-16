@@ -261,14 +261,22 @@ class TelemetryPublisher():
         try:
             power_alert_level = battery_alert[olympe_enums.battery.alert.power_level]["level"]
         except KeyError:
-            rospy.logwarn("Failed to get power alert level. Assuming battery is good, no action taken.")
+            rospy.logerr("Failed to get power alert level. The drone interface was started too soon after the simulator/drone. Restart it.")
             power_alert_level = no_alert
         if power_alert_level != no_alert:
             battery_warnings.append(f"low power: {power_alert_level}")
-        cold_alert_level = battery_alert[olympe_enums.battery.alert.too_hot]["level"]
+        try:
+            cold_alert_level = battery_alert[olympe_enums.battery.alert.too_hot]["level"]
+        except KeyError:
+            rospy.logerr("Failed to get cold alert level. The drone interface was started too soon after the simulator/drone. Restart it.")
+            cold_alert_level = no_alert
         if cold_alert_level != no_alert:
             battery_warnings.append(f"too cold: {cold_alert_level}")
-        hot_alert_level = battery_alert[olympe_enums.battery.alert.too_cold]["level"]
+        try:
+            hot_alert_level = battery_alert[olympe_enums.battery.alert.too_cold]["level"]
+        except KeyError:
+            rospy.logerr("Failed to get hot alert level. The drone interface was started too soon after the simulator/drone. Restart it.")
+            hot_alert_level = no_alert
         if hot_alert_level != no_alert:
             battery_warnings.append(f"too hot: {hot_alert_level}")
 

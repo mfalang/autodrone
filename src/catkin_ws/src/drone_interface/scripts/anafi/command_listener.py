@@ -151,11 +151,19 @@ class CommandListener():
         msg : drone_interface.msg.AttitudeSetpoint
             Message including the setpoints for the desired attitude
         """
-        roll_angle_as_percent = int((msg.roll/self.max_tilt)*100)
+        try:
+            roll_angle_as_percent = int((msg.roll/self.max_tilt)*100)
+        except ValueError:
+            rospy.logerr(f"Roll angle {msg.roll} caused value error, setting roll to 0")
+            roll_angle_as_percent = 0
         # Negative sign on pitch in order to make the reference consistent with
         # roll-pitch-yaw definition of defining positive pitch upwards and not
         # downwards which is the default from Parrot
-        pitch_angle_as_percent = int((-msg.pitch/self.max_tilt)*100)
+        try:
+            pitch_angle_as_percent = int((-msg.pitch/self.max_tilt)*100)
+        except ValueError:
+            rospy.logerr(f"Pitch angle {msg.pitch} caused value error, setting pitch to 0")
+            pitch_angle_as_percent = 0
         yaw_rotation_speed_as_percent = int((msg.yaw_rate/self.max_yaw_rot_speed)*100)
         throttle_as_percent = int((msg.climb_rate/self.max_vertical_speed)*100)
 
