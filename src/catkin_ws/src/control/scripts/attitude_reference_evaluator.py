@@ -137,7 +137,10 @@ class AttitudeReferenceEvaluator():
         att_ref = np.zeros_like(v_ref)
         time = np.zeros(v_ref.shape[1])
 
-        ref_generator = PIDReferenceGenerator(3,2,1)
+        pitch_gains = (-1, 0, 0)
+        roll_gains = (1, 0, 0)
+
+        ref_generator = PIDReferenceGenerator(roll_gains, pitch_gains)
 
         self._takeoff()
 
@@ -184,12 +187,12 @@ class AttitudeReferenceEvaluator():
         ax[0,1].plot(time - time[0], v_actual[1,:], label="vy")
 
         # Attitude references
-        ax[1,0].plot(time - time[0], att_ref[0,:], label="roll_ref")
-        ax[1,1].plot(time - time[0], att_ref[1,:], label="pitch_ref")
+        ax[1,0].plot(time - time[0], att_ref[1,:], label="pitch_ref")
+        ax[1,1].plot(time - time[0], att_ref[0,:], label="roll_ref")
 
         # Actual attitude
-        ax[1,0].plot(time - time[0], att_actual[0,:], label="roll")
-        ax[1,1].plot(time - time[0], att_actual[1,:], label="pitch")
+        ax[1,0].plot(time - time[0], att_actual[1,:], label="pitch")
+        ax[1,1].plot(time - time[0], att_actual[0,:], label="roll")
 
         # Legends
         ax[0,0].legend()
