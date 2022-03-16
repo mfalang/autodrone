@@ -8,6 +8,14 @@ class GenericAttitudeReferenceGenerator():
     def get_attitude_reference(self, v_ref: np.ndarray, v_actual: np.ndarray, timestamp: float):
         raise NotImplementedError
 
+    def _clamp(self, value: float, limits: tuple):
+        if value < limits[0]:
+            return limits[0]
+        elif value > limits[1]:
+            return limits[1]
+        else:
+            return value
+
 class PIDReferenceGenerator(GenericAttitudeReferenceGenerator):
 
     def __init__(self, roll_Kp_Ki_Kd: tuple, pitch_Kp_Ki_Kd: tuple,
@@ -71,3 +79,37 @@ class PIDReferenceGenerator(GenericAttitudeReferenceGenerator):
         attitude_reference = np.array([roll_reference, pitch_reference])
 
         return attitude_reference
+
+class LinearDragModelReferenceGenerator(GenericAttitudeReferenceGenerator):
+
+    def __init__(self, drone_mass, ax, ay, gravity=9.81):
+
+        self._m = drone_mass
+        self._g = gravity
+
+        self._ax = ax
+        self._ay = ay
+
+        self._prev_timestamp: float = None
+        self._prev_roll_ref: float = None
+        self._prev_pitch_ref: float = None
+
+    def get_attitude_reference(self, v_ref: np.ndarray, v_actual: np.ndarray, timestamp: float, debug=False):
+        vx = v_actual[0]
+        vy = v_actual[1]
+
+        vx_ref = v_ref[0]
+        vy_ref = v_ref[1]
+
+        accel_x_desired = vx_ref - vx
+        accel_y_desired = vy_ref - vy
+
+        # Negative on x axis due to inverse relationship between pitch angle and x-velocity
+        pitch_ref = np.rad2deg(np.arctan(-(accel_x_desired / self._g + self._ax * vx / (self._m * self._g))))
+        roll_ref = np.rad2deg(np.arctan(accel_y_desired / self._g + self._ay * vy / (self._m * self._g)))
+
+        if debug:
+            print(f"ts:{timestamp}\tRefs: R: {roll_ref:.3f}\tP: {pitch_ref:.3f}\tax_des: {accel_x_desired:.3f}\tay_des: {accel_y_desired:.3f}")
+            print()
+
+        return np.array([roll_ref, pitch_ref])

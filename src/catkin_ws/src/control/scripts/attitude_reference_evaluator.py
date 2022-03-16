@@ -13,7 +13,7 @@ import rospy
 import std_msgs.msg
 import drone_interface.msg
 
-from attitude_reference_generator import PIDReferenceGenerator
+import attitude_reference_generator
 
 # # Load velocity data to be used as reference and attitude data used for evaluation
 # data_folder = "2022-3-10/17-52-44"
@@ -76,7 +76,7 @@ class AttitudeReferenceEvaluator():
         rospy.Subscriber("/drone/out/telemetry", drone_interface.msg.AnafiTelemetry, self._drone_telemetry_cb)
 
         self._attitude_ref_publisher = rospy.Publisher(
-            "drone/cmd/set_attitude", drone_interface.msg.AttitudeSetpoint, queue_size=1
+            "drone/cmd/set_attitude", drone_interface.msg.AttitudeSetpoint, queue_size=2
         )
         self._takeoff_publisher = rospy.Publisher(
             "drone/cmd/takeoff", std_msgs.msg.Empty, queue_size=1
@@ -123,7 +123,7 @@ class AttitudeReferenceEvaluator():
         v_ref[1,400:450] = 0
         v_ref[1,450:550] = -0.5
 
-        # Forward backwards x and y
+        # # Forward backwards x and y
         v_ref[:,600:700] = 0.5
         v_ref[:,700:750] = 0
         v_ref[:, 750:850] = -0.5
@@ -142,7 +142,7 @@ class AttitudeReferenceEvaluator():
         rospy.loginfo("Landing")
         self._land_publisher.publish(std_msgs.msg.Empty())
 
-    def run(self):
+    def evaluate_PID_method(self):
         v_ref = self.get_reference()
         v_actual = np.zeros_like(v_ref)
         att_actual = np.zeros_like(v_ref)
@@ -155,7 +155,9 @@ class AttitudeReferenceEvaluator():
         pitch_gains = (-7, -0.001, -10)
         roll_gains = (7, 0.001, 10)
 
-        ref_generator = PIDReferenceGenerator(roll_gains, pitch_gains, roll_limits, pitch_limits)
+        ref_generator = attitude_reference_generator.PIDReferenceGenerator(
+            roll_gains, pitch_gains, roll_limits, pitch_limits
+        )
 
         self._takeoff()
 
@@ -186,11 +188,6 @@ class AttitudeReferenceEvaluator():
         # np.savetxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/att_actual.txt", att_actual)
         # np.savetxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/time.txt", time)
 
-        self.plot_reference_vs_actual(v_ref, v_actual, att_ref, att_actual, time, roll_gains, pitch_gains)
-
-        return v_ref, v_actual, att_ref, att_actual, time, roll_gains, pitch_gains
-
-    def plot_reference_vs_actual(self, v_ref, v_actual, att_ref, att_actual, time, roll_gains, pitch_gains):
         sns.set()
         fig, ax = plt.subplots(2, 2, sharex=True)
 
@@ -221,11 +218,82 @@ class AttitudeReferenceEvaluator():
 
         plt.show()
 
+        return v_ref, v_actual, att_ref, att_actual, time, roll_gains, pitch_gains
+
+    def evaluate_linear_drag_model_based_method(self):
+
+        v_ref = self.get_reference()
+        v_actual = np.zeros_like(v_ref)
+        att_actual = np.zeros_like(v_ref)
+        att_ref = np.zeros_like(v_ref)
+        time = np.zeros(v_ref.shape[1])
+
+        drone_mass = rospy.get_param("/drone/mass_g") / 1000
+        ax = ay = 0.1 # kg/s
+
+        ref_generator = attitude_reference_generator.LinearDragModelReferenceGenerator(
+            drone_mass, ax, ay
+        )
+
+        self._takeoff()
+
+        input("Press enter to begin test ")
+
+        rate = rospy.Rate(20)
+
+        for i in range(v_ref.shape[1]):
+            att_ref[:,i] = ref_generator.get_attitude_reference(
+                v_ref[:,i], self._prev_velocity, self._prev_telemetry_timestamp,
+                debug=True
+            )
+            v_actual[:,i] = self._prev_velocity.copy()
+            att_actual[:,i] = self._prev_atttiude.copy()
+            time[i] = self._prev_telemetry_timestamp
+
+            msg = self._pack_attitude_ref_msg(att_ref[:,i])
+
+            self._attitude_ref_publisher.publish(msg)
+
+            rate.sleep()
+
+        self._land()
+
+        sns.set()
+        fig, ax = plt.subplots(2, 2, sharex=True)
+
+        # time -= time[0] # set time to start at 0 seconds
+
+        # Vx
+        ax[0,0].plot(time, v_ref[0,:], label="vx_ref")
+        ax[0,0].plot(time, v_actual[0,:], label="vx")
+
+        # Vy
+        ax[0,1].plot(time, v_ref[1,:], label="vy_ref")
+        ax[0,1].plot(time, v_actual[1,:], label="vy")
+
+        # Pitch
+        ax[1,0].plot(time, att_ref[1,:], label="pitch_ref")
+        ax[1,0].plot(time, att_actual[1,:], label="pitch")
+
+        # Roll
+        ax[1,1].plot(time, att_ref[0,:], label="roll_ref")
+        ax[1,1].plot(time, att_actual[0,:], label="roll")
+
+        # Legends
+        ax[0,0].legend()
+        ax[0,1].legend()
+        ax[1,0].legend()
+        ax[1,1].legend()
+
+        plt.show()
+
+        return v_ref, v_actual, att_ref, att_actual, time
 
 
 def main():
     evaluator = AttitudeReferenceEvaluator()
-    evaluator.run()
+    # evaluator.evaluate_PID_method()
+    evaluator.evaluate_linear_drag_model_based_method()
 
     # v_ref = np.loadtxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/v_ref.txt")
     # v_actual = np.loadtxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/v_actual.txt")
