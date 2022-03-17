@@ -1,4 +1,5 @@
 <launch>
+    <arg name="view_camera_output" default="true" />
     <rosparam command="load" file="$(find drone_interface)/config/anafi/params.yaml" />
     <node
         name="anafi_interface"
@@ -7,5 +8,6 @@
         output="screen">
         <param name="drone_ip" value="192.168.53.1" />
         <param name="config_file" value="anafi/params.yaml" />
+        <param name="view_camera_output" value="$(arg view_camera_output)"/>
     </node>
 </launch>

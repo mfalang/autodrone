@@ -62,9 +62,14 @@ class OlympeRosBridge():
         self.gps_publisher = GpsPublisher(
             self.drone, self.config["drone"]["topics"]["gnss"]
         )
+
+        visualize = rospy.get_param("~view_camera_output")
+        if not visualize:
+            rospy.loginfo("Not showing live camera feed (but images are still published).")
+
         self.camera_streamer = CameraPublisher(
             self.drone, self.config["drone"]["topics"]["camera"],
-            reject_jitter=reject_jitter
+            reject_jitter=reject_jitter, visualize=visualize
         )
 
     def start(self):
