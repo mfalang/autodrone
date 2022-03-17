@@ -289,11 +289,65 @@ class AttitudeReferenceEvaluator():
 
         return v_ref, v_actual, att_ref, att_actual, time
 
+    def test_reference_model(self):
+
+        omegas = (3, 3)
+        zetas = (1, 1)
+
+        ref_model = attitude_reference_generator.VelocityReferenceModel(omegas, zetas)
+
+        v_ref = self.get_reference()
+
+        v_d = np.zeros_like(v_ref)
+        acc_d = np.zeros_like(v_ref)
+
+        time = np.linspace(0, 45, num=v_ref.shape[1])
+
+        x_d = np.zeros(4)
+
+        dt = 0.05
+
+        for i in range(v_ref.shape[1]):
+
+            x_d = ref_model.get_filtered_reference(x_d, v_ref[:,i], dt)
+
+            v_d[:,i] = x_d[:2]
+            acc_d[:,i] = x_d[2:]
+
+        sns.set()
+        fig, ax = plt.subplots(2, 2, sharex=True)
+
+        fig.suptitle("Velocity and acceleration references from second order velocity reference model")
+
+        # x-axis velocity reference
+        ax[0,0].plot(time, v_d[0,:], label="vd_x")
+        ax[0,0].plot(time, v_ref[0,:], label="vx_ref")
+
+        # y-axis velocity reference
+        ax[0,1].plot(time, v_d[1,:], label="vd_x")
+        ax[0,1].plot(time, v_ref[1,:], label="vy_ref")
+
+        # x-axis acceleration reference
+        ax[1,0].plot(time, acc_d[0,:], label="acc_d_x")
+
+        # y-axis acceleration reference
+        ax[1,1].plot(time, acc_d[1,:], label="acc_d_y")
+
+        # Legends
+        ax[0,0].legend()
+        ax[0,1].legend()
+        ax[1,0].legend()
+        ax[1,1].legend()
+
+        plt.show()
+
+
 
 def main():
     evaluator = AttitudeReferenceEvaluator()
     # evaluator.evaluate_PID_method()
-    evaluator.evaluate_linear_drag_model_based_method()
+    # evaluator.evaluate_linear_drag_model_based_method()
+    evaluator.test_reference_model()
 
     # v_ref = np.loadtxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/v_ref.txt")
     # v_actual = np.loadtxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/v_actual.txt")
