@@ -116,7 +116,7 @@ class AttitudeReferenceEvaluator():
         # Forward backwards x
         v_ref[0,:100] = 0.5
         v_ref[0,100:150] = 0
-        v_ref[0, 150:250] = -0.5
+        v_ref[0,150:250] = -0.5
 
         # Forward backwards y
         v_ref[1,300:400] = 0.5
@@ -126,7 +126,27 @@ class AttitudeReferenceEvaluator():
         # # Forward backwards x and y
         v_ref[:,600:700] = 0.5
         v_ref[:,700:750] = 0
-        v_ref[:, 750:850] = -0.5
+        v_ref[:,750:850] = -0.5
+
+        return v_ref
+
+    def _get_reference_short(self) -> np.ndarray:
+        v_ref = np.zeros((2, 360)) # 18 seconds
+
+        # Forward backwards x
+        v_ref[0,:40] = 0.5
+        v_ref[0,40:80] = 0
+        v_ref[0,80:120] = -0.5
+
+        # Forward backwards y
+        v_ref[1,120:160] = 0.5
+        v_ref[1,160:200] = 0
+        v_ref[1,200:240] = -0.5
+
+        # # Forward backwards x and y
+        v_ref[:,240:280] = 0.5
+        v_ref[:,280:320] = 0
+        v_ref[:,320:] = -0.5
 
         return v_ref
 
@@ -143,11 +163,14 @@ class AttitudeReferenceEvaluator():
         self._land_publisher.publish(std_msgs.msg.Empty())
 
     def evaluate_PID_method(self):
-        v_ref = self.get_reference()
+        # v_ref = self.get_reference()
+        v_ref = self._get_reference_short()
         v_actual = np.zeros_like(v_ref)
+        v_d = np.zeros_like(v_ref)
         att_actual = np.zeros_like(v_ref)
         att_ref = np.zeros_like(v_ref)
-        time = np.zeros(v_ref.shape[1])
+        time_refs = np.zeros(v_ref.shape[1])
+        time_meas = np.zeros(v_ref.shape[1])
 
         pitch_limits = (-20, 20)
         roll_limits = (-20, 20)
@@ -159,20 +182,36 @@ class AttitudeReferenceEvaluator():
             roll_gains, pitch_gains, roll_limits, pitch_limits
         )
 
+        omegas = (10, 10)
+        zetas = (1, 1)
+
+        ref_model = attitude_reference_generator.VelocityReferenceModel(
+            omegas, zetas
+        )
+        x_d = np.zeros(4)
+
+        dt = 0.05
+
         self._takeoff()
 
         input("Press enter to begin test ")
 
         rate = rospy.Rate(20)
-
+        # Use the reference model here
         for i in range(v_ref.shape[1]):
+
+            x_d = ref_model.get_filtered_reference(x_d, v_ref[:,i], dt)
+
             att_ref[:,i] = ref_generator.get_attitude_reference(
-                v_ref[:,i], self._prev_velocity, self._prev_telemetry_timestamp,
+                x_d[:2], self._prev_velocity, self._prev_telemetry_timestamp,
                 debug=True
             )
             v_actual[:,i] = self._prev_velocity.copy()
             att_actual[:,i] = self._prev_atttiude.copy()
-            time[i] = self._prev_telemetry_timestamp
+            time_refs[i] = rospy.Time.now().to_sec() # self._prev_telemetry_timestamp
+            time_meas[i] = self._prev_telemetry_timestamp
+            print(f"Time diff s: {time_refs[i] - time_meas[i]}")
+            v_d[:,i] = x_d[:2]
 
             msg = self._pack_attitude_ref_msg(att_ref[:,i])
 
@@ -191,24 +230,30 @@ class AttitudeReferenceEvaluator():
         sns.set()
         fig, ax = plt.subplots(2, 2, sharex=True)
 
+        # time_refs -= time_refs[0]
+        # time_meas -= time_meas[0]
+        # time_meas += np.average(time_refs - time_meas)
+
         # Vx
-        ax[0,0].plot(time - time[0], v_ref[0,:], label="vx_ref")
-        ax[0,0].plot(time - time[0], v_actual[0,:], label="vx")
+        ax[0,0].plot(time_refs, v_ref[0,:], label="vx_ref")
+        ax[0,0].plot(time_refs, v_d[0,:], label="vd_x")
+        ax[0,0].plot(time_meas, v_actual[0,:], label="vx")
         ax[0,0].set_title(f"Kp: {pitch_gains[0]} Ki: {pitch_gains[1]} Kd: {pitch_gains[2]}")
 
         # Vy
-        ax[0,1].plot(time - time[0], v_ref[1,:], label="vy_ref")
-        ax[0,1].plot(time - time[0], v_actual[1,:], label="vy")
+        ax[0,1].plot(time_refs, v_ref[1,:], label="vy_ref")
+        ax[0,1].plot(time_refs, v_d[1,:], label="vd_y")
+        ax[0,1].plot(time_meas, v_actual[1,:], label="vy")
         ax[0,1].set_title(f"Kp: {roll_gains[0]} Ki: {roll_gains[1]} Kd: {roll_gains[2]}")
 
 
         # Pitch
-        ax[1,0].plot(time - time[0], att_ref[1,:], label="pitch_ref")
-        ax[1,0].plot(time - time[0], att_actual[1,:], label="pitch")
+        ax[1,0].plot(time_refs, att_ref[1,:], label="pitch_ref")
+        ax[1,0].plot(time_meas, att_actual[1,:], label="pitch")
 
         # Roll
-        ax[1,1].plot(time - time[0], att_ref[0,:], label="roll_ref")
-        ax[1,1].plot(time - time[0], att_actual[0,:], label="roll")
+        ax[1,1].plot(time_refs, att_ref[0,:], label="roll_ref")
+        ax[1,1].plot(time_meas, att_actual[0,:], label="roll")
 
         # Legends
         ax[0,0].legend()
@@ -218,15 +263,18 @@ class AttitudeReferenceEvaluator():
 
         plt.show()
 
-        return v_ref, v_actual, att_ref, att_actual, time, roll_gains, pitch_gains
+        return v_ref, v_actual, att_ref, att_actual, time_refs, time_meas, roll_gains, pitch_gains
 
     def evaluate_linear_drag_model_based_method(self):
 
-        v_ref = self.get_reference()
+        v_ref = self._get_reference_short()
+        v_d = np.zeros_like(v_ref)
         v_actual = np.zeros_like(v_ref)
         att_actual = np.zeros_like(v_ref)
         att_ref = np.zeros_like(v_ref)
-        time = np.zeros(v_ref.shape[1])
+        time_refs = np.zeros(v_ref.shape[1])
+        time_meas = np.zeros(v_ref.shape[1])
+        acc_d = np.zeros_like(v_ref)
 
         drone_mass = rospy.get_param("/drone/mass_g") / 1000
         ax = ay = 0.1 # kg/s
@@ -235,6 +283,16 @@ class AttitudeReferenceEvaluator():
             drone_mass, ax, ay
         )
 
+        omegas = (3, 3)
+        zetas = (1, 1)
+
+        ref_model = attitude_reference_generator.VelocityReferenceModel(
+            omegas, zetas
+        )
+        x_d = np.zeros(4)
+
+        dt = 0.05
+
         self._takeoff()
 
         input("Press enter to begin test ")
@@ -242,13 +300,19 @@ class AttitudeReferenceEvaluator():
         rate = rospy.Rate(20)
 
         for i in range(v_ref.shape[1]):
+
+            x_d = ref_model.get_filtered_reference(x_d, v_ref[:,i], dt)
+
             att_ref[:,i] = ref_generator.get_attitude_reference(
-                v_ref[:,i], self._prev_velocity, self._prev_telemetry_timestamp,
+                x_d[:2], self._prev_velocity, self._prev_telemetry_timestamp,
                 debug=True
             )
             v_actual[:,i] = self._prev_velocity.copy()
             att_actual[:,i] = self._prev_atttiude.copy()
-            time[i] = self._prev_telemetry_timestamp
+            time_refs[i] = rospy.Time.now().to_sec()
+            time_meas[i] = self._prev_telemetry_timestamp
+            v_d[:,i] = x_d[:2]
+            acc_d[:,i] = x_d[2:]
 
             msg = self._pack_attitude_ref_msg(att_ref[:,i])
 
@@ -264,20 +328,24 @@ class AttitudeReferenceEvaluator():
         # time -= time[0] # set time to start at 0 seconds
 
         # Vx
-        ax[0,0].plot(time, v_ref[0,:], label="vx_ref")
-        ax[0,0].plot(time, v_actual[0,:], label="vx")
+        ax[0,0].plot(time_refs, v_ref[0,:], label="vx_ref")
+        ax[0,0].plot(time_refs, v_d[0,:], label="vd_x")
+        # ax[0,0].plot(time, acc_d[0,:], label="acc_d_x")
+        ax[0,0].plot(time_meas, v_actual[0,:], label="vx")
 
         # Vy
-        ax[0,1].plot(time, v_ref[1,:], label="vy_ref")
-        ax[0,1].plot(time, v_actual[1,:], label="vy")
+        ax[0,1].plot(time_refs, v_ref[1,:], label="vy_ref")
+        ax[0,1].plot(time_refs, v_d[1,:], label="vd_y")
+        # ax[0,1].plot(time, acc_d[1,:], label="acc_d_y")
+        ax[0,1].plot(time_meas, v_actual[1,:], label="vy")
 
         # Pitch
-        ax[1,0].plot(time, att_ref[1,:], label="pitch_ref")
-        ax[1,0].plot(time, att_actual[1,:], label="pitch")
+        ax[1,0].plot(time_refs, att_ref[1,:], label="pitch_ref")
+        ax[1,0].plot(time_meas, att_actual[1,:], label="pitch")
 
         # Roll
-        ax[1,1].plot(time, att_ref[0,:], label="roll_ref")
-        ax[1,1].plot(time, att_actual[0,:], label="roll")
+        ax[1,1].plot(time_refs, att_ref[0,:], label="roll_ref")
+        ax[1,1].plot(time_meas, att_actual[0,:], label="roll")
 
         # Legends
         ax[0,0].legend()
@@ -291,17 +359,17 @@ class AttitudeReferenceEvaluator():
 
     def test_reference_model(self):
 
-        omegas = (3, 3)
+        omegas = (10, 10)
         zetas = (1, 1)
 
         ref_model = attitude_reference_generator.VelocityReferenceModel(omegas, zetas)
 
-        v_ref = self.get_reference()
+        v_ref = self._get_reference_short()
 
         v_d = np.zeros_like(v_ref)
         acc_d = np.zeros_like(v_ref)
 
-        time = np.linspace(0, 45, num=v_ref.shape[1])
+        time = np.linspace(0, 9, num=v_ref.shape[1])
 
         x_d = np.zeros(4)
 
@@ -346,8 +414,8 @@ class AttitudeReferenceEvaluator():
 def main():
     evaluator = AttitudeReferenceEvaluator()
     # evaluator.evaluate_PID_method()
-    # evaluator.evaluate_linear_drag_model_based_method()
-    evaluator.test_reference_model()
+    evaluator.evaluate_linear_drag_model_based_method()
+    # evaluator.test_reference_model()
 
     # v_ref = np.loadtxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/v_ref.txt")
     # v_actual = np.loadtxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/v_actual.txt")
