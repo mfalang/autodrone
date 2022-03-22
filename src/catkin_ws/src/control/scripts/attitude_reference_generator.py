@@ -114,13 +114,13 @@ class PIDReferenceGenerator(GenericAttitudeReferenceGenerator):
 
 class LinearDragModelReferenceGenerator(GenericAttitudeReferenceGenerator):
 
-    def __init__(self, drone_mass, ax, ay, gravity=9.81):
+    def __init__(self, drone_mass: float, d_x: float, d_y: float, gravity=9.81):
 
         self._m = drone_mass
         self._g = gravity
 
-        self._ax = ax
-        self._ay = ay
+        self._d_x = d_x
+        self._d_y = d_y
 
         self._prev_timestamp: float = None
         self._prev_roll_ref: float = None
@@ -137,8 +137,8 @@ class LinearDragModelReferenceGenerator(GenericAttitudeReferenceGenerator):
         accel_y_desired = vy_ref - vy
 
         # Negative on x axis due to inverse relationship between pitch angle and x-velocity
-        pitch_ref = np.rad2deg(np.arctan(-(accel_x_desired / self._g + self._ax * vx / (self._m * self._g))))
-        roll_ref = np.rad2deg(np.arctan(accel_y_desired / self._g + self._ay * vy / (self._m * self._g)))
+        pitch_ref = np.rad2deg(np.arctan(-(accel_x_desired / self._g + (self._d_x * vx) / (self._m * self._g))))
+        roll_ref = np.rad2deg(np.arctan(accel_y_desired / self._g + (self._d_y * vy) / (self._m * self._g)))
 
         if debug:
             print(f"ts:{timestamp}\tRefs: R: {roll_ref:.3f}\tP: {pitch_ref:.3f}\tax_des: {accel_x_desired:.3f}\tay_des: {accel_y_desired:.3f}")
