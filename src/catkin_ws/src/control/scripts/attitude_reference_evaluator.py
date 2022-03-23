@@ -361,6 +361,115 @@ class AttitudeReferenceEvaluator():
 
         return v_ref, v_actual, att_ref, att_actual, time_refs
 
+    def evaluate_iP_method(self):
+        # v_ref = self.get_reference()
+        v_ref = self._get_reference_short()
+        v_actual = np.zeros_like(v_ref)
+        v_d = np.zeros_like(v_ref)
+        att_actual = np.zeros_like(v_ref)
+        att_ref = np.zeros_like(v_ref)
+        time_refs = np.zeros(v_ref.shape[1])
+        time_meas = np.zeros(v_ref.shape[1])
+
+        pitch_limits = (-5, 5)
+        roll_limits = (-5, 5)
+
+        # pitch_gains = (-7, -0.001, -10)
+        # roll_gains = (7, 0.001, 10)
+        pitch_gains = (7, 0.5, 0.1)
+        roll_gains = (-7, -0.5, -0.1)
+
+        # Kp_pitch = 7
+        # Kp_roll = -7
+        alpha_pitch = 1
+        alpha_roll = 1
+
+        ref_generator = attitude_reference_generator.iPReferenceGenerator(
+            roll_gains, pitch_gains, alpha_roll, alpha_pitch, roll_limits, pitch_limits
+        )
+
+        omegas = (10, 10)
+        zetas = (1, 1)
+
+        ref_model = attitude_reference_generator.VelocityReferenceModel(
+            omegas, zetas
+        )
+        x_d = np.zeros(4)
+
+        dt = 0.05
+
+        self._takeoff()
+
+        input("Press enter to begin test ")
+
+        rate = rospy.Rate(20)
+        # Use the reference model here
+        for i in range(v_ref.shape[1]):
+
+            x_d = ref_model.get_filtered_reference(x_d, v_ref[:,i], dt)
+
+            att_ref[:,i] = ref_generator.get_attitude_reference(
+                x_d[:2], self._prev_velocity, x_d[2:], self._prev_telemetry_timestamp, debug=True
+            )
+
+            v_actual[:,i] = self._prev_velocity.copy()
+            att_actual[:,i] = self._prev_atttiude.copy()
+            time_refs[i] = rospy.Time.now().to_sec() # self._prev_telemetry_timestamp
+            time_meas[i] = self._prev_telemetry_timestamp
+            v_d[:,i] = x_d[:2]
+
+            msg = self._pack_attitude_ref_msg(att_ref[:,i])
+
+            self._attitude_ref_publisher.publish(msg)
+
+            rate.sleep()
+
+        self._land()
+
+        # np.savetxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/v_ref.txt", v_ref)
+        # np.savetxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/v_actual.txt", v_actual)
+        # np.savetxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/att_ref.txt", att_ref)
+        # np.savetxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/att_actual.txt", att_actual)
+        # np.savetxt("/home/martin/code/autodrone/src/catkin_ws/src/control/scripts/time.txt", time)
+
+        sns.set()
+        fig, ax = plt.subplots(2, 2, sharex=True)
+
+        # time_refs -= time_refs[0]
+        # time_meas -= time_meas[0]
+        # time_meas += np.average(time_refs - time_meas)
+
+        # Vx
+        ax[0,0].plot(time_refs, v_ref[0,:], label="vx_ref")
+        ax[0,0].plot(time_refs, v_d[0,:], label="vd_x")
+        ax[0,0].plot(time_meas, v_actual[0,:], marker=".", label="vx")
+        ax[0,0].set_title(f"Kp: {pitch_gains[0]} Ki: {pitch_gains[1]} Kd: {pitch_gains[2]}")
+
+        # Vy
+        ax[0,1].plot(time_refs, v_ref[1,:], label="vy_ref")
+        ax[0,1].plot(time_refs, v_d[1,:], label="vd_y")
+        ax[0,1].plot(time_meas, v_actual[1,:], marker=".", label="vy")
+        ax[0,1].set_title(f"Kp: {roll_gains[0]} Ki: {roll_gains[1]} Kd: {roll_gains[2]}")
+
+
+        # Pitch
+        ax[1,0].plot(time_refs, att_ref[1,:], label="pitch_ref")
+        ax[1,0].plot(time_meas, att_actual[1,:], marker=".", label="pitch")
+
+        # Roll
+        ax[1,1].plot(time_refs, att_ref[0,:], label="roll_ref")
+        ax[1,1].plot(time_meas, att_actual[0,:], marker=".", label="roll")
+
+        # Legends
+        ax[0,0].legend()
+        ax[0,1].legend()
+        ax[1,0].legend()
+        ax[1,1].legend()
+
+        plt.show()
+
+        return v_ref, v_actual, att_ref, att_actual, time_refs, time_meas
+
     def test_reference_model(self):
 
         omegas = (10, 10)
@@ -418,7 +527,8 @@ class AttitudeReferenceEvaluator():
 def main():
     evaluator = AttitudeReferenceEvaluator()
     # evaluator.evaluate_PID_method()
-    evaluator.evaluate_linear_drag_model_based_method()
+    # evaluator.evaluate_linear_drag_model_based_method()
+    evaluator.evaluate_iP_method()
     # evaluator.test_reference_model()
 
     # visualize()
