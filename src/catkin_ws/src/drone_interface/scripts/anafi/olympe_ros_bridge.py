@@ -57,10 +57,10 @@ class OlympeRosBridge():
         self.command_listener = CommandListener(self.drone)
 
         self.telemetry_publisher = TelemetryPublisher(
-            self.drone, self.config["drone"]["topics"]["telemetry"]
+            self.drone, self.config["drone"]["topics"]["output"]["telemetry"]
         )
         self.gps_publisher = GpsPublisher(
-            self.drone, self.config["drone"]["topics"]["gnss"]
+            self.drone, self.config["drone"]["topics"]["output"]["gnss"]
         )
 
         visualize = rospy.get_param("~view_camera_output")
@@ -68,7 +68,7 @@ class OlympeRosBridge():
             rospy.loginfo("Not showing live camera feed (but images are still published).")
 
         self.camera_streamer = CameraPublisher(
-            self.drone, self.config["drone"]["topics"]["camera"],
+            self.drone, self.config["drone"]["topics"]["output"]["camera"],
             reject_jitter=reject_jitter, visualize=visualize
         )
 

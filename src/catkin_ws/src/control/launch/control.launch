@@ -1,9 +1,9 @@
 <launch>
     <arg name="att_controller" default="pid" />
     <node
-        name="attitude_reference_evaluator"
+        name="control"
         pkg="control"
-        type="attitude_reference_evaluator.py"
+        type="control.py"
         output="screen">
         <param name="config_file" value="control_params.yaml" />
         <param name="attitude_controller" value="$(arg att_controller)"/>

@@ -10,9 +10,16 @@ drone:
                     0.000000000000000000e+00, 9.326606388000454899e+02, 3.753484894513629229e+02,
                     0.000000000000000000e+00, 0.000000000000000000e+00, 1.000000000000000000e+00]
   topics:
-    telemetry: "/drone/out/telemetry"
-    gnss: "/drone/out/gps"
-    camera: "/drone/out/image_rect_color"
+    output:
+      telemetry: "/drone/out/telemetry"
+      gnss: "/drone/out/gps"
+      camera: "/drone/out/image_rect_color"
+    input:
+      takeoff: "/drone/cmd/takeoff"
+      land: "/drone/cmd/land"
+      attitude_setpoint: "drone/cmd/set_attitude"
+      position_setpoint: "drone/cmd/set_position_relative"
+      saturation_limits: "drone/cmd/set_saturation_limits"
   attitude_offsets:
     roll: -0.9
     pitch: -5.9
