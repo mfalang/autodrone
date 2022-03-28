@@ -147,6 +147,9 @@ class EKFRosRunner():
 
         z = np.array([msg.vx, msg.vy, msg.vz])
 
+        # # Remove entries that are below a certain threshold as these are not accurate
+        # z[np.where(np.abs(z) < 0.1)] = 0
+
         self.ekf_estimate = self.filter.update(z, self.ekf_estimate, "drone_velocity")
 
 def main():
