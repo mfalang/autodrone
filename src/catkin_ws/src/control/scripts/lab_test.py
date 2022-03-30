@@ -312,6 +312,51 @@ class NewSquare(Mission):
         self._get_keyboard_input("Land? (yes) ", "yes")
         self._land()
 
+class RotateMission2(Mission):
+
+    def __init__(self):
+        super().__init__()
+
+    def start(self):
+
+        self._get_keyboard_input("Ready to take off? (yes) ", "yes")
+        self._takeoff()
+
+        self._get_keyboard_input("Go up 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -1, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go backwards and right 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(-1, 1, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate -90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, -90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Land? (yes) ", "yes")
+        self._land()
+
 def main():
     ans = input("Choose mission\n" \
         "(1 = takeoff - landing)\n" \
@@ -321,7 +366,8 @@ def main():
         "(5 = takeoff - small square - landing)\n" \
         "(6 = takeoff - 100m forward - 100m backward - landing)\n" \
         "(7 = takeoff - forward - backward - forward - right - left - landing)\n" \
-        "(8 = takeoff - new square - landing)\n")
+        "(8 = takeoff - new square - landing)\n" \
+        "(9 = takeoff - fly backwards and to the right 1m - perform rotate mission - landing)\n")
 
     if ans == "1":
         mission = TakeoffLand()
@@ -339,6 +385,8 @@ def main():
         mission = ForwardBackwardSideways()
     elif ans == "8":
         mission = NewSquare()
+    elif ans == "9":
+        mission = RotateMission2()
     else:
         print(f"Invalid choice {ans}")
         sys.exit(0)

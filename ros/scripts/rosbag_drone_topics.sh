@@ -12,7 +12,6 @@ TEST_NAME=$1
 ENV=$2
 SCRIPT_DIR=$(dirname "$(realpath $0)")
 
-
 OUTPUT_DIR=$SCRIPT_DIR/../../out/rosbag/$ENV/$TEST_NAME
 mkdir -p $OUTPUT_DIR
 
@@ -26,15 +25,26 @@ fi
 
 TIME=$(date +%Y-%m-%d-%H-%M-%S)
 
-rosbag record -O $OUTPUT_DIR/$TIME \
-    /drone/out/telemetry \
-    /drone/out/image_rect_color \
-    /drone/out/gps \
-    /ground_truth/helipad_frame/drone_pose \
-    /ground_truth/body_frame/helipad_pose \
-    /qualisys/anafi/pose \
-    /qualisys/helipad/pose \
-    /darknet_ros/bounding_boxes \
-
-#/ground_truth/ned_frame/drone_pose \
-#/ground_truth/ned_frame/helipad_pose \
+if [[ $ENV == "sim" ]]; then
+    echo "Rosbagging sim topics"
+    rosbag record -O $OUTPUT_DIR/$TIME \
+        /drone/out/telemetry \
+        /drone/out/image_rect_color \
+        /drone/out/gps \
+        /ground_truth/helipad_frame/drone_pose \
+        /ground_truth/body_frame/helipad_pose \
+        /ground_truth/ned_frame/drone_pose \
+        /ground_truth/ned_frame/helipad_pose \
+        /darknet_ros/bounding_boxes
+else
+    echo "Rosbagging real topics"
+    rosbag record -O $OUTPUT_DIR/$TIME \
+        /drone/out/telemetry \
+        /drone/out/image_rect_color \
+        /drone/out/gps \
+        /ground_truth/helipad_frame/drone_pose \
+        /ground_truth/body_frame/helipad_pose \
+        /qualisys/anafi/pose \
+        /qualisys/helipad/pose \
+        /darknet_ros/bounding_boxes
+fi
