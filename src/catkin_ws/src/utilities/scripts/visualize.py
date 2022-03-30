@@ -5,10 +5,16 @@ import argparse
 import functools
 import numpy as np
 import pandas as pd
+
+import seaborn as sns
+
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
 class Plotter():
+
+    def __init__(self):
+        sns.set_theme()
 
     def match_two_dataseries_one_to_one(self, data1: np.ndarray, data2: np.ndarray):
 
@@ -118,11 +124,10 @@ class Plotter():
                 ax[i].set_xlabel(xlabels[i])
                 for j in range(len(data)):
                     if use_scatter[j]:
-                        ax[i].scatter(data[j][:,0] - data[j][0,0], data[j][:,i+1], s=4, label=legends[j])
+                        ax[i].plot(data[j][:,0] - data[j][0,0], data[j][:,i+1], marker=".", label=legends[j])
                     else:
                         ax[i].plot(data[j][:,0] - data[j][0,0], data[j][:,i+1], label=legends[j])
                 ax[i].legend(loc="lower right")
-                ax[i].grid()
         except AttributeError: # means there is only one plot
             ax.set_ylabel(ylabels[0])
             ax.set_xlabel(xlabels[0])
@@ -132,7 +137,6 @@ class Plotter():
                     else:
                         ax.plot(data[j][:,0] - data[j][0,0], data[j][:,1], label=legends[j])
             ax.legend(loc="lower right")
-            ax.grid()
 
 def main():
     parser = argparse.ArgumentParser(description="Visualize data.")

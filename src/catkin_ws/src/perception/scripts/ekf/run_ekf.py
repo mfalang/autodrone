@@ -160,6 +160,12 @@ class EKFRosRunner():
 
         z = np.array([msg.vx, msg.vy, msg.vz])
 
+        # Not sure if this is correct or not
+        # if self.ekf_estimate.mean[0] < 0:
+        #     z[0] *= -1
+        # if self.ekf_estimate.mean[0] < 0:
+        #     z[1] *= -1
+
         # # Remove entries that are below a certain threshold as these are not accurate
         # z[np.where(np.abs(z) < 0.1)] = 0
 
