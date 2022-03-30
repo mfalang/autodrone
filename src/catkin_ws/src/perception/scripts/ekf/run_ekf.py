@@ -50,6 +50,7 @@ class EKFRosRunner():
 
         # Create ROS subscribers for the input and measurements defined in the config file
         self.has_inputs = True
+        self._prev_heading: float = None
         self._setup_subscribers()
 
         # Set up filter
@@ -144,6 +145,18 @@ class EKFRosRunner():
     def _drone_velocity_cb(self, msg: drone_interface.msg.AnafiTelemetry):
         if not self.estimating:
             self.estimating = True
+
+        # Hack to incorporate heading into the model by rotating the position estimate
+        if self._prev_heading is not None:
+            xy = self.ekf_estimate.mean[:2]
+            dpsi = (self._prev_heading - msg.yaw + 180) % 360 - 180 # use SSA
+            R = np.array([[np.cos(np.deg2rad(dpsi)), -np.sin(np.deg2rad(dpsi))],
+                        [np.sin(np.deg2rad(dpsi)), np.cos(np.deg2rad(dpsi))]])
+            xy_rot = R @ xy
+            self.ekf_estimate.mean[0] = xy_rot[0]
+            self.ekf_estimate.mean[1] = xy_rot[1]
+
+        self._prev_heading = msg.yaw
 
         z = np.array([msg.vx, msg.vy, msg.vz])
 

@@ -109,9 +109,9 @@ class ConstantVelocityModel():
         x_next[2] = x[2] - dt*x[5]
 
         # Velocity prediction
-        x_next[3] = x_next[3]
-        x_next[4] = x_next[4]
-        x_next[5] = x_next[5]
+        x_next[3] = x[3]
+        x_next[4] = x[4]
+        x_next[5] = x[5]
 
         return x_next.copy()
 

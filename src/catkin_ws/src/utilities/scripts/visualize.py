@@ -112,16 +112,27 @@ class Plotter():
     ):
         fig, ax = plt.subplots(numplots, 1)
         fig.suptitle(suptitle)
-        for i in range(ax.shape[0]):
-            ax[i].set_ylabel(ylabels[i])
-            ax[i].set_xlabel(xlabels[i])
+        try:
+            for i in range(ax.shape[0]):
+                ax[i].set_ylabel(ylabels[i])
+                ax[i].set_xlabel(xlabels[i])
+                for j in range(len(data)):
+                    if use_scatter[j]:
+                        ax[i].scatter(data[j][:,0] - data[j][0,0], data[j][:,i+1], s=4, label=legends[j])
+                    else:
+                        ax[i].plot(data[j][:,0] - data[j][0,0], data[j][:,i+1], label=legends[j])
+                ax[i].legend(loc="lower right")
+                ax[i].grid()
+        except AttributeError: # means there is only one plot
+            ax.set_ylabel(ylabels[0])
+            ax.set_xlabel(xlabels[0])
             for j in range(len(data)):
-                if use_scatter[j]:
-                    ax[i].scatter(data[j][:,0] - data[j][0,0], data[j][:,i+1], s=4, label=legends[j])
-                else:
-                    ax[i].plot(data[j][:,0] - data[j][0,0], data[j][:,i+1], label=legends[j])
-            ax[i].legend(loc="lower right")
-            ax[i].grid()
+                    if use_scatter[j]:
+                        ax.scatter(data[j][:,0] - data[j][0,0], data[j][:,1], s=4, label=legends[j])
+                    else:
+                        ax.plot(data[j][:,0] - data[j][0,0], data[j][:,1], label=legends[j])
+            ax.legend(loc="lower right")
+            ax.grid()
 
 def main():
     parser = argparse.ArgumentParser(description="Visualize data.")
@@ -137,7 +148,9 @@ def main():
     # Load data
     dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
     gt_data = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
+    gt_data_drone_pose = np.loadtxt(f"{data_dir}/ground_truths/drone_pose_helipad_frame.txt", skiprows=2)
     ekfpos_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
+    anafi_raw_data = np.loadtxt(f"{data_dir}/estimates/anafi_raw_data.txt", skiprows=1)
 
     # Calculate accuracy of DNNCV
     ts, dnncv_pos, gt_pos = plotter.match_two_dataseries_one_to_one(dnncv_data, gt_data)
@@ -173,6 +186,17 @@ def main():
         synced_gt_dnncv_ekf_data, 3, "Position - GT vs. EKF vs. DNNCV raw",
         ["GT", "EKF", "DNNCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
         [False, True, True]
+    )
+
+    # Plot heading angles
+    synched_heading_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data_drone_pose, anafi_raw_data])
+
+    plotter.plot_multiple_data_series(
+        [
+            np.array([synched_heading_data[0][:,0], synched_heading_data[0][:,6]]).T,
+            np.array([synched_heading_data[1][:,0], synched_heading_data[1][:,6]]).T
+        ],
+         1, "Heading - GT vs Anafi raw", ["GT", "raw"],  ["t [sec]"], ["heading [deg]"], [False, False]
     )
 
     plt.show()
