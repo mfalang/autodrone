@@ -11,6 +11,7 @@ import drone_interface.msg
 import numpy as np
 
 from ekf import EKF, EKFState
+import utilities.transform as tf
 import dynamic_models
 import measurement_models
 
@@ -50,7 +51,7 @@ class EKFRosRunner():
 
         # Create ROS subscribers for the input and measurements defined in the config file
         self.has_inputs = True
-        self._prev_heading: float = None
+        self._prev_attitude: np.ndarray = None
         self._setup_subscribers()
 
         # Set up filter
@@ -147,16 +148,25 @@ class EKFRosRunner():
             self.estimating = True
 
         # Hack to incorporate heading into the model by rotating the position estimate
-        if self._prev_heading is not None:
-            xy = self.ekf_estimate.mean[:2]
-            dpsi = (self._prev_heading - msg.yaw + 180) % 360 - 180 # use SSA
-            R = np.array([[np.cos(np.deg2rad(dpsi)), -np.sin(np.deg2rad(dpsi))],
-                        [np.sin(np.deg2rad(dpsi)), np.cos(np.deg2rad(dpsi))]])
-            xy_rot = R @ xy
-            self.ekf_estimate.mean[0] = xy_rot[0]
-            self.ekf_estimate.mean[1] = xy_rot[1]
+        if self._prev_attitude is not None:
+            xyz = self.ekf_estimate.mean[:3]
+            drho = (self._prev_attitude[0] - msg.roll + 180) % 360 - 180 # use SSA
+            dtheta = (self._prev_attitude[1] - msg.pitch + 180) % 360 - 180 # use SSA
+            dpsi = (self._prev_attitude[2] - msg.yaw + 180) % 360 - 180 # use SSA
 
-        self._prev_heading = msg.yaw
+            # print(f"ts: {msg.header.stamp.to_sec()}\tdrho: {drho:.3f}\tdtheta: {dtheta:.3f}\tdpsi: {dpsi:.3f}")
+
+            R = tf.Rzyx(-drho, dtheta, dpsi)
+
+            # R = np.array([[np.cos(np.deg2rad(dpsi)), -np.sin(np.deg2rad(dpsi))],
+            #             [np.sin(np.deg2rad(dpsi)), np.cos(np.deg2rad(dpsi))]])
+            xyz_rot = R @ xyz
+            self.ekf_estimate.mean[0] = xyz_rot[0]
+            self.ekf_estimate.mean[1] = xyz_rot[1]
+            self.ekf_estimate.mean[2] = xyz_rot[2]
+
+        # self._prev_attitude = msg.yaw
+        self._prev_attitude = np.array([msg.roll, msg.pitch, msg.yaw])
 
         z = np.array([msg.vx, msg.vy, msg.vz])
 
@@ -167,7 +177,7 @@ class EKFRosRunner():
         #     z[1] *= -1
 
         # # Remove entries that are below a certain threshold as these are not accurate
-        # z[np.where(np.abs(z) < 0.1)] = 0
+        z[np.where(np.abs(z) < 0.1)] = 0
 
         self.ekf_estimate = self.filter.update(z, self.ekf_estimate, "drone_velocity")
 
