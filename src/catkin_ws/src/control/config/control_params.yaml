@@ -1,3 +1,7 @@
+guidance:
+  pp:
+    kappa: 0.1
+
 attitude_limits:
   pitch: [-5, 5]
   roll: [-5, 5]

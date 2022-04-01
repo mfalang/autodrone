@@ -1,9 +1,5 @@
 # Main file starting the control algorithms
 
-import os
-import sys
-import yaml
-
 import numpy as np
 
 import rospy
@@ -45,6 +41,11 @@ class Controller():
             std_msgs.msg.Empty, queue_size=1
         )
 
+        self._move_relative_publisher = rospy.Publisher(
+            rospy.get_param("/drone/topics/input/position_setpoint"),
+            drone_interface.msg.PositionSetpointRelative, queue_size=1
+        )
+
         self._reference_model = reference_model.VelocityReferenceModel(
             self.config["reference_model"]["omegas"], self.config["reference_model"]["zetas"]
         )
@@ -62,13 +63,28 @@ class Controller():
     def get_reference(self, ref_prev: np.ndarray, ref_raw: np.ndarray, dt: float):
         return self._reference_model.get_filtered_reference(ref_prev, ref_raw, dt)
 
-    def set_attitude(self, x_d: np.ndarray, x: np.ndarray, ts: float, debug=False):
-        att_ref = self._attitude_reference_generator.get_attitude_reference(x_d, x, ts, debug=debug)
+    def set_attitude(self, v_d: np.ndarray, v: np.ndarray, ts: float, debug=False):
+        att_ref = self._attitude_reference_generator.get_attitude_reference(v_d, v, ts, debug=debug)
 
         att_ref_msg = control_util.pack_attitude_ref_msg_horizontal(att_ref)
         self._attitude_ref_publisher.publish(att_ref_msg)
 
         return att_ref
+
+    def move_relative(self, dx: float, dy: float, dz: float, dpsi: float,
+        max_horizontal_speed=0.5, max_vertical_speed=0.5, max_yaw_rotation_speed=45
+    ) -> None:
+        msg = drone_interface.msg.PositionSetpointRelative()
+        msg.header.stamp = rospy.Time.now()
+        msg.dx = dx
+        msg.dy = dy
+        msg.dz = dz
+        msg.dpsi = dpsi
+        msg.max_horizontal_speed = max_horizontal_speed
+        msg.max_vertical_speed = max_vertical_speed
+        msg.max_yaw_rotation_speed = max_yaw_rotation_speed
+
+        self._move_relative_publisher.publish(msg)
 
 def main():
     controller = Controller()

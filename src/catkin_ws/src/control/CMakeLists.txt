@@ -159,6 +159,7 @@ catkin_install_python(PROGRAMS
   scripts/lab_test.py
   scripts/attitude_control_test.py
   scripts/attitude_reference_evaluator.py
+  scripts/track_helipad.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

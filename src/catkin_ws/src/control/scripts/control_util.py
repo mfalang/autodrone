@@ -113,6 +113,27 @@ def get_reference_trajectory_safe() -> np.ndarray:
 
     return v_ref
 
+def generate_random_reference_trajectory(duration: int) -> np.ndarray:
+    """Get a random horizontal trajectory lasting in a given amount of seconds.
+
+    Parameters
+    ----------
+    duration : int
+        Seconds the trajectory lasts
+
+    Returns
+    -------
+    np.ndarray
+        Reference trajectory. Format: [vx_ref, vy_ref] in m/s
+    """
+    v_ref = np.zeros((2, duration * 20))
+    print(v_ref.shape)
+    v_ref_i = np.random.uniform(0.2,0.5, [2,1])
+
+    v_ref[:,:-1] = v_ref_i # leave last reference to 0
+
+    return v_ref
+
 def await_user_confirmation(msg: str):
     """Await user confirmation to continue.
 
@@ -163,12 +184,14 @@ def plot_drone_velocity_vs_reference_trajectory(
     ax[0].plot(ts_refs, v_ref[0,:], label="vx_ref")
     ax[0].plot(ts_refs, v_d[0,:], label="vd_x")
     ax[0].plot(ts_meas, v[0,:], label="vx")
+    ax[0].legend()
     ax[0].set_title("X-axis")
 
     # Vy
     ax[1].plot(ts_refs, v_ref[1,:], label="vy_ref")
     ax[1].plot(ts_refs, v_d[1,:], label="vd_y")
     ax[1].plot(ts_meas, v[1,:], label="vy")
+    ax[1].legend()
     ax[1].set_title("Y-axis")
 
     if show_plot:
@@ -209,11 +232,13 @@ def plot_drone_attitude_vs_reference(
     # Pitch
     ax[0].plot(ts_refs, att_ref[1,:], label="pitch_ref")
     ax[0].plot(ts_meas, att_meas[1,:], label="pitch")
+    ax[0].legend()
     ax[0].set_title("Pitch")
 
     # Roll
     ax[1].plot(ts_refs, att_ref[0,:], label="roll_ref")
     ax[1].plot(ts_meas, att_meas[0,:], label="roll")
+    ax[1].legend()
     ax[1].set_title("Roll")
 
     if show_plot:
