@@ -42,8 +42,8 @@ class PIDReferenceGenerator(GenericAttitudeReferenceGenerator):
         self._roll_limits = limits["roll"]
 
         print(10*"=", "Control params", 10*"=")
-        print(f"Pitch:\tKp: {self._Kp_x}\tKi: {self._Ki_x}\tKd: {self._Kd_x}\tLimits: {self._pitch_limits}")
-        print(f"Roll:\tKp: {self._Kp_y}\tKi: {self._Ki_y}\tKd: {self._Kd_y}\tLimits: {self._roll_limits}")
+        print(f"Pitch: \tKp: {self._Kp_x} \tKi: {self._Ki_x} \tKd: {self._Kd_x} \tLimits: {self._pitch_limits}")
+        print(f"Roll: \tKp: {self._Kp_y} \tKi: {self._Ki_y} \tKd: {self._Kd_y} \tLimits: {self._roll_limits}")
         print(36*"=")
 
         self._prev_ts = None
