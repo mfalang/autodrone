@@ -23,9 +23,9 @@ class Tracker():
         self._guidance_law_type = rospy.get_param("~guidance_law")
         rospy.loginfo(f"Tracker started with guidance law: {self._guidance_law_type}")
         guidance_law_params = control_params["guidance"][self._guidance_law_type]
+        velocity_limits = control_params["guidance"]["velocity_limits"]
         guidance_law = guidance.get_guidance_law(self._guidance_law_type)
-        self._guidance_law = guidance_law(guidance_law_params)
-
+        self._guidance_law = guidance_law(guidance_law_params, velocity_limits)
 
         self._prev_telemetry_timestamp: float = None
         self._prev_atttiude: np.ndarray = None # roll and pitch
@@ -35,8 +35,8 @@ class Tracker():
         self._prev_pos: np.ndarray = None
 
         rospy.Subscriber("/drone/out/telemetry", drone_interface.msg.AnafiTelemetry, self._drone_telemetry_cb)
-        # rospy.Subscriber("/estimate/ekf", perception.msg.PointWithCovarianceStamped, self._ekf_cb)
-        rospy.Subscriber("/ground_truth/body_frame/helipad_pose", ground_truth.msg.PoseStampedEuler, self._gt_position_cb)
+        rospy.Subscriber("/estimate/ekf", perception.msg.PointWithCovarianceStamped, self._ekf_cb)
+        # rospy.Subscriber("/ground_truth/body_frame/helipad_pose", ground_truth.msg.PoseStampedEuler, self._gt_position_cb)
 
     def _drone_telemetry_cb(self, msg: drone_interface.msg.AnafiTelemetry) -> None:
 
@@ -91,6 +91,8 @@ class Tracker():
         self._vrefs = np.zeros((2, n_entries))
         self._vds = np.zeros_like(self._vrefs)
         self._v_meas = np.zeros_like(self._vrefs)
+        self._att_meas = np.zeros_like(self._vrefs)
+        self._att_refs = np.zeros_like(self._vrefs)
         self._time_refs = np.zeros(self._vrefs.shape[1])
         self._time_meas = np.zeros(self._vrefs.shape[1])
         self._counter = 0
@@ -99,7 +101,7 @@ class Tracker():
 
 
         while not rospy.is_shutdown():
-            v_ref = self._guidance_law.get_velocity_reference(self._prev_pos)
+            v_ref = self._guidance_law.get_velocity_reference(self._prev_pos, self._prev_pos_timestamp, debug=True)
             v_d = self._controller.get_reference(v_d, v_ref, dt)
 
             att_ref = self._controller.set_attitude(
@@ -109,8 +111,10 @@ class Tracker():
             if self._counter < n_entries:
                 self._vrefs[:, self._counter] = v_ref
                 self._vds[:, self._counter] = v_d[:2]
+                self._att_refs[:, self._counter] = att_ref
                 self._time_refs[ self._counter] = rospy.Time.now().to_sec()
                 self._v_meas[:, self._counter] = self._prev_velocity
+                self._att_meas[:, self._counter] = self._prev_atttiude
                 self._time_meas[ self._counter] = self._prev_telemetry_timestamp
 
                 self._counter += 1
@@ -132,6 +136,8 @@ class Tracker():
         np.savetxt(f"{output_dir}/vrefs.txt", self._vrefs[:, :self._counter])
         np.savetxt(f"{output_dir}/vds.txt", self._vds[:, :self._counter])
         np.savetxt(f"{output_dir}/v_meas.txt", self._v_meas[:, :self._counter])
+        np.savetxt(f"{output_dir}/att_refs.txt", self._att_refs[:, :self._counter])
+        np.savetxt(f"{output_dir}/att_meas.txt", self._att_meas[:, :self._counter])
         np.savetxt(f"{output_dir}/time_refs.txt", self._time_refs[:self._counter])
         np.savetxt(f"{output_dir}/time_meas.txt", self._time_meas[:self._counter])
 
@@ -142,15 +148,21 @@ class Tracker():
         v_meas = np.loadtxt(f"{output_dir}/v_meas.txt")
         t_refs = np.loadtxt(f"{output_dir}/time_refs.txt")
         t_meas = np.loadtxt(f"{output_dir}/time_meas.txt")
+        att_refs = np.loadtxt(f"{output_dir}/att_refs.txt")
+        att_meas = np.loadtxt(f"{output_dir}/att_meas.txt")
 
         control_util.plot_drone_velocity_vs_reference_trajectory(
-            v_ref, v_d, t_refs, v_meas, t_meas, start_time_from_0=True, show_plot=True
+            v_ref, v_d, t_refs, v_meas, t_meas, start_time_from_0=True
+        )
+
+        control_util.plot_drone_attitude_vs_reference(
+            att_refs, t_refs, att_meas, t_meas, start_time_from_0=True, show_plot=True
         )
 
 def main():
     tracker = Tracker()
-    tracker.start(debug=True)
-    # tracker._plot_output()
+    # tracker.start(debug=False)
+    tracker._plot_output()
 
 if __name__ == "__main__":
     main()

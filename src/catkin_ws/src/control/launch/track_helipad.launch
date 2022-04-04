@@ -1,6 +1,6 @@
 <launch>
     <arg name="att_controller" default="pid" />
-    <arg name="guidance_law" default="pp" />
+    <arg name="guidance_law" default="pid" />
     <node
         name="helipad_tracker"
         pkg="control"
