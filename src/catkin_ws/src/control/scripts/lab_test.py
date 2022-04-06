@@ -357,6 +357,37 @@ class RotateMission2(Mission):
         self._get_keyboard_input("Land? (yes) ", "yes")
         self._land()
 
+class UpDownMission(Mission):
+    def __init__(self):
+        super().__init__()
+
+    def start(self):
+        self._get_keyboard_input("Ready to take off? (yes) ", "yes")
+        self._takeoff()
+
+        self._get_keyboard_input("Go up 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -1, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go up 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -1, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go down 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 1, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go down 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0.5, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go up 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -0.5, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Land? (yes) ", "yes")
+        self._land()
+
 def main():
     ans = input("Choose mission\n" \
         "(1 = takeoff - landing)\n" \
@@ -367,7 +398,8 @@ def main():
         "(6 = takeoff - 100m forward - 100m backward - landing)\n" \
         "(7 = takeoff - forward - backward - forward - right - left - landing)\n" \
         "(8 = takeoff - new square - landing)\n" \
-        "(9 = takeoff - fly backwards and to the right 1m - perform rotate mission - landing)\n")
+        "(9 = takeoff - fly backwards and to the right 1m - perform rotate mission - landing)\n" \
+        "(10 = takeoff - up and down only)\n")
 
     if ans == "1":
         mission = TakeoffLand()
@@ -387,6 +419,8 @@ def main():
         mission = NewSquare()
     elif ans == "9":
         mission = RotateMission2()
+    elif ans == "10":
+        mission = UpDownMission()
     else:
         print(f"Invalid choice {ans}")
         sys.exit(0)

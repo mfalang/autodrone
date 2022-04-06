@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import threading
 import numpy as np
 
 import control
@@ -12,6 +13,10 @@ import drone_interface.msg
 import ground_truth.msg
 
 class Tracker():
+
+    STATE_TRACKING = "track"
+    STATE_DESCENDING = "descend"
+    STATE_LANDING = "land"
 
     def __init__(self):
         node_name = "helipad_tracker"
@@ -33,6 +38,8 @@ class Tracker():
 
         self._prev_pos_timestamp: float = None
         self._prev_pos: np.ndarray = None
+
+        self._state = self.STATE_TRACKING
 
         rospy.Subscriber("/drone/out/telemetry", drone_interface.msg.AnafiTelemetry, self._drone_telemetry_cb)
         rospy.Subscriber("/estimate/ekf", perception.msg.PointWithCovarianceStamped, self._ekf_cb)
@@ -74,8 +81,8 @@ class Tracker():
 
         self._controller.takeoff()
 
-        control_util.await_user_confirmation("Move up 1m")
-        self._controller.move_relative(0, 0, -1, 0)
+        control_util.await_user_confirmation("Move up 1.5m")
+        self._controller.move_relative(0, 0, -1.5, 0)
 
         control_util.await_user_confirmation("Move away from the helipad")
         self._controller.move_relative(-1, -1, 0, 0)
@@ -98,38 +105,67 @@ class Tracker():
         self._counter = 0
 
         rospy.on_shutdown(self._shutdown)
-
+        threading.Thread(target=self._change_state, args=(), daemon=True).start()
 
         while not rospy.is_shutdown():
-            v_ref = self._guidance_law.get_velocity_reference(self._prev_pos, self._prev_pos_timestamp, debug=True)
-            v_d = self._controller.get_reference(v_d, v_ref, dt)
 
-            att_ref = self._controller.set_attitude(
-                v_d, self._prev_velocity, self._prev_telemetry_timestamp
-            )
+            if self._state == Tracker.STATE_TRACKING:
+                v_ref = self._guidance_law.get_velocity_reference(self._prev_pos, self._prev_pos_timestamp, debug=False)
+                v_d = self._controller.get_smooth_reference(v_d, v_ref, dt)
 
-            if self._counter < n_entries:
-                self._vrefs[:, self._counter] = v_ref
-                self._vds[:, self._counter] = v_d[:2]
-                self._att_refs[:, self._counter] = att_ref
-                self._time_refs[ self._counter] = rospy.Time.now().to_sec()
-                self._v_meas[:, self._counter] = self._prev_velocity
-                self._att_meas[:, self._counter] = self._prev_atttiude
-                self._time_meas[ self._counter] = self._prev_telemetry_timestamp
+                att_ref = self._controller.set_attitude(
+                    v_d, self._prev_velocity, self._prev_telemetry_timestamp
+                )
 
-                self._counter += 1
+                if self._counter < n_entries:
+                    self._vrefs[:, self._counter] = v_ref
+                    self._vds[:, self._counter] = v_d[:2]
+                    self._att_refs[:, self._counter] = att_ref
+                    self._time_refs[ self._counter] = rospy.Time.now().to_sec()
+                    self._v_meas[:, self._counter] = self._prev_velocity
+                    self._att_meas[:, self._counter] = self._prev_atttiude
+                    self._time_meas[ self._counter] = self._prev_telemetry_timestamp
 
-            if debug:
-                print(f"Pos error: x: \t{self._prev_pos[0]:.3f} y: \t{self._prev_pos[1]:.3f}")
-                print(f"Vref: vx: \t{v_ref[0]:.3f} vy: \t{v_ref[1]:.3f}")
-                print(f"Vd: x: \t\t{v_d[0]:.3f} y: \t{v_d[1]:.3f}")
-                print(f"Attref: r: \t{att_ref[0]:.3f} p: \t{att_ref[1]:.3f}")
-                print()
+                    self._counter += 1
+
+                if debug:
+                    print(f"Pos error: x: \t{self._prev_pos[0]:.3f} y: \t{self._prev_pos[1]:.3f}")
+                    print(f"Vref: vx: \t{v_ref[0]:.3f} vy: \t{v_ref[1]:.3f}")
+                    print(f"Vd: x: \t\t{v_d[0]:.3f} y: \t{v_d[1]:.3f}")
+                    print(f"Attref: r: \t{att_ref[0]:.3f} p: \t{att_ref[1]:.3f}")
+                    print()
+            elif self._state == Tracker.STATE_DESCENDING:
+                pass
+
+            elif self._state == Tracker.STATE_LANDING:
+                break
 
             rate.sleep()
 
+    def _change_state(self):
+        next_state = ""
+        while next_state != Tracker.STATE_TRACKING or next_state != Tracker.STATE_DESCENDING or next_state != Tracker.STATE_LANDING:
+            next_state = input(f"Current state: {self._state}. Enter next state (track, descend, land): ")
+
+            if next_state == self._state:
+                print("Same state as current state given. No change.")
+            elif next_state == Tracker.STATE_TRACKING:
+                rospy.loginfo("Starting tracking")
+                self._state = Tracker.STATE_TRACKING
+            elif next_state == Tracker.STATE_DESCENDING:
+                self._state = Tracker.STATE_DESCENDING
+                rospy.sleep(1)
+                rospy.loginfo("Starting descending")
+                self._controller.move_relative(0, 0, 1.5, 0)
+            elif next_state == Tracker.STATE_LANDING:
+                rospy.loginfo("Starting landing")
+                self._controller.land()
+                self._state = Tracker.STATE_LANDING
+            else:
+                print(f"Invalid next state {next_state}. Must be {Tracker.STATE_TRACKING}/{Tracker.STATE_DESCENDING}/{Tracker.STATE_LANDING}")
+
     def _shutdown(self):
-        self._controller.land()
+        # self._controller.land()
 
         output_dir = "/home/martin/code/autodrone/out/temp_guidance_ouput"
         print(f"Saving output data to: {output_dir}")
@@ -161,7 +197,7 @@ class Tracker():
 
 def main():
     tracker = Tracker()
-    # tracker.start(debug=False)
+    tracker.start(debug=False)
     tracker._plot_output()
 
 if __name__ == "__main__":

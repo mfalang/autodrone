@@ -60,7 +60,7 @@ class Controller():
         rospy.loginfo("Landing")
         self._land_publisher.publish(std_msgs.msg.Empty())
 
-    def get_reference(self, ref_prev: np.ndarray, ref_raw: np.ndarray, dt: float):
+    def get_smooth_reference(self, ref_prev: np.ndarray, ref_raw: np.ndarray, dt: float):
         return self._reference_model.get_filtered_reference(ref_prev, ref_raw, dt)
 
     def set_attitude(self, v_d: np.ndarray, v: np.ndarray, ts: float, debug=False):

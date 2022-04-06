@@ -114,7 +114,7 @@ class AttitudeReferenceEvaluator():
 
         for i in range(v_ref.shape[1]):
 
-            x_d = self._controller.get_reference(x_d, v_ref[:,i], dt)
+            x_d = self._controller.get_smooth_reference(x_d, v_ref[:,i], dt)
 
             att_ref[:,i] = self._controller.set_attitude(
                 x_d, self._prev_velocity, self._prev_telemetry_timestamp, debug=True
