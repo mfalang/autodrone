@@ -3,3 +3,4 @@ numpy
 rospkg
 matplotlib
 seaborn
+scikit-learn

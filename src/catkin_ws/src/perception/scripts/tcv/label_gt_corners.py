@@ -46,7 +46,10 @@ def click_event(event, x, y, flags, param):
 # Load images
 images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]
 
-for (img, filename) in images:
+start_image = 0
+print(f"Starting from image {start_image}: {images[start_image][1]}")
+
+for (img, filename) in images[start_image:]:
     # img, filename = images[i]
     header = f"{'='*10} Labeling image: {filename} {'='*10}"
     print(header)
