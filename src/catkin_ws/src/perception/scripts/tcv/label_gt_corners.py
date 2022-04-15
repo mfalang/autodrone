@@ -50,7 +50,6 @@ start_image = 0
 print(f"Starting from image {start_image}: {images[start_image][1]}")
 
 for (img, filename) in images[start_image:]:
-    # img, filename = images[i]
     header = f"{'='*10} Labeling image: {filename} {'='*10}"
     print(header)
 
@@ -74,6 +73,10 @@ for (img, filename) in images[start_image:]:
             cv.destroyAllWindows()
             sys.exit(0)
         else:
+            if labels["current_idx"] <= 12:
+                print("13 features not present, add remainding")
+                ans = "r" # ensure coords are not saved
+                continue
             print(f"Labelling complete for image {filename}")
             gt_labels_filename = f"{filename[:-4]}_gt_labels.txt" # save in same folder as images
             print(f"Saving labels to: {gt_labels_filename}")

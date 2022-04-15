@@ -1,6 +1,8 @@
+import sys
+import glob
+import cv2 as cv
 import numpy as np
-import cv2
-import math
+
 drawing = False # true if mouse is pressed
 ix,iy = -1,-1
 
@@ -8,36 +10,65 @@ ix,iy = -1,-1
 def draw_circle(event,x,y,flags,param):
     global ix,iy,drawing
 
-    if event == cv2.EVENT_LBUTTONDOWN:
+    img = param[0]
+    filename = param[1]
+
+    if event == cv.EVENT_LBUTTONDOWN:
         drawing = True
         # we take note of where that mouse was located
         ix,iy = x,y
+        cv.imshow("image", img)
 
-    elif event == cv2.EVENT_MOUSEMOVE:
+    elif event == cv.EVENT_MOUSEMOVE:
         drawing == True
 
-    elif event == cv2.EVENT_LBUTTONUP:
-        radius = int(math.sqrt( ((ix-x)**2)+((iy-y)**2)))
-        cv2.circle(img,(ix,iy),radius,(0,0,255), thickness=1)
+    elif event == cv.EVENT_LBUTTONUP:
+        radius = int(np.math.sqrt( ((ix-x)**2)+((iy-y)**2)))
+        param[2][0] = x
+        param[2][1] = y
+        param[2][2] = radius
+        img_with_circle = img.copy()
+        cv.circle(img_with_circle,(ix,iy),radius, (127,255,127), thickness=2)
+        cv.imshow("image", img_with_circle)
         drawing = False
 
-# Create a black image
-img = np.zeros((512,512,3), np.uint8)
+# Load images
+images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]
 
-# This names the window so we can reference it
-cv2.namedWindow('image')
+start_image = 0
+print(f"Starting from image {start_image}: {images[start_image][1]}")
 
-# Connects the mouse button to our callback function
-cv2.setMouseCallback('image',draw_circle)
+for (img, filename) in images[start_image:]:
+    header = f"{'='*10} Labeling image: {filename} {'='*10}"
+    print(header)
 
-while(1):
-    cv2.imshow('image',img)
+    ans = "r"
 
-    # EXPLANATION FOR THIS LINE OF CODE:
-    # https://stackoverflow.com/questions/35372700/whats-0xff-for-in-cv2-waitkey1/39201163
-    k = cv2.waitKey(1) & 0xFF
-    if k == 27:
-        break
-# Once script is done, its usually good practice to call this line
-# It closes all windows (just in case you have multiple windows called)
-cv2.destroyAllWindows()
+    label = np.zeros(3) # format: [x,y,r]
+
+    while ans != "":
+        cv.imshow("image", img)
+        cv.setMouseCallback("image", draw_circle, param=(img, filename, label))
+        cv.waitKey(0)
+
+        ans = input("Save labels and go to next image [Enter], retry [r] or quit program [q]? ")
+        if ans == "r":
+            print("Resetting labels on current image")
+            label = np.zeros(3) # clear coords
+        elif ans == "q":
+            cv.destroyAllWindows()
+            sys.exit(0)
+        else:
+            if np.count_nonzero(label) == 0:
+                print("No circle drawn, add one.")
+                ans = "r"
+                continue
+            print(f"Labelling complete for image {filename}")
+            print(label)
+            gt_labels_filename = f"{filename[:-4]}_gt_circle.txt" # save in same folder as images
+            print(f"Saving labels to: {gt_labels_filename}")
+            # TODO: Fix this saving
+            # np.savetxt(gt_labels_filename, label["center"])
+            print("="*len(header))
+
+cv.destroyAllWindows()
