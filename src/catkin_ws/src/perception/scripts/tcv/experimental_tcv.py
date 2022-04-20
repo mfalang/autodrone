@@ -149,6 +149,12 @@ def find_corners_shi_tomasi(img, mask):
     gradient_size = 3
     k = 0.04
 
+    # New parameters found from grid search
+    quality_level = 0.001
+    block_size = 5
+    gradient_size = 9
+    min_distance = 1
+
     corners = cv.goodFeaturesToTrack(img, max_corners, quality_level,
         min_distance, mask=mask, blockSize=block_size,
         gradientSize=gradient_size, useHarrisDetector=False, k=k
@@ -160,9 +166,6 @@ def find_corners_shi_tomasi(img, mask):
         return np.array([])
 
 def hough_circle(img, use_matplotlib=True):
-    # img = cv.medianBlur(img, 11)
-    # img = cv.GaussianBlur(img,(5,5),0)
-    # img = cv.bilateralFilter(img,9,75,75)
 
     blurred_img = blur_image(img)
 
@@ -362,7 +365,11 @@ def evaluate_corner_detector():
 
     errors = []
     for (img, filename) in images[:9]:
+
         frame_id = os.path.basename(filename)
+        if frame_id == "frame0004.jpg":
+            continue
+
         gt_labels = get_corner_labels_from_csv(f"{filename[:-13]}/corner_labels.csv", frame_id)
         corners = run_pipeline_single_image(img, show_corners=True)
         error = corner_estimation_error(corners, gt_labels, verbose=True)
@@ -387,4 +394,5 @@ def evaluate_circle_detector():
         cv.waitKey(0)
 
 if __name__ == "__main__":
-    evaluate_circle_detector()
+    # evaluate_circle_detector()
+    evaluate_corner_detector()
