@@ -1,10 +1,13 @@
 # File to help with labeling the ground truth coordinates of the arrow and the corners of the H in
 # the helipad
 
+import os
 import sys
 import glob
+import itertools
 import cv2 as cv
 import numpy as np
+import pandas as pd
 
 def click_event(event, x, y, flags, param):
 
@@ -43,8 +46,21 @@ def click_event(event, x, y, flags, param):
 
         cv.imshow("image", img)
 
+def save_labels(df: pd.DataFrame, filename:str):
+    idx = list(itertools.chain.from_iterable(zip([f"x{i}" for i in range(13)], [f"y{i}" for i in range(13)])))
+    print(f"Saving labels to {output_file}")
+    df.to_csv(filename, columns=idx)
+
 # Load images
 images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]
+
+# Load output file
+output_file = "test_images/real/corner_labels.csv"
+try:
+    labels_df = pd.read_csv(output_file, index_col=0)
+except FileNotFoundError:
+    print(f"Could not find previous labels file {output_file}, creating a new one.")
+    labels_df = pd.DataFrame()
 
 start_image = 0
 print(f"Starting from image {start_image}: {images[start_image][1]}")
@@ -78,9 +94,17 @@ for (img, filename) in images[start_image:]:
                 ans = "r" # ensure coords are not saved
                 continue
             print(f"Labelling complete for image {filename}")
-            gt_labels_filename = f"{filename[:-4]}_gt_labels.txt" # save in same folder as images
-            print(f"Saving labels to: {gt_labels_filename}")
-            np.savetxt(gt_labels_filename, labels["coords"])
+
+            frame_id = os.path.basename(filename)
+
+            if frame_id in labels_df.index: # replace labels for image
+                labels_df.loc[frame_id, :] = labels["coords"].flatten()
+            else: # add new label
+                idx = list(itertools.chain.from_iterable(zip([f"x{i}" for i in range(13)], [f"y{i}" for i in range(13)])))
+                new_label = pd.Series(data=labels["coords"].flatten(), index=idx, name=frame_id)
+                labels_df = labels_df.append(new_label, ignore_index=False)
+
+            save_labels(labels_df, output_file)
             print("="*len(header))
 
 cv.destroyAllWindows()

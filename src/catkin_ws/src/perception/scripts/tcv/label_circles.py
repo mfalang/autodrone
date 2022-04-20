@@ -91,7 +91,6 @@ for (img, filename) in images[start_image:]:
             print("Resetting labels on current image")
             label = np.zeros(3) # clear coords
         elif ans == "q":
-            save_labels(labels_df, output_file)
             cv.destroyAllWindows()
             sys.exit(0)
         else:
@@ -100,7 +99,6 @@ for (img, filename) in images[start_image:]:
                 ans = "r"
                 continue
             print(f"Labelling complete for image {filename}")
-            gt_labels_filename = f"{filename[:-4]}_gt_circle.txt" # save in same folder as images
             frame_id = os.path.basename(filename)
             if frame_id in labels_df.index: # replace label for image
                 labels_df.loc[frame_id, "x"] = label[0]

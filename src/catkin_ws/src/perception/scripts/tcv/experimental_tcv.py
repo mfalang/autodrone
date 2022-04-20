@@ -1,8 +1,10 @@
 
+import os
 import time
 import glob
 import cv2 as cv
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.spatial import distance
 from sklearn.neighbors import KNeighborsClassifier
@@ -326,13 +328,17 @@ def run_pipeline_all_images():
     print(f"Mean corner detector run time: {np.mean(np.array(corner_detector_time_used))}")
     print(f"Could not find circles in {len(images_not_found_on)} images:\n{sorted([filename for (_, filename) in images_not_found_on])}")
 
+def get_corner_labels_from_csv(filename: str):
+    return pd.read_csv(filename, index_col=0).loc[frame_id, :].to_numpy().reshape((13,2))
+
 # Evaluate corner detector
 # Load images
 images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]
 
 errors = []
 for (img, filename) in images[:9]:
-    gt_labels = np.loadtxt(f"{filename[:-4]}_gt_labels.txt")
+    frame_id = os.path.basename(filename)
+    gt_labels = get_corner_labels_from_csv(f"{filename[:-13]}/corner_labels.csv")
     corners = run_pipeline_single_image(img, show_corners=True)
     error = estimation_error(corners, gt_labels, verbose=True)
     print(f"Mean prediction error: {error}")
