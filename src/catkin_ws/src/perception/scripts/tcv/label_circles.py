@@ -57,7 +57,7 @@ def draw_circle(event,x,y,flags,param):
 
 def save_labels(df: pd.DataFrame, filename:str):
     print(f"Saving labels to {output_file}")
-    df.to_csv(filename)
+    df.to_csv(filename, columns=["x", "y", "r"])
 
 # Load images
 images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]

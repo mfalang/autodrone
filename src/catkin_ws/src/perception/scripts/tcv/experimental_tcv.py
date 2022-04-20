@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial import distance
 from sklearn.neighbors import KNeighborsClassifier
 
-def estimation_error(pred: np.ndarray, gt: np.ndarray, verbose=False):
+def corner_estimation_error(pred: np.ndarray, gt: np.ndarray, verbose=False):
     classes = np.arange(len(pred))
 
     knn = KNeighborsClassifier(n_neighbors=1)
@@ -33,6 +33,15 @@ def estimation_error(pred: np.ndarray, gt: np.ndarray, verbose=False):
 
     return mean_error
 
+def circle_estimation_error(pred: np.ndarray, gt: np.ndarray, verbose=False):
+    error_origin = np.linalg.norm(pred[:2] - gt[:2])
+    error_radius = np.abs(pred[2] - gt[2])
+
+    if verbose:
+        print(f"Error origin: \t\t{error_origin:.2f} \t(pred: {(pred[0], pred[1])} gt: {(gt[0], gt[1])})")
+        print(f"Error radius (abs): \t{error_radius:.2f} \t(pred: {pred[2]} gt: {gt[2]})")
+
+    return error_origin, error_radius
 
 def show_image_matplotlib(img):
     try: # fails if image is grayscale, then just show it
@@ -213,7 +222,7 @@ def hough_circle(img, use_matplotlib=True):
         # else:
         #     show_image_opencv(img_masked)
 
-        return img_masked, circle_mask
+        return img_masked, circle_mask, (x,y,r)
     else:
         # show_image_opencv(img)
         return None
@@ -290,12 +299,19 @@ def estimate_noise(I):
 
 def run_pipeline_single_image(img, show_corners=True, use_matplot_lib=False):
     img = blur_image_gaussian(img)
-    img_masked, circle_mask = hough_circle(img, use_matplotlib=use_matplot_lib)
+    img_masked, circle_mask, _ = hough_circle(img, use_matplotlib=use_matplot_lib)
     corners = find_corners_shi_tomasi(img, circle_mask)
     if show_corners:
         show_corners_found(img_masked, corners, "red", use_matplotlib=use_matplot_lib)
 
     return corners
+
+def run_cropping_only(img, show_crop=False):
+    img = blur_image_gaussian(img)
+    img_masked, circle_mask, circle_params = hough_circle(img)
+    if show_crop:
+        show_image_opencv(img_masked)
+    return np.array(circle_params)
 
 def run_pipeline_all_images():
     images = [(cv.imread(file), file) for file in glob.glob("test_images/real/*.jpg")]
@@ -308,7 +324,7 @@ def run_pipeline_all_images():
         img = blur_image_gaussian(img)
         try:
             start_time = time.time()
-            img_masked, circle_mask = hough_circle(img, use_matplotlib=False)
+            img_masked, circle_mask, _ = hough_circle(img, use_matplotlib=False)
             time_used = time.time() - start_time
             hough_circle_run_times.append(time_used)
             print(f"Hough circle used: {time_used:.4f} sec for image {filename}")
@@ -328,21 +344,47 @@ def run_pipeline_all_images():
     print(f"Mean corner detector run time: {np.mean(np.array(corner_detector_time_used))}")
     print(f"Could not find circles in {len(images_not_found_on)} images:\n{sorted([filename for (_, filename) in images_not_found_on])}")
 
-def get_corner_labels_from_csv(filename: str):
+def get_corner_labels_from_csv(filename: str, frame_id: str):
+    # Returns [[x1, y1],
+    #          [x2, y2],
+    #          .........
+    #          [x12, y12]]
     return pd.read_csv(filename, index_col=0).loc[frame_id, :].to_numpy().reshape((13,2))
 
-# Evaluate corner detector
-# Load images
-images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]
+def get_circle_labels_from_csv(filename: str, frame_id: str):
+    # Returns [x,y,r]
+    return pd.read_csv(filename, index_col=0).loc[frame_id, :].to_numpy()
 
-errors = []
-for (img, filename) in images[:9]:
-    frame_id = os.path.basename(filename)
-    gt_labels = get_corner_labels_from_csv(f"{filename[:-13]}/corner_labels.csv")
-    corners = run_pipeline_single_image(img, show_corners=True)
-    error = estimation_error(corners, gt_labels, verbose=True)
-    print(f"Mean prediction error: {error}")
-    errors.append(error)
-    cv.waitKey(0)
+def evaluate_corner_detector():
+    # Evaluate corner detector
+    # Load images
+    images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]
 
-print(f"Mean prediction error (all images): {np.mean(errors)}")
+    errors = []
+    for (img, filename) in images[:9]:
+        frame_id = os.path.basename(filename)
+        gt_labels = get_corner_labels_from_csv(f"{filename[:-13]}/corner_labels.csv", frame_id)
+        corners = run_pipeline_single_image(img, show_corners=True)
+        error = corner_estimation_error(corners, gt_labels, verbose=True)
+        print(f"Mean prediction error: {error}")
+        errors.append(error)
+        cv.waitKey(0)
+
+    print(f"Mean prediction error (all images): {np.mean(errors)}")
+
+def evaluate_circle_detector():
+    # Load images
+    images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]
+
+    # errors = []
+
+    for (img, filename) in images[:9]:
+        frame_id = os.path.basename(filename)
+        gt_circle_params = get_circle_labels_from_csv(f"{filename[:-13]}/circle_labels.csv", frame_id)
+        circle_params = run_cropping_only(img, show_crop=True)
+        error = circle_estimation_error(circle_params, gt_circle_params, verbose=True)
+        # errors.append(error)
+        cv.waitKey(0)
+
+if __name__ == "__main__":
+    evaluate_circle_detector()
