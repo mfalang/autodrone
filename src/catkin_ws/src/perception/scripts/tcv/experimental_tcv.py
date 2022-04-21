@@ -328,9 +328,15 @@ def run_pipeline_single_image(img, show_corners=True, use_matplot_lib=False):
 
 def run_cropping_only(img, show_crop=False):
     img = blur_image_gaussian(img)
-    img_masked, circle_mask, circle_params = hough_circle(img)
+    try:
+        img_masked, circle_mask, circle_params = hough_circle(img)
+        out_img = img_masked
+    except TypeError:
+        out_img = img
+        circle_params = np.zeros(3)
+
     if show_crop:
-        show_image_opencv(img_masked)
+        show_image_opencv(out_img)
     return np.array(circle_params)
 
 def run_pipeline_all_images():
@@ -400,14 +406,14 @@ def evaluate_circle_detector():
     # Load images
     images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]
 
-    # errors = []
+    errors = []
 
-    for (img, filename) in images[:9]:
+    for (img, filename) in images:
         frame_id = os.path.basename(filename)
         gt_circle_params = get_circle_labels_from_csv(f"{filename[:-13]}/circle_labels.csv", frame_id)
         circle_params = run_cropping_only(img, show_crop=True)
         error = circle_estimation_error(circle_params, gt_circle_params, verbose=True)
-        # errors.append(error)
+        errors.append(error)
         cv.waitKey(0)
 
 if __name__ == "__main__":
