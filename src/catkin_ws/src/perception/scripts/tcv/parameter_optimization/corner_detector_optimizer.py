@@ -1,8 +1,8 @@
-# A script to get the best parameters for the Shi-Tomasi corner detector and the
-# Hough circle detector
+# A script to get the best parameters for the Shi-Tomasi corner detector
 
 import os
 import glob
+import yaml
 import cv2 as cv
 import numpy as np
 import pandas as pd
@@ -140,18 +140,11 @@ def get_circle_mask(img):
 
     return circle_mask
 
-def get_corner_labels_from_csv(filename: str, frame_id: str):
-    # Returns [[x1, y1],
-    #          [x2, y2],
-    #          .........
-    #          [x12, y12]]
-    return pd.read_csv(filename, index_col=0).loc[frame_id, :].to_numpy().reshape((13,2))
-
 def create_XY():
-    images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))][:9]
+    images = [(cv.imread(file), file) for file in sorted(glob.glob("../test_images/real/*.jpg"))][:9]
     del images[3] # remove image that has not been cropped properly
 
-    y_df = pd.read_csv("test_images/real/corner_labels.csv", index_col=0)
+    y_df = pd.read_csv("../test_images/real/corner_labels.csv", index_col=0)
 
     X = []
     y = []
@@ -182,5 +175,10 @@ param_grid = [{"quality_level": [0.001, 0.01, 0.1, 1],
 scorer_function = make_scorer(prediction_error, greater_is_better=False)
 grid = GridSearchCV(CornerDetector(), param_grid, scoring=scorer_function, verbose=51, n_jobs=10)
 grid.fit(X, y)
+results = pd.DataFrame(grid.cv_results_)
+results.to_csv("results/corner_params_grid_search_results.csv")
+with open("results/corner_params.yaml", "w+") as f:
+    yaml.dump(grid.best_params_, f, default_flow_style=False)
 print(f"Best parameters: {grid.best_params_}")
 print(f"Score: {grid.best_score_}")
+print(f"Best index: {grid.best_index_}")

@@ -172,10 +172,27 @@ def hough_circle(img, use_matplotlib=True):
     gray = cv.cvtColor(blurred_img, cv.COLOR_BGR2GRAY)
 
     rows = gray.shape[0]
-    circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, 1000,
-                        param1=50, param2=50,
-                        minRadius=10, maxRadius=700)
+
+    method = cv.HOUGH_GRADIENT
+    dp = 1
+    min_dist = 1000
+    param1 = 50
+    param2 = 50
+    min_radius = 10
+    max_radius = 700
+
+    # Parameters from grid search test
+    param1 = 80
+    param2 = 30
+    min_radius = 10
+    max_radius = 500
+
+    circles = cv.HoughCircles(gray, method=method, dp=dp, minDist=min_dist,
+                        param1=param1, param2=param2,
+                        minRadius=min_radius, maxRadius=max_radius)
+
     output = img.copy()
+
     if circles is not None and len(circles) == 1:
         # r_largest = 0
         # center_largest = None
@@ -394,5 +411,5 @@ def evaluate_circle_detector():
         cv.waitKey(0)
 
 if __name__ == "__main__":
-    # evaluate_circle_detector()
-    evaluate_corner_detector()
+    evaluate_circle_detector()
+    # evaluate_corner_detector()
