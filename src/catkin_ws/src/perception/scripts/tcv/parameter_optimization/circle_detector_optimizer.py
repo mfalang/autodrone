@@ -14,7 +14,9 @@ from sklearn.model_selection import GridSearchCV
 class CircleDetector(sklearn.base.BaseEstimator):
 
     def __init__(self, method=cv.HOUGH_GRADIENT, dp=1, min_dist=1000, param1=50,
-        param2=50, min_radius=10, max_radius=700
+        param2=50, min_radius=10, max_radius=700, use_gaussian_blur=True,
+        gaussian_kernel=5, use_median_blur=True, median_kernel=11, use_bilateral_blur=True,
+        bilateral_diameter=9
     ):
 
         self.method = method
@@ -24,6 +26,12 @@ class CircleDetector(sklearn.base.BaseEstimator):
         self.param2 = param2
         self.min_radius = min_radius
         self.max_radius = max_radius
+        self.use_gaussian_blur = use_gaussian_blur
+        self.gaussian_kernel = gaussian_kernel
+        self.use_median_blur = use_median_blur
+        self.median_kernel = median_kernel
+        self.use_bilateral_blur = use_bilateral_blur
+        self.bilateral_diameter = bilateral_diameter
 
     def set_params(self, **params):
         return super().set_params(**params)
@@ -38,8 +46,17 @@ class CircleDetector(sklearn.base.BaseEstimator):
         for X_i in X:
             # TODO: Make this blurring dependent on learnable parameters
             img = X_i.reshape((720, 1280, 3))
-            blurred_img = blur_image(img)
-            img_gray = cv.cvtColor(blurred_img.copy(), cv.COLOR_BGR2GRAY)
+
+            if self.use_median_blur:
+                img = cv.medianBlur(img, self.median_kernel)
+
+            if self.use_gaussian_blur:
+                img = cv.GaussianBlur(img,(self.gaussian_kernel,self.gaussian_kernel),0)
+
+            if self.use_bilateral_blur:
+                img = cv.bilateralFilter(img,self.bilateral_diameter,75,75)
+
+            img_gray = cv.cvtColor(img.copy(), cv.COLOR_BGR2GRAY)
 
             circles = cv.HoughCircles(img_gray, method=self.method, dp=self.dp,
                 minDist=self.min_dist, param1=self.param1, param2=self.param2,
@@ -113,15 +130,27 @@ def create_XY():
 
 X, y = create_XY()
 
-# param_grid = [{"method": [cv.HOUGH_GRADIENT, cv.HOUGH_STANDARD, cv.HOUGH_GRADIENT_ALT, cv.HOUGH_PROBABILISTIC, cv.HOUGH_MULTI_SCALE],
-#             "dp": [0.5, 1, 2],
-#             "min_dist": [10, 50, 100, 300, 500, 1000],
-#             "param1": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
-#             "param2": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
-#             "min_radius": [5, 10, 20, 50, 100],
-#             "max_radius": [100, 500, 700, 1000]}]
+# param_grid = [{"use_gaussian_blur": [True, False],
+#             "gaussian_kernel": [3, 5, 7],
+#             "use_median_blur": [True, False],
+#             "median_kernel": [9, 11, 13],
+#             "use_bilateral_blur": [True, False],
+#             "bilateral_diameter": [5, 7, 9],
+#             "method": [cv.HOUGH_GRADIENT],
+#             "dp": [1],
+#             "min_dist": [1000],
+#             "param1": [30, 40, 50, 60, 70, 80],
+#             "param2": [30, 40, 50, 60, 70, 80],
+#             "min_radius": [10],
+#             "max_radius": [500, 700, 1000]}]
 
-param_grid = [{"method": [cv.HOUGH_GRADIENT],
+param_grid = [{"use_gaussian_blur": [True],
+            "gaussian_kernel": [5],
+            "use_median_blur": [True],
+            "median_kernel": [11],
+            "use_bilateral_blur": [True],
+            "bilateral_diameter": [9],
+            "method": [cv.HOUGH_GRADIENT],
             "dp": [1],
             "min_dist": [1000],
             "param1": [30, 40, 50, 60, 70, 80],
