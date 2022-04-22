@@ -65,8 +65,8 @@ except FileNotFoundError:
 start_image = 0
 print(f"Starting from image {start_image}: {images[start_image][1]}")
 
-for (img, filename) in images[start_image:]:
-    header = f"{'='*10} Labeling image: {filename} {'='*10}"
+for i, (img, filename) in enumerate(images[start_image:]):
+    header = f"{'='*10} Labeling image: {filename} ({i}/{len(images)}) {'='*10}"
     print(header)
 
     ans = "r"
