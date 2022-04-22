@@ -45,7 +45,6 @@ class CircleDetector(sklearn.base.BaseEstimator):
         y_pred = []
 
         for X_i in X:
-            # TODO: Make this blurring dependent on learnable parameters
             img = X_i.reshape((720, 1280, 3))
 
             if self.use_median_blur:

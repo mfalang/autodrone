@@ -3,6 +3,7 @@
 import os
 import glob
 import yaml
+import time
 import cv2 as cv
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ from scipy.spatial import distance
 
 import sklearn
 from sklearn.metrics import make_scorer
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 
 class CornerDetector(sklearn.base.BaseEstimator):
@@ -136,26 +137,39 @@ def hough_circle(img, use_matplotlib=True):
 
 def get_circle_mask(img):
     img = blur_image_gaussian(img)
-    _, circle_mask, _ = hough_circle(img)
+    # try:
+    try:
+        _, circle_mask, _ = hough_circle(img)
+    except:
+        raise TypeError
+    # except TypeError:
+        # circle_mask = np.ones((720, 1280))
 
     return circle_mask
 
 def create_XY():
-    images = [(cv.imread(file), file) for file in sorted(glob.glob("../test_images/real/*.jpg"))][:9]
-    del images[3] # remove image that has not been cropped properly
+    images = [(cv.imread(file), file) for file in sorted(glob.glob("../test_images/real/*.jpg"))]
+    # del images[3] # remove image that has not been cropped properly
 
     y_df = pd.read_csv("../test_images/real/corner_labels.csv", index_col=0)
+
+    with open("../test_images/real/corner_optimization_images_to_use.txt") as f:
+        images_to_use = f.read().splitlines()
 
     X = []
     y = []
 
     for img, filename in images:
         frame_id = os.path.basename(filename)
-        if frame_id in y_df.index:
-            y_i = y_df.loc[frame_id, :].to_numpy().reshape((13,2))
-            y.append(y_i.flatten())
-            mask = get_circle_mask(img)
-            X.append(np.hstack((img.flatten(), mask.flatten())))
+        if frame_id in images_to_use and frame_id in y_df.index:
+            try:
+                mask = get_circle_mask(img)
+                X.append(np.hstack((img.flatten(), mask.flatten())))
+                y_i = y_df.loc[frame_id, :].to_numpy().reshape((13,2))
+                y.append(y_i.flatten())
+            except:
+                print(f"Could not get mask for img: {frame_id}. Skipping it.")
+                continue
 
     X = np.array(X)
     y = np.array(y)
@@ -163,18 +177,32 @@ def create_XY():
     return X, y
 
 X, y = create_XY()
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size = 0.75, random_state = 101
+)
 
-param_grid = [{"quality_level": [0.001, 0.01, 0.1, 1],
+param_grid = [{"quality_level": [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1, 1],
             "min_distance": [1, 5, 10],
             "block_size": [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21],
-            "gradient_size": [1, 3, 5, 7, 9, 11, 13, 17, 19],
-            "use_harris_detector": [False],
+            "gradient_size": [1, 3, 5, 7, 9, 11, 13, 15, 17, 19],
+            "use_harris_detector": [True, False],
             "k": [0.04],
             "max_corners": [13]}]
 
+# param_grid = [{"quality_level": [0.0001],
+#             "min_distance": [1, 5, 10],
+#             "block_size": [1, 21],
+#             "gradient_size": [1],
+#             "use_harris_detector": [True],
+#             "k": [0.04],
+#             "max_corners": [13]}]
+
 scorer_function = make_scorer(prediction_error, greater_is_better=False)
-grid = GridSearchCV(CornerDetector(), param_grid, scoring=scorer_function, verbose=51, n_jobs=10)
-grid.fit(X, y)
+grid = GridSearchCV(CornerDetector(), param_grid, scoring=scorer_function, verbose=10, n_jobs=10)
+start_time = time.time()
+grid.fit(X_train, y_train)
+duration_sec = time.time() - start_time
+print(f"Grid search used: {int(duration_sec)} sec")
 results = pd.DataFrame(grid.cv_results_)
 results.to_csv("results/corner_params_grid_search_results.csv")
 with open("results/corner_params.yaml", "w+") as f:
@@ -182,3 +210,8 @@ with open("results/corner_params.yaml", "w+") as f:
 print(f"Best parameters: {grid.best_params_}")
 print(f"Score: {grid.best_score_}")
 print(f"Best index: {grid.best_index_}")
+
+# Test parameters
+grid_predictions = grid.predict(X_test)
+# print classification report
+print(f"Test set score: {prediction_error(y_test, grid_predictions)}")

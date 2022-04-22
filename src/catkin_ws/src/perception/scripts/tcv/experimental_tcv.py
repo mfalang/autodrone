@@ -44,7 +44,6 @@ def circle_estimation_error(pred: np.ndarray, gt: np.ndarray, verbose=False):
     if error_radius/gt[2] < 0.2:
         return 0
     else:
-        print("Misdetected")
         return 1
 
 def show_image_matplotlib(img):
@@ -159,9 +158,18 @@ def find_corners_shi_tomasi(img, mask):
     gradient_size = 9
     min_distance = 1
 
+    # Parameters from newest grid search
+    block_size = 7
+    gradient_size = 17
+    k = 0.04
+    max_corners = 13
+    min_distance = 1
+    quality_level = 0.0001
+    use_harris_detector = True
+
     corners = cv.goodFeaturesToTrack(img, max_corners, quality_level,
         min_distance, mask=mask, blockSize=block_size,
-        gradientSize=gradient_size, useHarrisDetector=False, k=k
+        gradientSize=gradient_size, useHarrisDetector=use_harris_detector, k=k
     )
 
     if corners is not None:
@@ -197,7 +205,7 @@ def hough_circle(img, use_matplotlib=True):
                         param1=param1, param2=param2,
                         minRadius=min_radius, maxRadius=max_radius)
 
-    print(f"Hough circle used {time.time() - start_time:.3f} sec")
+    # print(f"Hough circle used {time.time() - start_time:.3f} sec")
 
     output = img.copy()
 
@@ -253,7 +261,7 @@ def hough_circle(img, use_matplotlib=True):
         return img_masked, circle_mask, (x,y,r)
     else:
         # show_image_opencv(img)
-        return None
+        return img, np.ones((720, 1280)), (0,0,0)
 
 
 
@@ -395,7 +403,7 @@ def evaluate_corner_detector():
     images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]
 
     errors = []
-    for (img, filename) in images[:9]:
+    for (img, filename) in images:
 
         frame_id = os.path.basename(filename)
         if frame_id == "frame0004.jpg":
@@ -420,12 +428,14 @@ def evaluate_circle_detector():
         frame_id = os.path.basename(filename)
         gt_circle_params = get_circle_labels_from_csv(f"{filename[:-13]}/circle_labels.csv", frame_id)
         circle_params = run_cropping_only(img, show_crop=True)
-        error = circle_estimation_error(circle_params, gt_circle_params, verbose=True)
+        error = circle_estimation_error(circle_params, gt_circle_params, verbose=False)
+        if error:
+            print(f"Could not find correct circle in image: {filename}")
         errors.append(error)
         cv.waitKey(0)
 
     print(f"Misdetected images: {np.count_nonzero(errors)}/{len(errors)}")
 
 if __name__ == "__main__":
-    evaluate_circle_detector()
-    # evaluate_corner_detector()
+    # evaluate_circle_detector()
+    evaluate_corner_detector()
