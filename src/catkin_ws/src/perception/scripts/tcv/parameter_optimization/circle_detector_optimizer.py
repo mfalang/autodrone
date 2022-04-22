@@ -10,6 +10,7 @@ import pandas as pd
 import sklearn
 from sklearn.metrics import make_scorer
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
 
 class CircleDetector(sklearn.base.BaseEstimator):
 
@@ -63,10 +64,9 @@ class CircleDetector(sklearn.base.BaseEstimator):
                 minRadius=self.min_radius, maxRadius=self.max_radius
             )
 
-            # convert the (x, y) coordinates and radius of the circles to integers
-            circles = np.round(circles[0, :]).astype("int")
-
             if circles is not None and len(circles) == 1:
+                # convert the (x, y) coordinates and radius of the circles to integers
+                circles = np.round(circles[0, :]).astype("int")
                 y_pred_i = np.array(circles[0])
             else:
                 y_pred_i = np.zeros(3)
@@ -109,7 +109,7 @@ def blur_image(img):
 
 
 def create_XY():
-    images = [(cv.imread(file), file) for file in sorted(glob.glob("../test_images/real/*.jpg"))][:9]
+    images = [(cv.imread(file), file) for file in sorted(glob.glob("../test_images/real/*.jpg"))]
 
     y_df = pd.read_csv("../test_images/real/circle_labels.csv", index_col=0)
 
@@ -129,6 +129,9 @@ def create_XY():
     return X, y
 
 X, y = create_XY()
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size = 0.30, random_state = 101
+)
 
 # param_grid = [{"use_gaussian_blur": [True, False],
 #             "gaussian_kernel": [3, 5, 7],
@@ -153,14 +156,14 @@ param_grid = [{"use_gaussian_blur": [True],
             "method": [cv.HOUGH_GRADIENT],
             "dp": [1],
             "min_dist": [1000],
-            "param1": [30, 40, 50, 60, 70, 80],
-            "param2": [30, 40, 50, 60, 70, 80],
-            "min_radius": [10],
-            "max_radius": [500, 700, 1000]}]
+            "param1": [20, 30, 40, 50, 60, 70, 80, 100],
+            "param2": [20, 30, 40, 50, 60, 70, 80, 100],
+            "min_radius": [50],
+            "max_radius": [500]}]
 
 scorer_function = make_scorer(CircleDetector().prediction_error, greater_is_better=False)
 grid = GridSearchCV(CircleDetector(), param_grid, scoring=scorer_function, verbose=10, n_jobs=10)
-grid.fit(X, y)
+grid.fit(X_train, y_train)
 results = pd.DataFrame(grid.cv_results_)
 results.to_csv("results/circle_params_grid_search_results.csv")
 with open("results/circle_params.yaml", "w+") as f:
@@ -168,3 +171,8 @@ with open("results/circle_params.yaml", "w+") as f:
 print(f"Best parameters: {grid.best_params_}")
 print(f"Score: {grid.best_score_}")
 print(f"Best index: {grid.best_index_}")
+
+# Test parameters
+grid_predictions = grid.predict(X_test)
+# print classification report
+print(f"Test set score: {CircleDetector().prediction_error(y_test, grid_predictions)}")

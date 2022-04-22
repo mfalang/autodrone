@@ -41,7 +41,11 @@ def circle_estimation_error(pred: np.ndarray, gt: np.ndarray, verbose=False):
         print(f"Error origin: \t\t{error_origin:.2f} \t(pred: {(pred[0], pred[1])} gt: {(gt[0], gt[1])})")
         print(f"Error radius (abs): \t{error_radius:.2f} \t(pred: {pred[2]} gt: {gt[2]})")
 
-    return error_origin, error_radius
+    if error_radius/gt[2] < 0.2:
+        return 0
+    else:
+        print("Misdetected")
+        return 1
 
 def show_image_matplotlib(img):
     try: # fails if image is grayscale, then just show it
@@ -182,14 +186,18 @@ def hough_circle(img, use_matplotlib=True):
     max_radius = 700
 
     # Parameters from grid search test
-    param1 = 80
-    param2 = 30
-    min_radius = 10
+    param1 = 40
+    param2 = 70
+    min_radius = 50
     max_radius = 500
+
+    start_time = time.time()
 
     circles = cv.HoughCircles(gray, method=method, dp=dp, minDist=min_dist,
                         param1=param1, param2=param2,
                         minRadius=min_radius, maxRadius=max_radius)
+
+    print(f"Hough circle used {time.time() - start_time:.3f} sec")
 
     output = img.copy()
 
@@ -225,7 +233,7 @@ def hough_circle(img, use_matplotlib=True):
         # Create circle mask
         (x, y, r) = circles[0]
         circle_mask = np.zeros((720,1280), np.uint8)
-        cv.circle(circle_mask, (x,y), int(r * 1.30), (255, 0, 255), cv.FILLED)
+        cv.circle(circle_mask, (x,y), int(r * 1.40), (255, 0, 255), cv.FILLED)
         img_masked = cv.bitwise_and(img, img, mask=circle_mask)
 
         # loop over the (x, y) coordinates and radius of the circles
@@ -415,6 +423,8 @@ def evaluate_circle_detector():
         error = circle_estimation_error(circle_params, gt_circle_params, verbose=True)
         errors.append(error)
         cv.waitKey(0)
+
+    print(f"Misdetected images: {np.count_nonzero(errors)}/{len(errors)}")
 
 if __name__ == "__main__":
     evaluate_circle_detector()
