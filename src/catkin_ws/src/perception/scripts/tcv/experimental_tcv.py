@@ -167,10 +167,14 @@ def find_corners_shi_tomasi(img, mask):
     quality_level = 0.0001
     use_harris_detector = True
 
+    start_time = time.time()
+
     corners = cv.goodFeaturesToTrack(img, max_corners, quality_level,
         min_distance, mask=mask, blockSize=block_size,
         gradientSize=gradient_size, useHarrisDetector=use_harris_detector, k=k
     )
+
+    print(f"Shi-Tomasi corner detector used {time.time() - start_time:.3f} sec")
 
     if corners is not None:
         return corners.reshape(corners.shape[0], 2)
@@ -411,7 +415,7 @@ def evaluate_corner_detector():
 
         gt_labels = get_corner_labels_from_csv(f"{filename[:-13]}/corner_labels.csv", frame_id)
         corners = run_pipeline_single_image(img, show_corners=True)
-        error = corner_estimation_error(corners, gt_labels, verbose=True)
+        error = corner_estimation_error(corners, gt_labels, verbose=False)
         print(f"Mean prediction error: {error}")
         errors.append(error)
         cv.waitKey(0)

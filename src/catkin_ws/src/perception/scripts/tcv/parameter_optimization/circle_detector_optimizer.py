@@ -165,8 +165,10 @@ grid = GridSearchCV(CircleDetector(), param_grid, scoring=scorer_function, verbo
 grid.fit(X_train, y_train)
 results = pd.DataFrame(grid.cv_results_)
 results.to_csv("results/circle_params_grid_search_results.csv")
+params = grid.best_params_.copy()
+params["best_index"] = int(grid.best_index_)
 with open("results/circle_params.yaml", "w+") as f:
-    yaml.dump(grid.best_params_, f)
+    yaml.dump(params, f, default_flow_style=False)
 print(f"Best parameters: {grid.best_params_}")
 print(f"Score: {grid.best_score_}")
 print(f"Best index: {grid.best_index_}")

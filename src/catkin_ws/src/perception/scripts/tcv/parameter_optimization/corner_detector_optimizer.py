@@ -153,15 +153,12 @@ def create_XY():
 
     y_df = pd.read_csv("../test_images/real/corner_labels.csv", index_col=0)
 
-    with open("../test_images/real/corner_optimization_images_to_use.txt") as f:
-        images_to_use = f.read().splitlines()
-
     X = []
     y = []
 
     for img, filename in images:
         frame_id = os.path.basename(filename)
-        if frame_id in images_to_use and frame_id in y_df.index:
+        if frame_id in y_df.index:
             try:
                 mask = get_circle_mask(img)
                 X.append(np.hstack((img.flatten(), mask.flatten())))
@@ -205,8 +202,10 @@ duration_sec = time.time() - start_time
 print(f"Grid search used: {int(duration_sec)} sec")
 results = pd.DataFrame(grid.cv_results_)
 results.to_csv("results/corner_params_grid_search_results.csv")
+params = grid.best_params_.copy()
+params["best_index"] = int(grid.best_index_)
 with open("results/corner_params.yaml", "w+") as f:
-    yaml.dump(grid.best_params_, f, default_flow_style=False)
+    yaml.dump(params, f, default_flow_style=False)
 print(f"Best parameters: {grid.best_params_}")
 print(f"Score: {grid.best_score_}")
 print(f"Best index: {grid.best_index_}")
