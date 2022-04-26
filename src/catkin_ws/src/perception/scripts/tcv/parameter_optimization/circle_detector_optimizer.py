@@ -127,53 +127,54 @@ def create_XY():
 
     return X, y
 
-X, y = create_XY()
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size = 0.30, random_state = 101
-)
+if __name__ == "__main__":
+    X, y = create_XY()
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size = 0.30, random_state = 101
+    )
 
-# param_grid = [{"use_gaussian_blur": [True, False],
-#             "gaussian_kernel": [3, 5, 7],
-#             "use_median_blur": [True, False],
-#             "median_kernel": [9, 11, 13],
-#             "use_bilateral_blur": [True, False],
-#             "bilateral_diameter": [5, 7, 9],
-#             "method": [cv.HOUGH_GRADIENT],
-#             "dp": [1],
-#             "min_dist": [1000],
-#             "param1": [30, 40, 50, 60, 70, 80],
-#             "param2": [30, 40, 50, 60, 70, 80],
-#             "min_radius": [10],
-#             "max_radius": [500, 700, 1000]}]
+    # param_grid = [{"use_gaussian_blur": [True, False],
+    #             "gaussian_kernel": [3, 5, 7],
+    #             "use_median_blur": [True, False],
+    #             "median_kernel": [9, 11, 13],
+    #             "use_bilateral_blur": [True, False],
+    #             "bilateral_diameter": [5, 7, 9],
+    #             "method": [cv.HOUGH_GRADIENT],
+    #             "dp": [1],
+    #             "min_dist": [1000],
+    #             "param1": [30, 40, 50, 60, 70, 80],
+    #             "param2": [30, 40, 50, 60, 70, 80],
+    #             "min_radius": [10],
+    #             "max_radius": [500, 700, 1000]}]
 
-param_grid = [{"use_gaussian_blur": [True],
-            "gaussian_kernel": [5],
-            "use_median_blur": [True],
-            "median_kernel": [11],
-            "use_bilateral_blur": [True],
-            "bilateral_diameter": [9],
-            "method": [cv.HOUGH_GRADIENT],
-            "dp": [1],
-            "min_dist": [1000],
-            "param1": [20, 30, 40, 50, 60, 70, 80, 100],
-            "param2": [20, 30, 40, 50, 60, 70, 80, 100],
-            "min_radius": [50],
-            "max_radius": [500]}]
+    param_grid = [{"use_gaussian_blur": [True],
+                "gaussian_kernel": [5],
+                "use_median_blur": [True],
+                "median_kernel": [11],
+                "use_bilateral_blur": [True],
+                "bilateral_diameter": [9],
+                "method": [cv.HOUGH_GRADIENT],
+                "dp": [1],
+                "min_dist": [1000],
+                "param1": [20, 30, 40, 50, 60, 70, 80, 100],
+                "param2": [20, 30, 40, 50, 60, 70, 80, 100],
+                "min_radius": [50],
+                "max_radius": [500]}]
 
-scorer_function = make_scorer(CircleDetector().prediction_error, greater_is_better=False)
-grid = GridSearchCV(CircleDetector(), param_grid, scoring=scorer_function, verbose=10, n_jobs=10)
-grid.fit(X_train, y_train)
-results = pd.DataFrame(grid.cv_results_)
-results.to_csv("results/circle_params_grid_search_results.csv")
-params = grid.best_params_.copy()
-params["best_index"] = int(grid.best_index_)
-with open("results/circle_params.yaml", "w+") as f:
-    yaml.dump(params, f, default_flow_style=False)
-print(f"Best parameters: {grid.best_params_}")
-print(f"Score: {grid.best_score_}")
-print(f"Best index: {grid.best_index_}")
+    scorer_function = make_scorer(CircleDetector().prediction_error, greater_is_better=False)
+    grid = GridSearchCV(CircleDetector(), param_grid, scoring=scorer_function, verbose=10, n_jobs=10)
+    grid.fit(X_train, y_train)
+    results = pd.DataFrame(grid.cv_results_)
+    results.to_csv("results/circle_params_grid_search_results.csv")
+    params = grid.best_params_.copy()
+    params["best_index"] = int(grid.best_index_)
+    with open("results/circle_params.yaml", "w+") as f:
+        yaml.dump(params, f, default_flow_style=False)
+    print(f"Best parameters: {grid.best_params_}")
+    print(f"Score: {grid.best_score_}")
+    print(f"Best index: {grid.best_index_}")
 
-# Test parameters
-grid_predictions = grid.predict(X_test)
-# print classification report
-print(f"Test set score: {CircleDetector().prediction_error(y_test, grid_predictions)}")
+    # Test parameters
+    grid_predictions = grid.predict(X_test)
+    # print classification report
+    print(f"Test set score: {CircleDetector().prediction_error(y_test, grid_predictions)}")

@@ -1,8 +1,8 @@
 
 import cv2 as cv
 import numpy as np
-from numpy.core.numeric import isclose
-from numpy.core.records import array
+from parameter_optimization.circle_detector_optimizer import CircleDetector
+from parameter_optimization.corner_detector_optimizer import CornerDetector
 
 HSV_SIM_GREEN = [120, 100, 30]
 
@@ -19,17 +19,50 @@ SAT_HIGH_GREEN = 100
 VAL_LOW_GREEN = 15
 VAL_HIGH_GREEN = 60
 
-class CornerDetector():
+class FeatureDetector():
 
-    def __init__(self, shi_tomasi_config):
-        self._max_corners = shi_tomasi_config["max_corners"]
-        self._quality_level = shi_tomasi_config["quality_level"]
-        self._min_distance = shi_tomasi_config["min_distance"]
-        self._block_size = shi_tomasi_config["block_size"]
-        self._gradient_size = shi_tomasi_config["gradient_size"]
-        self._k = shi_tomasi_config["k"]
+    def __init__(self, shi_tomasi_config, hough_circle_config):
+
+        self._corner_detector = CornerDetector(
+            quality_level=shi_tomasi_config["quality_level"],
+            min_distance=shi_tomasi_config["min_distance"],
+            block_size=shi_tomasi_config["block_size"],
+            gradient_size=shi_tomasi_config["gradient_size"],
+            use_harris_detector=shi_tomasi_config["use_harris_detector"],
+            k=shi_tomasi_config["k"],
+            max_corners=shi_tomasi_config["max_corners"]
+        )
+
+        self._circle_detector = CircleDetector(
+            method=hough_circle_config["method"],
+            dp=hough_circle_config["dp"],
+            param1=hough_circle_config["param1"],
+            param2=hough_circle_config["param2"],
+            min_radius=hough_circle_config["min_radius"],
+            max_radius=hough_circle_config["max_radius"],
+            use_gaussian_blur=hough_circle_config["use_gaussian_blur"],
+            gaussian_kernel=hough_circle_config["gaussian_kernel"],
+            use_median_blur=hough_circle_config["use_median_blur"],
+            median_kernel=hough_circle_config["median_kernel"],
+            use_bilateral_blur=hough_circle_config["use_bilateral_blur"],
+            bilateral_diameter=hough_circle_config["bilateral_diameter"],
+        )
 
         self.fast_feature_dector = cv.FastFeatureDetector_create()
+
+    def create_helipad_mask(self, img, show_masked_img=False):
+
+        xyr = self._circle_detector.predict([img.flatten()])[0]
+
+        circle_mask = np.zeros((720,1280), np.uint8)
+        if np.count_nonzero(xyr) != 0:
+            cv.circle(circle_mask, (xyr[0], xyr[1]), int(xyr[2] * 1.40), (255, 0, 255), cv.FILLED)
+
+        if show_masked_img:
+            img_masked = cv.bitwise_and(img, img, mask=circle_mask)
+            cv.imshow("Masked image", img_masked)
+
+        return circle_mask
 
     def preprocess_image(self, img, segment=False):
 
@@ -101,17 +134,14 @@ class CornerDetector():
 
         return corners
 
-    def find_corners_shi_tomasi(self, img):
+    def find_corners_shi_tomasi(self, img, mask):
 
-        corners = cv.goodFeaturesToTrack(img, self._max_corners, self._quality_level,
-            self._min_distance, None, blockSize=self._block_size,
-            gradientSize=self._gradient_size, useHarrisDetector=False, k=self._k
-        )
+        corners = self._corner_detector.predict([np.hstack((img.flatten(), mask.flatten()))])[0]
 
-        if corners is not None:
-            return corners.reshape(corners.shape[0], 2)
+        if np.count_nonzero(corners) != 0:
+            return corners
         else:
-            return np.array([])
+            return None
 
     def find_arrow_and_H(self, corners, helipad_dists_metric):
 
@@ -305,26 +335,48 @@ class CornerDetector():
         cv.imshow("Detected corners", image)
 
 def main():
-    config = {
+    shi_tomasi_config = {
         "max_corners" : 13,
-        "quality_level" : 0.01,
-        "min_distance" : 30,
-        "block_size" : 20,
-        "gradient_size" : 30,
-        "k" : 0.04
+        "quality_level" : 0.0001,
+        "min_distance" : 1,
+        "block_size" : 7,
+        "gradient_size" : 17,
+        "k" : 0.04,
+        "use_harris_detector": True
     }
 
-    corner_detector = CornerDetector(config)
+    hough_circle_config = {
+        "bilateral_diameter": 9,
+        "dp": 1,
+        "gaussian_kernel": 5,
+        "max_radius": 500,
+        "median_kernel": 11,
+        "method": 3,
+        "min_dist": 1000,
+        "min_radius": 50,
+        "param1": 40,
+        "param2": 70,
+        "use_bilateral_blur": True,
+        "use_gaussian_blur": True,
+        "use_median_blur": True
+    }
 
-    img = cv.imread("test_images/test1.png")
+    corner_detector = FeatureDetector(shi_tomasi_config, hough_circle_config)
+
+    img = cv.imread("test_images/real/frame0001.jpg")
     # img = cv.imread("../../data/test_images_real/real_test_2.png")
-    img_gray = corner_detector.preprocess_image(img)
-    cv.imshow("test", img_gray)
+    # img_gray = corner_detector.preprocess_image(img)
+    cv.imshow("test", img)
     # corners = corner_detector.find_corners_harris(img_gray)
     # corner_detector.show_corners_found(img, corners)
-    corners = corner_detector.find_corners_shi_tomasi(img_gray)
+    mask = corner_detector.create_helipad_mask(img, show_masked_img=True)
+    corners = corner_detector.find_corners_shi_tomasi(img, mask)
     corner_detector.show_corners_found(img, corners, color="red")
 
+    features_metric = np.loadtxt("../../data/helipad_dists_origin_center_enu_metric.txt")
+
+    features = corner_detector.find_arrow_and_H(corners, features_metric)
+    corner_detector.show_known_points(img, features)
     cv.waitKey()
 
 if __name__ == "__main__":

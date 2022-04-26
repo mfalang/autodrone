@@ -2,7 +2,6 @@
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
-from numpy.core.numeric import zeros_like
 
 import homography
 
@@ -199,17 +198,35 @@ def main():
     import sys
     import yaml
     import time
-    import corner_detector
+    import feature_detector
 
-    detector_config = {
+    shi_tomasi_config = {
         "max_corners" : 13,
-        "quality_level" : 0.001,
-        "min_distance" : 10,
-        "block_size" : 3,
-        "gradient_size" : 3,
-        "k" : 0.04
+        "quality_level" : 0.0001,
+        "min_distance" : 1,
+        "block_size" : 7,
+        "gradient_size" : 17,
+        "k" : 0.04,
+        "use_harris_detector": True
     }
-    detector = corner_detector.CornerDetector(detector_config)
+
+    hough_circle_config = {
+        "bilateral_diameter": 9,
+        "dp": 1,
+        "gaussian_kernel": 5,
+        "max_radius": 500,
+        "median_kernel": 11,
+        "method": 3,
+        "min_dist": 1000,
+        "min_radius": 50,
+        "param1": 40,
+        "param2": 70,
+        "use_bilateral_blur": True,
+        "use_gaussian_blur": True,
+        "use_median_blur": True
+    }
+
+    detector = feature_detector.FeatureDetector(shi_tomasi_config, hough_circle_config)
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -232,10 +249,10 @@ def main():
     pose_recoverer = PoseRecovery(K)
 
     img = cv.imread("test_images/test4.png")
+    mask = detector.create_helipad_mask(img, show_masked_img=True)
+    # img_processed = detector.preprocess_image(img)
 
-    img_processed = detector.preprocess_image(img)
-
-    corners = detector.find_corners_shi_tomasi(img_processed)
+    corners = detector.find_corners_shi_tomasi(img, mask)
     # detector.show_corners_found(img, corners, color="red")
 
     features_image = detector.find_arrow_and_H(corners, features_metric)

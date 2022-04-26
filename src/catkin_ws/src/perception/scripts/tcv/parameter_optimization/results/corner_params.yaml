@@ -1,6 +1,6 @@
-best_index: 1470
+best_index: 1596
 block_size: 7
-gradient_size: 11
+gradient_size: 17
 k: 0.04
 max_corners: 13
 min_distance: 1

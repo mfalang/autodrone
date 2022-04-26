@@ -111,8 +111,8 @@ def hough_circle(img, use_matplotlib=True):
 
     rows = gray.shape[0]
     circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, 1000,
-                        param1=50, param2=50,
-                        minRadius=10, maxRadius=700)
+                        param1=40, param2=70,
+                        minRadius=50, maxRadius=500)
     output = img.copy()
     if circles is not None and len(circles) == 1:
         # convert the (x, y) coordinates and radius of the circles to integers
@@ -173,44 +173,45 @@ def create_XY():
 
     return X, y
 
-X, y = create_XY()
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size = 0.75, random_state = 101
-)
+if __name__ == "__main__":
+    X, y = create_XY()
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size = 0.75, random_state = 101
+    )
 
-param_grid = [{"quality_level": [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1, 1],
-            "min_distance": [1, 5, 10],
-            "block_size": [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21],
-            "gradient_size": [1, 3, 5, 7, 9, 11, 13, 15, 17, 19],
-            "use_harris_detector": [True, False],
-            "k": [0.04],
-            "max_corners": [13]}]
+    param_grid = [{"quality_level": [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1, 1],
+                "min_distance": [1, 5, 10],
+                "block_size": [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21],
+                "gradient_size": [1, 3, 5, 7, 9, 11, 13, 15, 17, 19],
+                "use_harris_detector": [True, False],
+                "k": [0.04],
+                "max_corners": [13]}]
 
-# param_grid = [{"quality_level": [0.0001],
-#             "min_distance": [1, 5, 10],
-#             "block_size": [1, 21],
-#             "gradient_size": [1],
-#             "use_harris_detector": [True],
-#             "k": [0.04],
-#             "max_corners": [13]}]
+    # param_grid = [{"quality_level": [0.0001],
+    #             "min_distance": [1, 5, 10],
+    #             "block_size": [1, 21],
+    #             "gradient_size": [1],
+    #             "use_harris_detector": [True],
+    #             "k": [0.04],
+    #             "max_corners": [13]}]
 
-scorer_function = make_scorer(prediction_error, greater_is_better=False)
-grid = GridSearchCV(CornerDetector(), param_grid, scoring=scorer_function, verbose=10, n_jobs=10)
-start_time = time.time()
-grid.fit(X_train, y_train)
-duration_sec = time.time() - start_time
-print(f"Grid search used: {int(duration_sec)} sec")
-results = pd.DataFrame(grid.cv_results_)
-results.to_csv("results/corner_params_grid_search_results.csv")
-params = grid.best_params_.copy()
-params["best_index"] = int(grid.best_index_)
-with open("results/corner_params.yaml", "w+") as f:
-    yaml.dump(params, f, default_flow_style=False)
-print(f"Best parameters: {grid.best_params_}")
-print(f"Score: {grid.best_score_}")
-print(f"Best index: {grid.best_index_}")
+    scorer_function = make_scorer(prediction_error, greater_is_better=False)
+    grid = GridSearchCV(CornerDetector(), param_grid, scoring=scorer_function, verbose=10, n_jobs=10)
+    start_time = time.time()
+    grid.fit(X_train, y_train)
+    duration_sec = time.time() - start_time
+    print(f"Grid search used: {int(duration_sec)} sec")
+    results = pd.DataFrame(grid.cv_results_)
+    results.to_csv("results/corner_params_grid_search_results.csv")
+    params = grid.best_params_.copy()
+    params["best_index"] = int(grid.best_index_)
+    with open("results/corner_params.yaml", "w+") as f:
+        yaml.dump(params, f, default_flow_style=False)
+    print(f"Best parameters: {grid.best_params_}")
+    print(f"Score: {grid.best_score_}")
+    print(f"Best index: {grid.best_index_}")
 
-# Test parameters
-grid_predictions = grid.predict(X_test)
-# print classification report
-print(f"Test set score: {prediction_error(y_test, grid_predictions)}")
+    # Test parameters
+    grid_predictions = grid.predict(X_test)
+    # print classification report
+    print(f"Test set score: {prediction_error(y_test, grid_predictions)}")
