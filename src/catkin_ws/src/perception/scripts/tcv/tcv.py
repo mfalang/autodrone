@@ -9,7 +9,7 @@ import yaml
 import cv2 as cv
 import numpy as np
 
-import corner_detector
+import feature_detector
 import pose_recovery
 
 import perception.msg
@@ -41,14 +41,11 @@ class TcvPoseEstimator():
         self.env = rospy.get_param("~environment")
         self.img_height = rospy.get_param("/drone/camera/img_height")
         self.img_width = rospy.get_param("/drone/camera/img_width")
-        self.focal_length = rospy.get_param("/drone/camera/focal_length")
         self.camera_offset_x_mm = rospy.get_param("/drone/camera/offset_x_mm")
         self.camera_offset_y_mm = rospy.get_param("/drone/camera/offset_y_mm")
         self.camera_offset_z_mm = rospy.get_param("/drone/camera/offset_z_mm")
-
-        self.K = np.loadtxt(
-            f"{script_dir}/../../{self.config['camera_matrix']['path']}"
-        )
+        self.K = np.array(rospy.get_param("/drone/camera/camera_matrix")).reshape(3,3)
+        self.focal_length = (self.K[0,0] + self.K[1,1])/2
 
         self.feature_dists_metric = np.loadtxt(
             f"{script_dir}/../../{self.config['feature_dists_metric']['path']}"
@@ -57,7 +54,13 @@ class TcvPoseEstimator():
         self.latest_image = np.zeros((self.img_height, self.img_width, 3))
         self.new_image_available = False
 
-        self.corner_detector = corner_detector.CornerDetector(self.config["shi_tomasi"])
+        with open(f"{script_dir}/../../{self.config['shi_tomasi_params']['path']}") as f:
+            shi_tomasi_params = yaml.safe_load(f)
+
+        with open(f"{script_dir}/../../{self.config['hough_circle_params']['path']}") as f:
+            hough_circle_params = yaml.safe_load(f)
+
+        self.corner_detector = feature_detector.FeatureDetector(shi_tomasi_params, hough_circle_params)
         self.pose_recoverer = pose_recovery.PoseRecovery(self.K)
 
         self.pose_estimate_publisher = rospy.Publisher(
@@ -86,9 +89,9 @@ class TcvPoseEstimator():
             if self.new_image_available:
 
                 img = self.latest_image.astype(np.uint8)
-                img_processed = self.corner_detector.preprocess_image(img, segment=segment)
 
-                corners = self.corner_detector.find_corners_shi_tomasi(img_processed)
+                mask = self.corner_detector.create_helipad_mask(img)
+                corners = self.corner_detector.find_corners_shi_tomasi(img, mask)
                 self.corner_detector.show_corners_found(img, corners, color="red")
 
                 cv.waitKey(1)

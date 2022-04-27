@@ -1,13 +1,8 @@
-shi_tomasi:
-  max_corners: 13
-  quality_level: 0.01
-  min_distance: 10
-  block_size: 3
-  gradient_size: 3
-  k: 0.04
+shi_tomasi_params:
+  path: "data/shi_tomasi_params.yaml"
+
+hough_circle_params:
+  path: "data/hough_circle_params.yaml"
 
 feature_dists_metric:
   path: "data/helipad_dists_origin_center_enu_metric.txt"
-
-camera_matrix:
-  path: "data/camera_matrix.txt"

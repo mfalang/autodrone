@@ -141,7 +141,7 @@ class FeatureDetector():
         if np.count_nonzero(corners) != 0:
             return corners
         else:
-            return None
+            return np.array([])
 
     def find_arrow_and_H(self, corners, helipad_dists_metric):
 

@@ -111,7 +111,7 @@ class PoseRecovery():
 
         # t_ned = Rx @ Rz @ t
 
-        t_ned = zeros_like(t)
+        t_ned = np.zeros_like(t)
         t_ned[0] = t[1]
         t_ned[1] = -t[0]
         t_ned[2] = -t[2]
