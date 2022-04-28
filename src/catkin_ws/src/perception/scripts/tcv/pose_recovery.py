@@ -31,26 +31,20 @@ class PoseRecovery():
     def find_R_t_pnp(self, object_points, image_points):
         distortion_coeffs = np.zeros(5)
 
+        # cv.solvePnP(...) requires object points to be of shape (n_points, 3)
+        # and image points to be of shape (n_points, 2)
         object_points = homography.dehomogenize(object_points.copy()).T
         image_points = image_points.T
 
-        rvec = np.zeros(3)
-        tvec = np.zeros(3)
-        _, R_vec, t_vec = cv.solvePnP(object_points, image_points, self.K, distortion_coeffs, rvec, tvec)
+        _, R_vec, t_vec = cv.solvePnP(object_points, image_points, self.K, distortion_coeffs)
         Rt, _ = cv.Rodrigues(R_vec)
-        R = Rt.T
-        # pos = -R @ t_vec
-        pos = t_vec
-        pos = pos.reshape((3,))
-        # roll = np.math.atan2(-R[2][1], R[2][2])
-        # pitch = np.math.asin(R[2][0])
-        # yaw = np.math.atan2(-R[1][0], R[0][0])
 
-        return R, pos
+        R = Rt
+        t = t_vec.reshape((3,))
 
+        return R, t
 
-
-    def find_R_t(self, features_image, features_metric, H):
+    def find_R_t_homography(self, features_image, features_metric, H):
         XY01 = features_metric.copy()
 
         T1, T2 = homography.decompose_H(H)
@@ -81,100 +75,36 @@ class PoseRecovery():
 
     def get_pose_from_R_t(self, R, t):
 
-        # R_ned, t_ned = self.camera_to_ned_frame(R, t)
-        # R_body, t_body = self.camera_to_drone_body_frame(R, t)
-        # rz = homography.rotate_z(np.pi/2)[:3, :3]
-        # R_body = rz @ R
-        # t_body = rz @ t
-
-        R_body = R
-        t_body = t
-
-        orientation = homography.rotation_matrix2euler_angles(R_body)*180/np.pi
-        # psi_offset = -90
-        # orientation[2] = (orientation[2] - psi_offset + 180) % 360 - 180
-
-        pos = t_body
+        # The orientation angles are probably incorrect, but this has not been investigated
+        # as only the position is used in the EKF.
+        orientation = homography.rotation_matrix2euler_angles(R)*180/np.pi
+        pos = t
 
         pose = np.hstack((pos, orientation))
-
-        # # Convert pose from camera frame with ENU coordinates, to NED coordinates
-
-        # pose_ned = np.zeros_like(pose_camera)
-        # pose_ned[0] = pose_camera[1]
-        # pose_ned[1] = pose_camera[0]
-        # pose_ned[2] = -pose_camera[2]
-        # pose_ned[3] = pose_camera[3]
-        # pose_ned[4] = pose_camera[4]
-        # pose_ned[5] = pose_camera[5]
-
-        # camera_offset_x_mm = 100
-        # camera_offset_y_mm = 0
-        # camera_offset_z_mm = 0
-
-        # pose_ned[0] -= camera_offset_x_mm / 1000
-        # pose_ned[1] -= camera_offset_y_mm / 1000
-        # pose_ned[2] -= camera_offset_z_mm / 1000
 
         return pose
 
     def camera_to_drone_body_frame(self, R_camera, t_camera):
-        # Similar to how it is done in DNNCV. See docs there for explanation
-        # Only concerned with position as the control system does not use the orientation.
-
-        # t_body = np.zeros_like(t_camera)
-
-        # t_body[0] = t_camera[1] + self.camera_offsets[0]
-        # t_body[1] = t_camera[0] + self.camera_offsets[1]
-        # t_body[2] = t_camera[2] + self.camera_offsets[2]
+        # The x and y axis of the camera frame span the image plane, and the z-axis
+        # sits perpendicular to this plane out of the camera. The camera frame axes are therefore
+        # as follows:
+        #   x-axis: Positive right in image plane
+        #   y-axis: Positive down in image plane
+        #   z-axis: Positive out of the image plane
+        # Converting this to the body frame therefore only involved rotating the whole
+        # camera frame 90 degrees counter clockwise, andn then adjusting for the
+        # camera offsets.
 
         rz = homography.rotate_z(np.pi/2)[:3, :3]
+        R_body = rz @ R_camera
 
         t_body = rz @ t_camera
 
-        R_body = rz @ R_camera
+        t_body += self.camera_offsets
 
         return R_body, t_body
 
-    def camera_to_ned_frame(self, R, t):
-
-        # Rotate 90 deg (counter clockwise around z)
-        rad = np.deg2rad(90)
-        c = np.cos(rad)
-        s = np.sin(rad)
-
-        Rz = np.array([[c, -s, 0],
-                     [s, c, 0],
-                     [0, 0, 1]])
-
-        # Rotate 180 degrees around x-axis
-        rad = np.deg2rad(180)
-        c = np.cos(rad)
-        s = np.sin(rad)
-
-        Rx = np.array([[1, 0, 0],
-                        [0, c, -s],
-                        [0, s, c]])
-
-        R_ned = R @ Rz @ Rx
-
-        # t_ned = Rx @ Rz @ t
-
-        t_ned = np.zeros_like(t)
-        t_ned[0] = t[1]
-        t_ned[1] = -t[0]
-        t_ned[2] = -t[2]
-
-        # t_ned = t
-
-        return R_ned, t_ned
-
-    def evaluate_reprojection(self, image, features_image, features_metric, H, R, t, R_LM, t_LM):
-
-
-        angles = homography.rotation_matrix2euler_angles(R_LM)*180/np.pi
-
-        # print(f"Pos: {t_LM} orientation: {angles}")
+    def evaluate_reprojection(self, image, features_image, features_metric, R_camera, t_camera, H=None, R_LM=None, t_LM=None):
 
         # uv is image pixel location (origin = upper left)
         uv = features_image.copy()
@@ -184,50 +114,48 @@ class PoseRecovery():
         XY1 = homography.homogenize(XY)
         XY01 = features_metric.copy()
 
-        # For H
-        uv_H = homography.reproject_using_H(self.K, H, XY1)
-        err_H = homography.reprojection_error(uv, uv_H)
-        print("Reprojection error using H:", err_H)
+        if H is not None:
+            # For H
+            uv_H = homography.reproject_using_H(self.K, H, XY1)
+            err_H = homography.reprojection_error(uv, uv_H)
+            print("Reprojection error using H:", err_H)
 
-        # For R,t from DLT
-        uv_Rt = homography.reproject_using_Rt(self.K, R, t, XY01)
+        # For R,t
+        uv_Rt = homography.reproject_using_Rt(self.K, R_camera, t_camera, XY01)
         err_Rt = homography.reprojection_error(uv, uv_Rt)
         print(f"Reprojection error using R and t: {err_Rt}, average: {np.average(err_Rt)}")
-
-        # For R,t from LM
-        uv_Rt_LM = homography.reproject_using_Rt(self.K, R_LM, t_LM, XY01)
-        err_Rt_LM = homography.reprojection_error(uv, uv_Rt_LM)
-        print(f"Reprojection error using R and t from LM: {err_Rt_LM}, average: {np.average(err_Rt_LM)}")
-
-        # R_LM_ned, t_LM_ned = self.camera_to_ned_frame(R_LM, t_LM)
-
-        T_raw = homography.create_T_from_Rt(R, t)
-        T_LM = homography.create_T_from_Rt(R_LM, t_LM)
-
-        T_visualize = T_raw
+        T_camera = homography.create_T_from_Rt(R_camera, t_camera)
+        T_body = homography.create_T_from_Rt(*self.camera_to_drone_body_frame(R_camera, t_camera))
 
         plt.figure()
         plt.imshow(cv.cvtColor(image, cv.COLOR_BGR2RGB))
         plt.scatter(*uv, s=150, marker='o', c='white', edgecolor='black', label="True")
-        # plt.scatter(*uv_H, s=30, marker='o', c='yellow',
-        #             edgecolors='black', label="Reprojected using H")
         plt.scatter(*uv_Rt, s=30, marker='o', c='cyan',
-                    edgecolors='black', label="Reprojected using R and t")
-        plt.scatter(*uv_Rt_LM, s=30, marker='o', c='red',
-                    edgecolors='black', label="Reprojected using LM")
+                    edgecolors='black', label="Reprojected using camera frame R and t")
+        plt_title = "Reprojections of pose"
 
-        plt.title("Reprojections of pose with and without optimization")
+        if R_LM is not None and t_LM is not None:
+            # For R,t from LM
+            uv_Rt_LM = homography.reproject_using_Rt(self.K, R_LM, t_LM, XY01)
+            err_Rt_LM = homography.reprojection_error(uv, uv_Rt_LM)
+            print(f"Reprojection error using R and t from LM: {err_Rt_LM}, average: {np.average(err_Rt_LM)}")
 
-        homography.draw_frame(self.K, T_visualize, scale=0.1)
+            plt.scatter(*uv_Rt_LM, s=30, marker='o', c='red',
+                        edgecolors='black', label="Reprojected using LM")
+            plt_title = "Reprojections of pose with and without optimization"
+
+        plt.title(plt_title)
+        homography.draw_frame(self.K, T_camera, scale=0.1)
         plt.legend()
 
+        # Plot body frame in 3D relative to the helipad points
         plt.figure()
         ax = plt.axes(projection='3d')
         ax.plot(XY[0,:], XY[1,:], np.zeros(XY.shape[1]), '.', markersize=10) # Draw markers in 3D
-        pO = np.linalg.inv(T_visualize)@np.array([0,0,0,1]) # Compute camera origin
-        pX = np.linalg.inv(T_visualize)@np.array([0.4,0,0,1]) # Compute camera X-axis
-        pY = np.linalg.inv(T_visualize)@np.array([0,0.4,0,1]) # Compute camera Y-axis
-        pZ = np.linalg.inv(T_visualize)@np.array([0,0,0.4,1]) # Compute camera Z-axis
+        pO = np.linalg.inv(T_body)@np.array([0,0,0,1]) # Compute camera origin
+        pX = np.linalg.inv(T_body)@np.array([0.4,0,0,1]) # Compute camera X-axis
+        pY = np.linalg.inv(T_body)@np.array([0,0.4,0,1]) # Compute camera Y-axis
+        pZ = np.linalg.inv(T_body)@np.array([0,0,0.4,1]) # Compute camera Z-axis
         plt.plot([pO[0], pZ[0]], [pO[1], pZ[1]], [pO[2], pZ[2]], color='blue', linewidth=2) # Draw camera Z-axis
         plt.plot([pO[0], pY[0]], [pO[1], pY[1]], [pO[2], pY[2]], color='green', linewidth=2) # Draw camera Y-axis
         plt.plot([pO[0], pX[0]], [pO[1], pX[1]], [pO[2], pX[2]], color='red', linewidth=2) # Draw camera X-axis
@@ -304,38 +232,30 @@ def main():
 
     img = cv.imread("test_images/real/frame0055.jpg")
     mask = detector.create_helipad_mask(img, show_masked_img=False)
-    # img_processed = detector.preprocess_image(img)
-
     corners = detector.find_corners_shi_tomasi(img, mask)
     # detector.show_corners_found(img, corners, color="red")
-
     features_image = detector.find_arrow_and_H(corners, features_metric)
-
     # detector.show_known_points(img, features_image)
 
-    H = pose_recoverer.find_homography(features_image, features_metric)
-    start = time.time()
-    R, t = pose_recoverer.find_R_t(features_image, features_metric, H)
-    print(f"Recovering R and t took {time.time() - start} seconds")
-    start = time.time()
-    R_LM, t_LM = pose_recoverer.optimize_R_t(features_image, features_metric, R, t)
-    print(f"Optmizing R and t took {time.time() - start} seconds")
+    # Not using this homograpghy based solution anymore
+    # H = pose_recoverer.find_homography(features_image, features_metric)
+    # start = time.time()
+    # R, t = pose_recoverer.find_R_t_homography(features_image, features_metric, H)
+    # print(f"Recovering R and t took {time.time() - start} seconds")
+    # start = time.time()
+    # R_LM, t_LM = pose_recoverer.optimize_R_t(features_image, features_metric, R, t)
+    # print(f"Optmizing R and t took {time.time() - start} seconds")
+    # pose_raw = pose_recoverer.get_pose_from_R_t(R, t)
+    # pose = pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
+    # print(f"Raw pose from R and t Pos: {pose_raw[:3]} Orientation: {pose_raw[3:]}")
+    # print(f"Optimized pose: Pos: {pose[:3]} Orientation: {pose[3:]}")
 
+    R_pnp_camera, t_pnp_camera = pose_recoverer.find_R_t_pnp(features_metric, features_image)
+    R_pnp_body, t_pnp_body = pose_recoverer.camera_to_drone_body_frame(R_pnp_camera, t_pnp_camera)
+    pose_pnp_body = pose_recoverer.get_pose_from_R_t(R_pnp_body, t_pnp_body)
+    pose_recoverer.evaluate_reprojection(img, features_image, features_metric, R_pnp_camera, t_pnp_camera)
 
-    R_LM_ned, t_LM_ned = pose_recoverer.camera_to_ned_frame(R_LM, t_LM)
-
-    pose_raw = pose_recoverer.get_pose_from_R_t(R, t)
-    pose = pose_recoverer.get_pose_from_R_t(R_LM_ned, t_LM_ned)
-    R_pnp, t_pnp = pose_recoverer.find_R_t_pnp(features_metric, features_image)
-    R_pnp, t_pnp = pose_recoverer.camera_to_drone_body_frame(R_pnp, t_pnp)
-    pose_pnp = pose_recoverer.get_pose_from_R_t(R_pnp, t_pnp)
-    pose_recoverer.evaluate_reprojection(img, features_image, features_metric,
-        H, R_pnp, t_pnp, R_LM, t_LM
-    )
-
-    print(f"Raw pose from R and t Pos: {pose_raw[:3]} Orientation: {pose_raw[3:]}")
-    print(f"Optimized pose: Pos: {pose[:3]} Orientation: {pose[3:]}")
-    print(f"PnP pose from R and t Pos: {pose_pnp[:3]} Orientation: {pose_pnp[3:]}")
+    print(f"PnP pose from R and t Pos: {pose_pnp_body[:3]} Orientation: {pose_pnp_body[3:]}")
 
 
     # cv.waitKey()

@@ -108,16 +108,13 @@ class TcvPoseEstimator():
 
                 self.corner_detector.show_known_points(img, features_image)
 
-                H = self.pose_recoverer.find_homography(features_image, self.feature_dists_metric)
-                R, t = self.pose_recoverer.find_R_t(features_image, self.feature_dists_metric, H)
-                R_LM, t_LM = self.pose_recoverer.optimize_R_t(features_image, self.feature_dists_metric, R, t)
+                R_cam, t_cam = self.pose_recoverer.find_R_t_pnp(self.feature_dists_metric, features_image)
+                R_body, t_body = self.pose_recoverer.camera_to_drone_body_frame(R_cam, t_cam)
+                pose_body = self.pose_recoverer.get_pose_from_R_t(R_body, t_body)
 
-                pose_ned = self.pose_recoverer.get_pose_from_R_t(R_LM, t_LM)
+                print(f"Pos: {pose_body[0:3]} Orientation: {pose_body[3:]}")
 
-                # pose_ned = self._pose_camera_to_ned(pose_camera)
-                print(f"Pos: {pose_ned[0:3]} Orientation: {pose_ned[3:]}")
-
-                self._publish_pose(pose_ned)
+                self._publish_pose(pose_body)
 
                 self.new_image_available = False
 
