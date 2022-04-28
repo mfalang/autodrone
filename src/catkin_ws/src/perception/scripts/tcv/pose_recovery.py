@@ -7,8 +7,9 @@ import homography
 
 class PoseRecovery():
 
-    def __init__(self, K):
+    def __init__(self, K, camera_offsets):
         self.K = K
+        self.camera_offsets = camera_offsets
 
     def find_homography(self, features_image, features_metric):
         # uv is image pixel location (origin = upper left)
@@ -22,9 +23,32 @@ class PoseRecovery():
         # XY are the metric coordinates in the helipad frame
         XY = features_metric[0:2].copy()
 
-        H = homography.estimate_H_linear(xy, XY)
+        # H = homography.estimate_H_linear(xy, XY)
+        H = homography.estimate_H_opencv(xy.T, XY.T)
 
         return H
+
+    def find_R_t_pnp(self, object_points, image_points):
+        distortion_coeffs = np.zeros(5)
+
+        object_points = homography.dehomogenize(object_points.copy()).T
+        image_points = image_points.T
+
+        rvec = np.zeros(3)
+        tvec = np.zeros(3)
+        _, R_vec, t_vec = cv.solvePnP(object_points, image_points, self.K, distortion_coeffs, rvec, tvec)
+        Rt, _ = cv.Rodrigues(R_vec)
+        R = Rt.T
+        # pos = -R @ t_vec
+        pos = t_vec
+        pos = pos.reshape((3,))
+        # roll = np.math.atan2(-R[2][1], R[2][2])
+        # pitch = np.math.asin(R[2][0])
+        # yaw = np.math.atan2(-R[1][0], R[0][0])
+
+        return R, pos
+
+
 
     def find_R_t(self, features_image, features_metric, H):
         XY01 = features_metric.copy()
@@ -57,13 +81,20 @@ class PoseRecovery():
 
     def get_pose_from_R_t(self, R, t):
 
-        R_ned, t_ned = self.camera_to_ned_frame(R, t)
+        # R_ned, t_ned = self.camera_to_ned_frame(R, t)
+        # R_body, t_body = self.camera_to_drone_body_frame(R, t)
+        # rz = homography.rotate_z(np.pi/2)[:3, :3]
+        # R_body = rz @ R
+        # t_body = rz @ t
 
-        orientation = homography.rotation_matrix2euler_angles(R_ned)*180/np.pi
-        psi_offset = -90
-        orientation[2] = (orientation[2] - psi_offset + 180) % 360 - 180
+        R_body = R
+        t_body = t
 
-        pos = t_ned
+        orientation = homography.rotation_matrix2euler_angles(R_body)*180/np.pi
+        # psi_offset = -90
+        # orientation[2] = (orientation[2] - psi_offset + 180) % 360 - 180
+
+        pos = t_body
 
         pose = np.hstack((pos, orientation))
 
@@ -86,6 +117,24 @@ class PoseRecovery():
         # pose_ned[2] -= camera_offset_z_mm / 1000
 
         return pose
+
+    def camera_to_drone_body_frame(self, R_camera, t_camera):
+        # Similar to how it is done in DNNCV. See docs there for explanation
+        # Only concerned with position as the control system does not use the orientation.
+
+        # t_body = np.zeros_like(t_camera)
+
+        # t_body[0] = t_camera[1] + self.camera_offsets[0]
+        # t_body[1] = t_camera[0] + self.camera_offsets[1]
+        # t_body[2] = t_camera[2] + self.camera_offsets[2]
+
+        rz = homography.rotate_z(np.pi/2)[:3, :3]
+
+        t_body = rz @ t_camera
+
+        R_body = rz @ R_camera
+
+        return R_body, t_body
 
     def camera_to_ned_frame(self, R, t):
 
@@ -152,7 +201,10 @@ class PoseRecovery():
 
         # R_LM_ned, t_LM_ned = self.camera_to_ned_frame(R_LM, t_LM)
 
+        T_raw = homography.create_T_from_Rt(R, t)
         T_LM = homography.create_T_from_Rt(R_LM, t_LM)
+
+        T_visualize = T_raw
 
         plt.figure()
         plt.imshow(cv.cvtColor(image, cv.COLOR_BGR2RGB))
@@ -166,16 +218,16 @@ class PoseRecovery():
 
         plt.title("Reprojections of pose with and without optimization")
 
-        homography.draw_frame(self.K, T_LM, scale=0.1)
+        homography.draw_frame(self.K, T_visualize, scale=0.1)
         plt.legend()
 
         plt.figure()
         ax = plt.axes(projection='3d')
         ax.plot(XY[0,:], XY[1,:], np.zeros(XY.shape[1]), '.', markersize=10) # Draw markers in 3D
-        pO = np.linalg.inv(T_LM)@np.array([0,0,0,1]) # Compute camera origin
-        pX = np.linalg.inv(T_LM)@np.array([0.4,0,0,1]) # Compute camera X-axis
-        pY = np.linalg.inv(T_LM)@np.array([0,0.4,0,1]) # Compute camera Y-axis
-        pZ = np.linalg.inv(T_LM)@np.array([0,0,0.4,1]) # Compute camera Z-axis
+        pO = np.linalg.inv(T_visualize)@np.array([0,0,0,1]) # Compute camera origin
+        pX = np.linalg.inv(T_visualize)@np.array([0.4,0,0,1]) # Compute camera X-axis
+        pY = np.linalg.inv(T_visualize)@np.array([0,0.4,0,1]) # Compute camera Y-axis
+        pZ = np.linalg.inv(T_visualize)@np.array([0,0,0.4,1]) # Compute camera Z-axis
         plt.plot([pO[0], pZ[0]], [pO[1], pZ[1]], [pO[2], pZ[2]], color='blue', linewidth=2) # Draw camera Z-axis
         plt.plot([pO[0], pY[0]], [pO[1], pY[1]], [pO[2], pY[2]], color='green', linewidth=2) # Draw camera Y-axis
         plt.plot([pO[0], pX[0]], [pO[1], pX[1]], [pO[2], pX[2]], color='red', linewidth=2) # Draw camera X-axis
@@ -243,13 +295,15 @@ def main():
     # features_metric = np.loadtxt("../../data/helipad_dists_origin_center_enu_metric.txt")
 
     K = np.loadtxt(
-            f"{script_dir}/../../{config['camera_matrix']['path']}"
-        )
+        f"{script_dir}/../../data/camera_matrix.txt"
+    )
 
-    pose_recoverer = PoseRecovery(K)
+    camera_offsets = np.array([0.09, 0, 0])
 
-    img = cv.imread("test_images/test4.png")
-    mask = detector.create_helipad_mask(img, show_masked_img=True)
+    pose_recoverer = PoseRecovery(K, camera_offsets)
+
+    img = cv.imread("test_images/real/frame0055.jpg")
+    mask = detector.create_helipad_mask(img, show_masked_img=False)
     # img_processed = detector.preprocess_image(img)
 
     corners = detector.find_corners_shi_tomasi(img, mask)
@@ -257,8 +311,7 @@ def main():
 
     features_image = detector.find_arrow_and_H(corners, features_metric)
 
-    detector.show_known_points(img, features_image)
-    cv.waitKey()
+    # detector.show_known_points(img, features_image)
 
     H = pose_recoverer.find_homography(features_image, features_metric)
     start = time.time()
@@ -268,16 +321,24 @@ def main():
     R_LM, t_LM = pose_recoverer.optimize_R_t(features_image, features_metric, R, t)
     print(f"Optmizing R and t took {time.time() - start} seconds")
 
-    pose_recoverer.evaluate_reprojection(img, features_image, features_metric,
-        H, R, t, R_LM, t_LM
-    )
 
     R_LM_ned, t_LM_ned = pose_recoverer.camera_to_ned_frame(R_LM, t_LM)
 
+    pose_raw = pose_recoverer.get_pose_from_R_t(R, t)
     pose = pose_recoverer.get_pose_from_R_t(R_LM_ned, t_LM_ned)
+    R_pnp, t_pnp = pose_recoverer.find_R_t_pnp(features_metric, features_image)
+    R_pnp, t_pnp = pose_recoverer.camera_to_drone_body_frame(R_pnp, t_pnp)
+    pose_pnp = pose_recoverer.get_pose_from_R_t(R_pnp, t_pnp)
+    pose_recoverer.evaluate_reprojection(img, features_image, features_metric,
+        H, R_pnp, t_pnp, R_LM, t_LM
+    )
 
-    print(f"NED pose: Pos: {pose[:3]} Orientation: {pose[3:]}")
+    print(f"Raw pose from R and t Pos: {pose_raw[:3]} Orientation: {pose_raw[3:]}")
+    print(f"Optimized pose: Pos: {pose[:3]} Orientation: {pose[3:]}")
+    print(f"PnP pose from R and t Pos: {pose_pnp[:3]} Orientation: {pose_pnp[3:]}")
 
+
+    # cv.waitKey()
     plt.show()
 
 if __name__ == "__main__":

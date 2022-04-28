@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import cv2 as cv
 
 def homogenize(v):
     """
@@ -26,6 +27,11 @@ def dehomogenize(v):
 
 def homogeneous_normalize(v):
     return v / v[-1]
+
+def estimate_H_opencv(xy, XY):
+    H, _ = cv.findHomography(XY, xy)
+
+    return H
 
 def estimate_H_linear(xy_, XY_):
     """

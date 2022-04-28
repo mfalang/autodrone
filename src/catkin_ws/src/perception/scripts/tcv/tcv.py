@@ -41,9 +41,11 @@ class TcvPoseEstimator():
         self.env = rospy.get_param("~environment")
         self.img_height = rospy.get_param("/drone/camera/img_height")
         self.img_width = rospy.get_param("/drone/camera/img_width")
-        self.camera_offset_x_mm = rospy.get_param("/drone/camera/offset_x_mm")
-        self.camera_offset_y_mm = rospy.get_param("/drone/camera/offset_y_mm")
-        self.camera_offset_z_mm = rospy.get_param("/drone/camera/offset_z_mm")
+        self.camera_offsets = np.array([
+            rospy.get_param("/drone/camera/offset_x_mm")/1000,
+            rospy.get_param("/drone/camera/offset_y_mm")/1000,
+            rospy.get_param("/drone/camera/offset_z_mm")/1000
+        ])
         self.K = np.array(rospy.get_param("/drone/camera/camera_matrix")).reshape(3,3)
         self.focal_length = (self.K[0,0] + self.K[1,1])/2
 
@@ -61,7 +63,7 @@ class TcvPoseEstimator():
             hough_circle_params = yaml.safe_load(f)
 
         self.corner_detector = feature_detector.FeatureDetector(shi_tomasi_params, hough_circle_params)
-        self.pose_recoverer = pose_recovery.PoseRecovery(self.K)
+        self.pose_recoverer = pose_recovery.PoseRecovery(self.K, self.camera_offsets)
 
         self.pose_estimate_publisher = rospy.Publisher(
             "/estimate/drone_pose/tcv", perception.msg.EulerPose, queue_size=10
@@ -132,9 +134,9 @@ class TcvPoseEstimator():
         pose_ned[4] = pose_camera[4]
         pose_ned[5] = pose_camera[5]
 
-        pose_ned[0] -= self.camera_offset_x_mm / 1000
-        pose_ned[1] -= self.camera_offset_y_mm / 1000
-        pose_ned[2] -= self.camera_offset_z_mm / 1000
+        pose_ned[0] -= self.camera_offsets[0]
+        pose_ned[1] -= self.camera_offsets[1]
+        pose_ned[2] -= self.camera_offsets[2]
 
         return pose_ned
 
