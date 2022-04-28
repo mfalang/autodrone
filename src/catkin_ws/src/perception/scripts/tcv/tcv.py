@@ -35,13 +35,6 @@ class TcvPoseEstimator():
             rospy.logerr(f"Failed to load config: {e}")
             sys.exit()
 
-        self.view_camera_output = rospy.get_param("~view_camera_output")
-        self.calculate_run_times = rospy.get_param("~calculate_run_times")
-
-        rospy.Subscriber("/drone/out/image_rect_color", sensor_msgs.msg.Image,
-            self._new_image_cb
-        )
-
         self.env = rospy.get_param("~environment")
         self.img_height = rospy.get_param("/drone/camera/img_height")
         self.img_width = rospy.get_param("/drone/camera/img_width")
@@ -52,6 +45,17 @@ class TcvPoseEstimator():
         ])
         self.K = np.array(rospy.get_param("/drone/camera/camera_matrix")).reshape(3,3)
         self.focal_length = (self.K[0,0] + self.K[1,1])/2
+
+        self.view_camera_output = rospy.get_param("~view_camera_output")
+        self.calculate_run_times = rospy.get_param("~calculate_run_times")
+
+        self.latest_image = np.zeros((self.img_height, self.img_width, 3))
+        self.new_image_available = False
+        self.processing_image = False
+
+        rospy.Subscriber("/drone/out/image_rect_color", sensor_msgs.msg.Image,
+            self._new_image_cb
+        )
 
         self.feature_dists_metric = np.loadtxt(
             f"{script_dir}/../../{self.config['feature_dists_metric']['path']}"
@@ -70,12 +74,22 @@ class TcvPoseEstimator():
             "/estimate/drone_pose/tcv", perception.msg.EulerPose, queue_size=10
         )
 
+        self.N_duration_entries = 1000
+        self.circle_detection_durations = np.zeros(self.N_duration_entries)
+        self.circle_detection_index = 0
+        self.corner_detection_durations = np.zeros(self.N_duration_entries)
+        self.corner_detection_index = 0
+        self.corner_identification_durations = np.zeros(self.N_duration_entries)
+        self.corner_identification_index = 0
+        self.pose_calculation_durations = np.zeros(self.N_duration_entries)
+        self.pose_calculation_index = 0
 
     def _new_image_cb(self, msg):
-        img = np.frombuffer(msg.data,
-            dtype=np.uint8).reshape(msg.height, msg.width, -1
-        )
-        self.run_pipeline(img)
+        if not self.processing_image:
+            self.latest_image = np.frombuffer(msg.data,
+                dtype=np.uint8).reshape(msg.height, msg.width, -1
+            )
+            self.new_image_available = True
 
     def run_pipeline(self, img):
         img = img.astype(np.uint8)
@@ -83,10 +97,13 @@ class TcvPoseEstimator():
         if self.calculate_run_times:
             start_time = time.time()
 
-        mask = self.corner_detector.create_helipad_mask(img)
+        mask = self.corner_detector.create_helipad_mask(img, show_masked_img=True)
 
         if self.calculate_run_times:
             circle_detection_duration = time.time() - start_time
+            if self.circle_detection_index < self.N_duration_entries:
+                self.circle_detection_durations[self.circle_detection_index] = circle_detection_duration
+                self.circle_detection_index += 1
             print(f"Used {circle_detection_duration:.4f} sec to detect circle")
 
         if self.calculate_run_times:
@@ -96,6 +113,9 @@ class TcvPoseEstimator():
 
         if self.calculate_run_times:
             corner_detection_duration = time.time() - start_time
+            if self.corner_detection_index < self.N_duration_entries:
+                self.corner_detection_durations[self.corner_detection_index] = corner_detection_duration
+                self.corner_detection_index += 1
             print(f"Used {corner_detection_duration:.4f} sec to detect corners")
 
         if self.view_camera_output:
@@ -110,6 +130,9 @@ class TcvPoseEstimator():
         features_image = self.corner_detector.find_arrow_and_H(corners, self.feature_dists_metric)
         if self.calculate_run_times:
             corner_identification_duration = time.time() - start_time
+            if self.corner_detection_index < self.N_duration_entries:
+                self.corner_identification_durations[self.corner_identification_index] = corner_identification_duration
+                self.corner_identification_index += 1
             print(f"Used {corner_identification_duration:.4f} sec to identify corners")
 
         if features_image is None:
@@ -126,10 +149,10 @@ class TcvPoseEstimator():
         pose_body = self.pose_recoverer.get_pose_from_R_t(R_body, t_body)
         if self.calculate_run_times:
             pose_calculation_duration = time.time() - start_time
+            if self.pose_calculation_index < self.N_duration_entries:
+                self.pose_calculation_durations[self.pose_calculation_index] = pose_calculation_duration
+                self.pose_calculation_index += 1
             print(f"Used {pose_calculation_duration:.4f} sec to calculate pose")
-
-        if self.calculate_run_times:
-            print(f"Total: {circle_detection_duration + corner_detection_duration + corner_identification_duration + pose_calculation_duration:.4f} sec")
             print()
 
         self._publish_pose(pose_body)
@@ -137,7 +160,14 @@ class TcvPoseEstimator():
     def start(self):
 
         rospy.loginfo("Starting TCV pose estimator")
-        rospy.spin()
+        rospy.on_shutdown(self._on_shutdown)
+
+        while not rospy.is_shutdown():
+            if self.new_image_available:
+                self.processing_image = True
+                self.new_image_available = False
+                self.run_pipeline(self.latest_image)
+                self.processing_image = False
 
     def _publish_pose(self, pose):
         msg = perception.msg.EulerPose()
@@ -151,6 +181,12 @@ class TcvPoseEstimator():
         msg.psi = pose[5]
 
         self.pose_estimate_publisher.publish(msg)
+
+    def _on_shutdown(self):
+        print(f"Average circle detection duration: {np.mean(self.circle_detection_durations):4f} sec")
+        print(f"Average corner detection duration: {np.mean(self.corner_detection_durations):4f} sec")
+        print(f"Average corner identification duration: {np.mean(self.corner_identification_durations):4f} sec")
+        print(f"Average pose calculation duration: {np.mean(self.pose_calculation_durations):4f} sec")
 
 
 def main():

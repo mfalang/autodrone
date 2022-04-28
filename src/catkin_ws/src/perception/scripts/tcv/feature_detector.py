@@ -61,6 +61,7 @@ class FeatureDetector():
         if show_masked_img:
             img_masked = cv.bitwise_and(img, img, mask=circle_mask)
             cv.imshow("Masked image", img_masked)
+            cv.waitKey(1)
 
         return circle_mask
 

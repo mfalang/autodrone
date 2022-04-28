@@ -155,6 +155,7 @@ def main():
     gt_data_drone_pose = np.loadtxt(f"{data_dir}/ground_truths/drone_pose_helipad_frame.txt", skiprows=2)
     ekfpos_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
     anafi_raw_data = np.loadtxt(f"{data_dir}/estimates/anafi_raw_data.txt", skiprows=1)
+    tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
 
     # Calculate accuracy of DNNCV
     ts, dnncv_pos, gt_pos = plotter.match_two_dataseries_one_to_one(dnncv_data, gt_data)
@@ -185,11 +186,11 @@ def main():
     )
 
     # Compare DNNCV and EKF estimate to ground truth
-    synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekfpos_data, dnncv_data])
+    synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekfpos_data, dnncv_data, tcv_data])
     plotter.plot_multiple_data_series(
-        synced_gt_dnncv_ekf_data, 3, "Position - GT vs. EKF vs. DNNCV raw",
-        ["GT", "EKF", "DNNCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-        [False, True, True]
+        synced_gt_dnncv_ekf_data, 3, "Position - GT vs. EKF vs. DNNCV raw vs. TCV raw",
+        ["GT", "EKF", "DNNCV", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+        [False, True, True, True]
     )
 
     # Plot heading angles
