@@ -57,9 +57,6 @@ class TcvPoseEstimator():
             f"{script_dir}/../../{self.config['feature_dists_metric']['path']}"
         )
 
-        self.latest_image = np.zeros((self.img_height, self.img_width, 3))
-        self.new_image_available = False
-
         with open(f"{script_dir}/../../{self.config['shi_tomasi_params']['path']}") as f:
             shi_tomasi_params = yaml.safe_load(f)
 
@@ -75,101 +72,72 @@ class TcvPoseEstimator():
 
 
     def _new_image_cb(self, msg):
-        self.latest_image = np.frombuffer(msg.data,
+        img = np.frombuffer(msg.data,
             dtype=np.uint8).reshape(msg.height, msg.width, -1
         )
-        self.new_image_available = True
+        self.run_pipeline(img)
 
+    def run_pipeline(self, img):
+        img = img.astype(np.uint8)
+
+        if self.calculate_run_times:
+            start_time = time.time()
+
+        mask = self.corner_detector.create_helipad_mask(img)
+
+        if self.calculate_run_times:
+            circle_detection_duration = time.time() - start_time
+            print(f"Used {circle_detection_duration:.4f} sec to detect circle")
+
+        if self.calculate_run_times:
+            start_time = time.time()
+
+        corners = self.corner_detector.find_corners_shi_tomasi(img, mask)
+
+        if self.calculate_run_times:
+            corner_detection_duration = time.time() - start_time
+            print(f"Used {corner_detection_duration:.4f} sec to detect corners")
+
+        if self.view_camera_output:
+            self.corner_detector.show_corners_found(img, corners, color="red")
+            cv.waitKey(1)
+
+        if corners is None:
+            return
+
+        if self.calculate_run_times:
+            start_time = time.time()
+        features_image = self.corner_detector.find_arrow_and_H(corners, self.feature_dists_metric)
+        if self.calculate_run_times:
+            corner_identification_duration = time.time() - start_time
+            print(f"Used {corner_identification_duration:.4f} sec to identify corners")
+
+        if features_image is None:
+            return
+
+        if self.view_camera_output:
+            self.corner_detector.show_known_points(img, features_image)
+            cv.waitKey(1)
+
+        if self.calculate_run_times:
+            start_time = time.time()
+        R_cam, t_cam = self.pose_recoverer.find_R_t_pnp(self.feature_dists_metric, features_image)
+        R_body, t_body = self.pose_recoverer.camera_to_drone_body_frame(R_cam, t_cam)
+        pose_body = self.pose_recoverer.get_pose_from_R_t(R_body, t_body)
+        if self.calculate_run_times:
+            pose_calculation_duration = time.time() - start_time
+            print(f"Used {pose_calculation_duration:.4f} sec to calculate pose")
+
+        if self.calculate_run_times:
+            print(f"Total: {circle_detection_duration + corner_detection_duration + corner_identification_duration + pose_calculation_duration:.4f} sec")
+            print()
+
+        self._publish_pose(pose_body)
 
     def start(self):
 
         rospy.loginfo("Starting TCV pose estimator")
-
-        if self.env == "sim":
-            segment = False
-        else:
-            segment = True
-
-        while not rospy.is_shutdown():
-
-            if self.new_image_available:
-
-                img = self.latest_image.astype(np.uint8)
-
-                if self.calculate_run_times:
-                    start_time = time.time()
-
-                mask = self.corner_detector.create_helipad_mask(img)
-
-                if self.calculate_run_times:
-                    circle_detection_duration = time.time() - start_time
-                    print(f"Used {circle_detection_duration:.4f} sec to detect circle")
-
-                if self.calculate_run_times:
-                    start_time = time.time()
-
-                corners = self.corner_detector.find_corners_shi_tomasi(img, mask)
-
-                if self.calculate_run_times:
-                    corner_detection_duration = time.time() - start_time
-                    print(f"Used {corner_detection_duration:.4f} sec to detect corners")
-
-                if self.view_camera_output:
-                    self.corner_detector.show_corners_found(img, corners, color="red")
-                    cv.waitKey(1)
-
-                if corners is None:
-                    continue
-
-                if self.calculate_run_times:
-                    start_time = time.time()
-                features_image = self.corner_detector.find_arrow_and_H(corners, self.feature_dists_metric)
-                if self.calculate_run_times:
-                    corner_identification_duration = time.time() - start_time
-                    print(f"Used {corner_identification_duration:.4f} sec to identify corners")
-
-                if features_image is None:
-                    continue
-
-                if self.view_camera_output:
-                    self.corner_detector.show_known_points(img, features_image)
-
-                if self.calculate_run_times:
-                    start_time = time.time()
-                R_cam, t_cam = self.pose_recoverer.find_R_t_pnp(self.feature_dists_metric, features_image)
-                R_body, t_body = self.pose_recoverer.camera_to_drone_body_frame(R_cam, t_cam)
-                pose_body = self.pose_recoverer.get_pose_from_R_t(R_body, t_body)
-                if self.calculate_run_times:
-                    pose_calculation_duration = time.time() - start_time
-                    print(f"Used {pose_calculation_duration:.4f} sec to calculate pose")
-
-                if self.calculate_run_times:
-                    print(f"Total: {circle_detection_duration + corner_detection_duration + corner_identification_duration + pose_calculation_duration:.4f} sec")
-                    print()
-
-                self._publish_pose(pose_body)
-
-                self.new_image_available = False
-
-                cv.waitKey(1)
-
-    def _pose_camera_to_ned(self, pose_camera):
-        # Convert pose from camera frame with ENU coordinates, to NED coordinates
-
-        pose_ned = np.zeros_like(pose_camera)
-        pose_ned[0] = pose_camera[1]
-        pose_ned[1] = pose_camera[0]
-        pose_ned[2] = -pose_camera[2]
-        pose_ned[3] = pose_camera[3]
-        pose_ned[4] = pose_camera[4]
-        pose_ned[5] = pose_camera[5]
-
-        pose_ned[0] -= self.camera_offsets[0]
-        pose_ned[1] -= self.camera_offsets[1]
-        pose_ned[2] -= self.camera_offsets[2]
-
-        return pose_ned
-
+        rospy.spin()
 
     def _publish_pose(self, pose):
         msg = perception.msg.EulerPose()
