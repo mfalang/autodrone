@@ -6,6 +6,7 @@ import sensor_msgs.msg
 import os
 import sys
 import yaml
+import time
 import cv2 as cv
 import numpy as np
 
@@ -17,6 +18,8 @@ import perception.msg
 class TcvPoseEstimator():
 
     def __init__(self, config_file=None):
+
+        rospy.init_node("tcv_pose_estimator", anonymous=False)
 
         # In order to be able to run program without ROS launch so that it can
         # be run in vscode debugger
@@ -32,7 +35,8 @@ class TcvPoseEstimator():
             rospy.logerr(f"Failed to load config: {e}")
             sys.exit()
 
-        rospy.init_node("tcv_pose_estimator", anonymous=False)
+        self.view_camera_output = rospy.get_param("~view_camera_output")
+        self.calculate_run_times = rospy.get_param("~calculate_run_times")
 
         rospy.Subscriber("/drone/out/image_rect_color", sensor_msgs.msg.Image,
             self._new_image_cb
@@ -92,27 +96,56 @@ class TcvPoseEstimator():
 
                 img = self.latest_image.astype(np.uint8)
 
-                mask = self.corner_detector.create_helipad_mask(img)
-                corners = self.corner_detector.find_corners_shi_tomasi(img, mask)
-                self.corner_detector.show_corners_found(img, corners, color="red")
+                if self.calculate_run_times:
+                    start_time = time.time()
 
-                cv.waitKey(1)
-                # continue
+                mask = self.corner_detector.create_helipad_mask(img)
+
+                if self.calculate_run_times:
+                    circle_detection_duration = time.time() - start_time
+                    print(f"Used {circle_detection_duration:.4f} sec to detect circle")
+
+                if self.calculate_run_times:
+                    start_time = time.time()
+
+                corners = self.corner_detector.find_corners_shi_tomasi(img, mask)
+
+                if self.calculate_run_times:
+                    corner_detection_duration = time.time() - start_time
+                    print(f"Used {corner_detection_duration:.4f} sec to detect corners")
+
+                if self.view_camera_output:
+                    self.corner_detector.show_corners_found(img, corners, color="red")
+                    cv.waitKey(1)
+
                 if corners is None:
                     continue
 
+                if self.calculate_run_times:
+                    start_time = time.time()
                 features_image = self.corner_detector.find_arrow_and_H(corners, self.feature_dists_metric)
+                if self.calculate_run_times:
+                    corner_identification_duration = time.time() - start_time
+                    print(f"Used {corner_identification_duration:.4f} sec to identify corners")
 
                 if features_image is None:
                     continue
 
-                self.corner_detector.show_known_points(img, features_image)
+                if self.view_camera_output:
+                    self.corner_detector.show_known_points(img, features_image)
 
+                if self.calculate_run_times:
+                    start_time = time.time()
                 R_cam, t_cam = self.pose_recoverer.find_R_t_pnp(self.feature_dists_metric, features_image)
                 R_body, t_body = self.pose_recoverer.camera_to_drone_body_frame(R_cam, t_cam)
                 pose_body = self.pose_recoverer.get_pose_from_R_t(R_body, t_body)
+                if self.calculate_run_times:
+                    pose_calculation_duration = time.time() - start_time
+                    print(f"Used {pose_calculation_duration:.4f} sec to calculate pose")
 
-                print(f"Pos: {pose_body[0:3]} Orientation: {pose_body[3:]}")
+                if self.calculate_run_times:
+                    print(f"Total: {circle_detection_duration + corner_detection_duration + corner_identification_duration + pose_calculation_duration:.4f} sec")
+                    print()
 
                 self._publish_pose(pose_body)
 
