@@ -177,14 +177,14 @@ class FeatureDetector():
         # Remove outliers
 
         # Check that distance between arrow and both corners is the same
-        if not np.allclose(dists[arrow_idx, corner_0_idx], dists[arrow_idx, corner_1_idx], atol=1):
+        if not np.allclose(dists[arrow_idx, corner_0_idx], dists[arrow_idx, corner_1_idx], atol=3):
             return None
 
         # Check that ratio between distances in the image and in real life are the same
         dist_ratio_px = dists[arrow_idx, corner_0_idx] / dists[corner_0_idx, corner_1_idx]
         dist_ratio_m = cv.norm(helipad_dists_metric[:3,0], helipad_dists_metric[:3,4]) \
                      / cv.norm(helipad_dists_metric[:3,0], helipad_dists_metric[:3,1])
-        if not np.allclose(dist_ratio_px, dist_ratio_m, atol=1):
+        if not np.allclose(dist_ratio_px, dist_ratio_m, atol=3):
             return None
 
         # Determine which corner is the left corner of the H and which is the right
@@ -273,7 +273,7 @@ class FeatureDetector():
 
         # Check that distance between bottom left and top left is equal to distance
         # between bottom right and top right
-        if not np.allclose(dists[h_bottom_left_idx, h_top_left_idx], dists[h_bottom_right_idx, h_top_right_idx], atol=1):
+        if not np.allclose(dists[h_bottom_left_idx, h_top_left_idx], dists[h_bottom_right_idx, h_top_right_idx], atol=3):
             return None
 
         ret = np.hstack((

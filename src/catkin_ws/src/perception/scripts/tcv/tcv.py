@@ -84,6 +84,9 @@ class TcvPoseEstimator():
         self.pose_calculation_durations = np.zeros(self.N_duration_entries)
         self.pose_calculation_index = 0
 
+        self.percentage_feature_identification = np.ones(self.N_duration_entries)
+        self.percentage_feature_identification_index = 0
+
     def _new_image_cb(self, msg):
         if not self.processing_image:
             self.latest_image = np.frombuffer(msg.data,
@@ -97,7 +100,7 @@ class TcvPoseEstimator():
         if self.calculate_run_times:
             start_time = time.time()
 
-        mask = self.corner_detector.create_helipad_mask(img, show_masked_img=True)
+        mask = self.corner_detector.create_helipad_mask(img, show_masked_img=self.view_camera_output)
 
         if self.calculate_run_times:
             circle_detection_duration = time.time() - start_time
@@ -122,7 +125,7 @@ class TcvPoseEstimator():
             self.corner_detector.show_corners_found(img, corners, color="red")
             cv.waitKey(1)
 
-        if corners is None:
+        if len(corners) == 0:
             return
 
         if self.calculate_run_times:
@@ -135,7 +138,9 @@ class TcvPoseEstimator():
                 self.corner_identification_index += 1
             print(f"Used {corner_identification_duration:.4f} sec to identify corners")
 
+        self.percentage_feature_identification_index += 1
         if features_image is None:
+            self.percentage_feature_identification[self.percentage_feature_identification_index-1] = 0
             return
 
         if self.view_camera_output:
@@ -160,7 +165,9 @@ class TcvPoseEstimator():
     def start(self):
 
         rospy.loginfo("Starting TCV pose estimator")
-        rospy.on_shutdown(self._on_shutdown)
+
+        if self.calculate_run_times:
+            rospy.on_shutdown(self._on_shutdown)
 
         while not rospy.is_shutdown():
             if self.new_image_available:
@@ -187,6 +194,7 @@ class TcvPoseEstimator():
         print(f"Average corner detection duration: {np.mean(self.corner_detection_durations):4f} sec")
         print(f"Average corner identification duration: {np.mean(self.corner_identification_durations):4f} sec")
         print(f"Average pose calculation duration: {np.mean(self.pose_calculation_durations):4f} sec")
+        print(f"Indentified features percentage: {np.mean(self.percentage_feature_identification[:self.percentage_feature_identification_index]):4f}")
 
 
 def main():
