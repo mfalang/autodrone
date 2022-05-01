@@ -1,0 +1,15 @@
+Takeoff
+Move12
+Search2
+Drop2
+Move21
+Trackheli
+Land
+Resupply
+Takeoff
+Move13
+Search3
+Drop3
+Move31
+Trackheli
+Land

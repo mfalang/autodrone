@@ -1,0 +1,2 @@
+Initial state: s1 nrs ls aO bB cB dA
+Goal state: s5 rs aA bA cO dB

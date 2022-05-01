@@ -1,0 +1,65 @@
+Propositions:
+d1 d2 d3 batt nbatt buoy nbuoy searched2 nsearched2 searched3 nsearched3 dropped2 ndropped2 dropped3 ndropped3 tracking ntracking landed nlanded
+Actions:
+Name: Move12
+pre: d1 nlanded
+add: d2
+delete: d1
+Name: Move13
+pre: d1 nlanded
+add: d3
+delete: d1
+Name: Move21
+pre: d2
+add: d1
+delete: d2
+Name: Move31
+pre: d3
+add: d1
+delete: d3
+Name: Move23
+pre: d2
+add: d3
+delete: d2
+Name: Move32
+pre: d3
+add: d2
+delete: d3
+---
+Name: Search2
+pre: d2 batt buoy
+add: searched2
+delete: nsearched2
+Name: Search3
+pre: d3 batt buoy
+add: searched3
+delete: nsearched3
+---
+Name: Drop2
+pre: d2 searched2 buoy batt
+add: nbuoy nbatt dropped2
+delete: buoy batt ndropped2
+Name: Drop3
+pre: d3 searched3 buoy batt
+add: nbuoy nbatt dropped3
+delete: buoy batt ndropped3
+---
+Name: Resupply
+pre: d1 nbatt nbuoy landed
+add: batt buoy
+delete: nbatt nbuoy
+---
+Name: Trackheli
+pre: d1 ntracking nlanded
+add: tracking
+delete: ntracking
+---
+Name: Takeoff
+pre: d1 landed batt buoy
+add: nlanded ntracking
+delete: landed
+---
+Name: Land
+pre: d1 nlanded tracking
+add: landed
+delete: tracking nlanded

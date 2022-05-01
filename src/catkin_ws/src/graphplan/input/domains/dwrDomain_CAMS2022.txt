@@ -1,0 +1,131 @@
+Propositions:
+s1 s2 s3 s4 s5 aO aA aB dO dA dB rs nrs cA cB cO bA bO bB ls nls
+Actions:
+Name: LcB 
+pre: s4 cB nls rs
+add: cO ls
+delete: cB nls 
+Name: Ms45 
+pre: s4 
+add: s5 
+delete: s4
+Name: Ms32 
+pre: s3 
+add: s2 
+delete: s3
+Name: LbA 
+pre: s2 bA nls rs
+add: bO ls
+delete: bA nls
+Name: LbB 
+pre: s4 bB nls rs
+add: bO ls
+delete: bB nls
+Name: Ms24 
+pre: s2 
+add: s4 
+delete: s2
+Name: Ms12 
+pre: s1 
+add: s2 
+delete: s1 
+Name: UaA 
+pre: s2 aO ls
+add: aA nls
+delete: aO ls
+Name: Ms23 
+pre: s2 nls
+add: s3 
+delete: s2
+Name: Rs3 
+pre: s3 nrs nls
+add: rs 
+delete: nrs
+Name: Ms34 
+pre: s3 
+add: s4 
+delete: s3 
+Name: UbB 
+pre: s4 bO ls
+add: bB nls
+delete: bO ls 
+Name: LcB 
+pre: s4 cB nls rs
+add: cO ls
+delete: cB nls
+Name: Ms21 
+pre: s2 
+add: s1 
+delete: s2 
+Name: Ms42 
+pre: s4 
+add: s2 
+delete: s4 
+Name: Ms43 
+pre: s4 nls
+add: s3 
+delete: s4 
+Name: Ms15 
+pre: s1 
+add: s5 
+delete: s1 
+Name: Ms51 
+pre: s5 
+add: s1 
+delete: s5 
+Name: UaB 
+pre: s4 aO ls
+add: aB nls
+delete: aO
+Name: UbA 
+pre: s2 bO ls
+add: bA nls
+delete: bO  
+Name: UcB 
+pre: s4 cO ls
+add: cB nls
+delete: cO 
+Name: UcA 
+pre: s2 cO ls
+add: cA nls
+delete: cO  
+Name: LcA 
+pre: s2 cA nls rs
+add: cO ls
+delete: cA 
+Name: Ms25 
+pre: s2 
+add: s5 
+delete: s2 
+Name: Ms13 
+pre: s1 nrs nls
+add: s3 
+delete: s1 
+Name: Ms35 
+pre: s3 
+add: s5 
+delete: s3 
+Name: Ms14 
+pre: s1 
+add: s4
+delete: s1
+Name: Ms41 
+pre: s4 
+add: s1
+delete: s4
+Name: UdA 
+pre: s2 dO ls
+add: dA nls
+delete: dO  ls
+Name: LdA 
+pre: s2 dA nls rs
+add: dO ls
+delete: dA nls
+Name: UdB 
+pre: s4 dO ls
+add: dB nls
+delete: dO  ls
+Name: LdB 
+pre: s4 dB nls rs
+add: dO ls
+delete: dB nls

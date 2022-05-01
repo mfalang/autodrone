@@ -1,0 +1,2 @@
+Initial state: d1 landed batt buoy
+Goal: d1 landed searched2 searched3 dropped2 dropped3
