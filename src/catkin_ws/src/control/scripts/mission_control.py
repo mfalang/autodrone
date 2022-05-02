@@ -63,6 +63,15 @@ class MissionController():
             rospy.sleep(0.1)
         rospy.loginfo("Hovering")
 
+    def _get_reliable_altitude_estimate(self):
+        # Use EKF if altitude is above 1m
+        if self._prev_pos[2] > 1:
+            print("Using EKF")
+            return self._prev_pos[2]
+        else:
+            print("Using ultrasonic sensor")
+            return -self._prev_telemetry.relative_altitude # negative to get it in the BODY frame
+
     def start(self):
 
         control_util.await_user_confirmation("Start mission")
@@ -112,44 +121,28 @@ class MissionController():
 
         # First align the drone with the helipad horizontally
         rospy.loginfo("Aligning horizontally")
+        descending = False
+        landing_position_ref = np.array([0, 0, 0.5]) # in body frame
         while not rospy.is_shutdown():
 
             if np.linalg.norm(self._prev_pos[:2]) < pos_error_threshold:
-                break
+                descending = True
 
-            v_ref = self._guidance_law.get_velocity_reference(self._prev_pos[:2], self._prev_pos_timestamp, debug=False)
-            v_d = self._controller.get_smooth_reference(v_d, v_ref, dt)
+            if descending:
+                alt = self._get_reliable_altitude_estimate()
+                alt_error = alt - landing_position_ref[2]
+                # Sign of position errro in z must be switched as positive climb rate is defined as upwards
+                # in the drone interface, but since these measurements are in BODY, being above the desired
+                # altitude will result in a positive error, hence this error must be made negative to work with
+                # the control
+                alt_error *= -1
 
-            prev_vel = np.array([
-                self._prev_telemetry.vx,
-                self._prev_telemetry.vy,
-            ])
+                pos_error = np.hstack((self._prev_pos[:2], alt_error))
 
-            self._controller.set_attitude(
-                v_d, prev_vel, self._prev_telemetry_timestamp
-            )
-
-            rate.sleep()
-
-        # Then start lowering it
-        rospy.loginfo("Descending while keeping horizontal alignment")
-        target_altitude = 0.5
-        pos_ref = np.array([0, 0, 0.5]) # in body frame
-        while not rospy.is_shutdown():
-            pos_error = self._prev_pos - pos_ref
-            # Using this instead of EKF because EKF is not accurate below 1m
-            rel_alt_body = -self._prev_telemetry.relative_altitude
-            pos_error[2] = rel_alt_body - pos_ref[2]
-            # Sign of position errro in z must be switched as positive climb rate is defined as upwards
-            # in the drone interface, but since these measurements are in BODY, being above the desired
-            # altitude will result in a positive error, hence this error must be made negative to work with
-            # the control
-            pos_error[2] *= -1
-
-            if np.abs(pos_error[2]) < 0.1:
-                break
-
-            print(f"Pos error: {pos_error}")
+                if np.abs(pos_error[2]) < 0.1:
+                    break
+            else:
+                pos_error = np.hstack((self._prev_pos[:2], 0))
 
             v_ref = self._guidance_law.get_velocity_reference(pos_error, self._prev_pos_timestamp, debug=True)
             v_d = self._controller.get_smooth_reference(v_d, v_ref[:2], dt)
@@ -168,7 +161,6 @@ class MissionController():
             rate.sleep()
 
         rospy.loginfo("Ready to land")
-
 
 def main():
     mission_controller = MissionController()
