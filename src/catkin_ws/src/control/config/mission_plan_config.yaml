@@ -1,0 +1,20 @@
+
+mission_1:
+  loc_type: "relative"
+
+mission_2:
+  loc_type: "relative"
+
+mission_3:
+  loc_type: "gps"
+
+locations:
+  loc_1:
+    relative_coords: [0, 0, 0]
+    gps_coords: [0, 0, 0]
+  loc_2:
+    relative_coords: [1, 0, 0]
+    gps_coords: [0, 0, 0]
+  loc_3:
+    relative_coords: [0, 2, 0]
+    gps_coords: [0, 0, 0]

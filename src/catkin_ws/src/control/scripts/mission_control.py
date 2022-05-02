@@ -19,6 +19,8 @@ class MissionController():
         rospy.init_node(node_name, anonymous=False)
 
         self._action_sequence = self._generate_action_sequence()
+        mission_plan_params = control_util.load_config(node_name, "mission_plan_config_file")
+        self._locations, self._locations_type = self._load_locations(mission_plan_params)
 
         control_params = control_util.load_control_params_config(node_name)
 
@@ -54,6 +56,18 @@ class MissionController():
 
         return action_sequence
 
+    def _load_locations(self, mission_plan_config: dict):
+        mission_number = rospy.get_param("~mission_number")
+        loc_type = mission_plan_config[f"mission_{mission_number}"]["loc_type"]
+
+        locations = np.vstack((
+            np.array([mission_plan_config["locations"]["loc_1"][f"{loc_type}_coords"]]),
+            np.array([mission_plan_config["locations"]["loc_2"][f"{loc_type}_coords"]]),
+            np.array([mission_plan_config["locations"]["loc_3"][f"{loc_type}_coords"]]),
+        ))
+
+        return locations, loc_type
+
     def _drone_telemetry_cb(self, msg: drone_interface.msg.AnafiTelemetry) -> None:
         self._prev_telemetry_timestamp = msg.header.stamp.to_sec()
         self._prev_telemetry = msg
@@ -71,10 +85,11 @@ class MissionController():
 
     def _wait_for_hovering(self):
         rospy.loginfo("Waiting for drone to hover")
-        flying_state = ""
-        while flying_state != "hovering":
+        while not rospy.is_shutdown():
             if self._new_telemetry_available:
                 flying_state = self._prev_telemetry.flying_state
+                if flying_state == "hovering":
+                    break
                 self._new_telemetry_available = False
             rospy.sleep(0.1)
         rospy.loginfo("Hovering")
@@ -88,17 +103,40 @@ class MissionController():
             print("Using ultrasonic sensor")
             return -self._prev_telemetry.relative_altitude # negative to get it in the BODY frame
 
+    def _get_action_function(self, action: str):
+        if action == "Takeoff":
+            return self.takeoff
+        elif action == "Land":
+            return self.land
+        elif "Move" in action:
+            return self.move
+        elif action == "Trackheli":
+            return self.track_helipad
+        elif "Search" in action:
+            return self.search
+        elif "Drop" in action:
+            return self.drop
+        elif action == "Resupply":
+            return self.resupply
+        else:
+            print(f"Unknown action: {action}")
+            raise ValueError
+
     def start(self):
 
-        control_util.await_user_confirmation("Start mission")
+        print("\nSelected action sequence:")
+        for i, action in enumerate(self._action_sequence):
+            print(f"\t{i+1}. {action}")
 
-        self.takeoff()
-        control_util.await_user_confirmation("Continue to tracking")
-        self.track_helipad()
-        self.land()
+        control_util.await_user_confirmation(f"Start action sequence")
 
+        for action in self._action_sequence:
+            if not rospy.is_shutdown():
+                function = self._get_action_function(action)
+                control_util.await_user_confirmation(f"Start action {action}")
+                function(action)
 
-    def takeoff(self):
+    def takeoff(self, action: str):
         # Take off and wait for drone to be stable in the air
         self._controller.takeoff()
         self._wait_for_hovering()
@@ -108,23 +146,22 @@ class MissionController():
         self._controller.move_relative(0, 0, -2, 0)
         self._wait_for_hovering()
 
-    def land(self):
+    def land(self, action: str):
         # Assuming that the altitude above the helipad is about 0.5m (done by the tracking
         # helipad action) and therefore we can just execute the landing here.
         self._controller.land()
 
-    def move(self, whereto: np.ndarray, use_gps_coordinates=False):
+    def move(self, action: str):
+        dest = int(action[-1])
+
+        if self._locations_type == "relative":
+            self._controller.move_relative(*self._locations[dest])
+        else:
+            print("GPS not implemented")
         # use_gps_coordinates should only be set to true in the simulator and if used in real
         # life one must be very careful to actually select the correct GPS location.
 
-        if not use_gps_coordinates:
-            self._controller.move_relative(whereto[0], whereto[1], whereto[2])
-        else:
-            print("GPS coordinates not implemented.")
-
-        self._wait_for_hovering()
-
-    def track_helipad(self):
+    def track_helipad(self, action: str):
         rate = rospy.Rate(20)
         dt = 0.05
         v_d = np.zeros(4)
@@ -178,10 +215,20 @@ class MissionController():
 
         rospy.loginfo("Ready to land")
 
+    def search(self, action: str):
+        print(f"Searching in location {action[-1]}")
+        print("Not implemented")
+
+    def drop(self, action: str):
+        print(f"Dropping life buoy in location {action[-1]}")
+
+    def resupply(self, action: str):
+        print("Resupplying")
+
+
 def main():
     mission_controller = MissionController()
-    # mission_controller.start()
-    mission_controller._generate_action_sequence()
+    mission_controller.start()
 
 if __name__ == "__main__":
     main()

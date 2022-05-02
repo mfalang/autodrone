@@ -269,3 +269,30 @@ def load_control_params_config(node_name: str) -> dict:
         sys.exit()
 
     return config
+
+def load_config(node_name: str, rosparam_name: str) -> dict:
+    """Load the control parameters when the controller is run from an arbitrary node.
+
+    Parameters
+    ----------
+    node_name : str
+        The name of the node the starting the controller
+    rosparam_name : str
+        The name of the ROS parameter where the filename of the config file is stored
+
+    Returns
+    -------
+    dict
+        The control parameters config
+    """
+    config_file = rospy.get_param(f"/{node_name}/{rosparam_name}")
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+
+    try:
+        with open(f"{script_dir}/../config/{config_file}") as f:
+            config = yaml.safe_load(f)
+    except Exception as e:
+        rospy.logerr(f"Failed to load config: {e}")
+        sys.exit()
+
+    return config
