@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import rospy
+import rospkg
+import subprocess
 import numpy as np
 
 import control
@@ -15,6 +17,9 @@ class MissionController():
     def __init__(self) -> None:
         node_name = "mission_control"
         rospy.init_node(node_name, anonymous=False)
+
+        self._action_sequence = self._generate_action_sequence()
+
         control_params = control_util.load_control_params_config(node_name)
 
         self._controller = control.Controller(control_params)
@@ -37,6 +42,17 @@ class MissionController():
 
         rospy.Subscriber("/drone/out/telemetry", drone_interface.msg.AnafiTelemetry, self._drone_telemetry_cb)
         rospy.Subscriber("/estimate/ekf", perception.msg.PointWithCovarianceStamped, self._ekf_cb)
+
+    def _generate_action_sequence(self):
+        mission_number = rospy.get_param("~mission_number")
+        rospack = rospkg.RosPack()
+        graphplan_path = rospack.get_path("graphplan")
+
+        subprocess.run(["python", f"{graphplan_path}/scripts/GraphPlan_main.py", "drone_domain.txt", f"drone_problem_{mission_number}.txt", "zero"])
+
+        action_sequence = np.loadtxt(f"{graphplan_path}/output/problem{mission_number}.txt", dtype=str)
+
+        return action_sequence
 
     def _drone_telemetry_cb(self, msg: drone_interface.msg.AnafiTelemetry) -> None:
         self._prev_telemetry_timestamp = msg.header.stamp.to_sec()
@@ -164,7 +180,8 @@ class MissionController():
 
 def main():
     mission_controller = MissionController()
-    mission_controller.start()
+    # mission_controller.start()
+    mission_controller._generate_action_sequence()
 
 if __name__ == "__main__":
     main()
