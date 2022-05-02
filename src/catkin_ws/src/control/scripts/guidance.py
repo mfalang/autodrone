@@ -79,27 +79,49 @@ class PID(GenericGuidanceLaw):
         self._Ki_y = params["y_axis"]["ki"]
         self._Kd_y = params["y_axis"]["kd"]
 
+        self._Kp_z = params["z_axis"]["kp"]
+        self._Ki_z = params["z_axis"]["ki"]
+        self._Kd_z = params["z_axis"]["kd"]
+
         self._vx_limits = limits["vx"]
         self._vy_limits = limits["vy"]
+        self._vz_limits = limits["vz"]
 
         print(10*"=", "Position controller control params", 10*"=")
         print(f"X-axis: \tKp: {self._Kp_x} \tKi: {self._Ki_x} \tKd: {self._Kd_x} \tLimits: {self._vx_limits}")
         print(f"Y-axis: \tKp: {self._Kp_y} \tKi: {self._Ki_y} \tKd: {self._Kd_y} \tLimits: {self._vy_limits}")
+        print(f"Z-axis: \tKp: {self._Kp_z} \tKi: {self._Ki_z} \tKd: {self._Kd_z} \tLimits: {self._vz_limits}")
         print(56*"=")
 
         self._prev_ts = None
-        self._error_int = np.zeros(2)
-        self._prev_error = np.zeros(2)
+        self._error_int = np.zeros(3)
+        self._prev_error = np.zeros(3)
 
     def get_velocity_reference(self, pos_error_body: np.ndarray, ts: float, debug=False) -> np.ndarray:
+
+        if pos_error_body.shape[0] == 2:
+            control3D = False
+        elif pos_error_body.shape[0] == 3:
+            control3D = True
+        else:
+            print(f"Position error has wrong shape, should be 2 or 3, is: {pos_error_body.shape[0]}")
+
         e_x = pos_error_body[0]
         e_y = pos_error_body[1]
+
+        if control3D:
+            e_z = pos_error_body[2]
+        else:
+            e_z = 0
 
         if self._prev_ts is not None and ts != self._prev_ts:
             dt = ts - self._prev_ts
 
             e_dot_x = (e_x - self._prev_error[0]) / dt
             e_dot_y = (e_y - self._prev_error[1]) / dt
+
+            if control3D:
+                e_dot_z = (e_z - self._prev_error[2]) / dt
 
             self._prev_error = pos_error_body
 
@@ -110,8 +132,12 @@ class PID(GenericGuidanceLaw):
             if self._vy_limits[0] <= self._error_int[1] <= self._vy_limits[1]:
                 self._error_int[1] += e_y * dt
 
+            if control3D:
+                if self._vz_limits[0] <= self._error_int[2] <= self._vz_limits[1]:
+                    self._error_int[2] += e_z * dt
+
         else:
-            e_dot_x = e_dot_y = 0
+            e_dot_x = e_dot_y = e_dot_z = 0
 
         self._prev_ts = ts
 
@@ -121,13 +147,20 @@ class PID(GenericGuidanceLaw):
         vx_reference = self._clamp(vx_reference, self._vx_limits)
         vy_reference = self._clamp(vy_reference, self._vy_limits)
 
-        velocity_reference = np.array([vx_reference, vy_reference])
+        if control3D:
+            vz_reference = self._Kp_z*e_z + self._Kd_z*e_dot_z + self._Ki_z*self._error_int[2]
+            vz_reference = self._clamp(vz_reference, self._vz_limits)
+            velocity_reference = np.array([vx_reference, vy_reference, vz_reference])
+        else:
+            velocity_reference = np.array([vx_reference, vy_reference])
 
         if debug:
             print(f"Timestamp: {ts}")
             print(f"Velocity references:\t vx: {vx_reference:.3f}\t vy: {vy_reference:.3f}")
             print(f"Vx gains:\tP: {self._Kp_x*e_x:.3f}\tI: {self._Ki_x*self._error_int[0]:.3f}\tD: {self._Kd_x*e_dot_x:.3f} ")
             print(f"Vy gains:\tP: {self._Kp_y*e_y:.3f}\tI: {self._Ki_y*self._error_int[1]:.3f}\tD: {self._Kd_y*e_dot_y:.3f} ")
+            if control3D:
+                print(f"Vz gains:\tP: {self._Kp_z*e_z:.3f}\tI: {self._Ki_z*self._error_int[2]:.3f}\tD: {self._Kd_z*e_dot_y:.3f} ")
             print()
 
         return velocity_reference

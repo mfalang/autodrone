@@ -71,6 +71,14 @@ class Controller():
 
         return att_ref
 
+    def set_attitude3D(self, v_d: np.ndarray, v: np.ndarray, ts: float, debug=False):
+        att_ref = self._attitude_reference_generator.get_attitude_reference(v_d[:2], v, ts, debug=debug)
+
+        att_ref_msg = control_util.pack_attitude_ref_msg(att_ref[0], att_ref[1], 0, v_d[2])
+        self._attitude_ref_publisher.publish(att_ref_msg)
+
+        return att_ref
+
     def move_relative(self, dx: float, dy: float, dz: float, dpsi: float,
         max_horizontal_speed=0.5, max_vertical_speed=0.5, max_yaw_rotation_speed=45
     ) -> None:

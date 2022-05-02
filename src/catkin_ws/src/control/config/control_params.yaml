@@ -2,6 +2,7 @@ guidance:
   velocity_limits:
     vx: [-0.3, 0.3]
     vy: [-0.3, 0.3]
+    vz: [-0.3, 0.3]
   pp:
     kappa: 0.1
   pid:
@@ -10,6 +11,10 @@ guidance:
       ki: 0
       kd: 0
     y_axis:
+      kp: 0.5
+      ki: 0
+      kd: 0
+    z_axis:
       kp: 0.5
       ki: 0
       kd: 0
