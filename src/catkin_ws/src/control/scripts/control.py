@@ -72,9 +72,11 @@ class Controller():
         return att_ref
 
     def set_attitude3D(self, v_d: np.ndarray, v: np.ndarray, ts: float, debug=False):
-        att_ref = self._attitude_reference_generator.get_attitude_reference(v_d[:2], v, ts, debug=debug)
+        # v_d format: [vd_x, vd_y, vd_z]
+        att_ref = self._attitude_reference_generator.get_attitude_reference(v_d[:2], v[:2], ts, debug=debug)
 
-        att_ref_msg = control_util.pack_attitude_ref_msg(att_ref[0], att_ref[1], 0, v_d[2])
+        att_ref_3D = np.array([att_ref[0], att_ref[1], 0, v_d[2]])
+        att_ref_msg = control_util.pack_attitude_ref_msg(att_ref_3D)
         self._attitude_ref_publisher.publish(att_ref_msg)
 
         return att_ref

@@ -1,0 +1,13 @@
+<launch>
+    <arg name="att_controller" default="pid" />
+    <arg name="guidance_law" default="pid" />
+    <node
+        name="mission_control"
+        pkg="control"
+        type="mission_control.py"
+        output="screen">
+        <param name="config_file" value="control_params.yaml" />
+        <param name="attitude_controller" value="$(arg att_controller)"/>
+        <param name="guidance_law" value="$(arg guidance_law)"/>
+    </node>
+</launch>

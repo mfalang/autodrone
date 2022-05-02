@@ -111,8 +111,6 @@ class PID(GenericGuidanceLaw):
 
         if control3D:
             e_z = pos_error_body[2]
-        else:
-            e_z = 0
 
         if self._prev_ts is not None and ts != self._prev_ts:
             dt = ts - self._prev_ts
@@ -123,7 +121,10 @@ class PID(GenericGuidanceLaw):
             if control3D:
                 e_dot_z = (e_z - self._prev_error[2]) / dt
 
-            self._prev_error = pos_error_body
+            if control3D:
+                self._prev_error = pos_error_body
+            else:
+                self._prev_error = np.hstack((pos_error_body, 0))
 
             # Avoid integral windup
             if self._vx_limits[0] <= self._error_int[0] <= self._vx_limits[1]:
@@ -156,11 +157,13 @@ class PID(GenericGuidanceLaw):
 
         if debug:
             print(f"Timestamp: {ts}")
-            print(f"Velocity references:\t vx: {vx_reference:.3f}\t vy: {vy_reference:.3f}")
             print(f"Vx gains:\tP: {self._Kp_x*e_x:.3f}\tI: {self._Ki_x*self._error_int[0]:.3f}\tD: {self._Kd_x*e_dot_x:.3f} ")
             print(f"Vy gains:\tP: {self._Kp_y*e_y:.3f}\tI: {self._Ki_y*self._error_int[1]:.3f}\tD: {self._Kd_y*e_dot_y:.3f} ")
             if control3D:
                 print(f"Vz gains:\tP: {self._Kp_z*e_z:.3f}\tI: {self._Ki_z*self._error_int[2]:.3f}\tD: {self._Kd_z*e_dot_y:.3f} ")
+                print(f"Velocity references:\t vx: {vx_reference:.3f}\t vy: {vy_reference:.3f} vz: {vz_reference:.3f}")
+            else:
+                print(f"Velocity references:\t vx: {vx_reference:.3f}\t vy: {vy_reference:.3f}")
             print()
 
         return velocity_reference
