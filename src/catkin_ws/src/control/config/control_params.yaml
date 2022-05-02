@@ -2,7 +2,7 @@ guidance:
   velocity_limits:
     vx: [-0.3, 0.3]
     vy: [-0.3, 0.3]
-    vz: [-0.3, 0.3]
+    vz: [-0.1, 0.1]
   pp:
     kappa: 0.1
   pid:

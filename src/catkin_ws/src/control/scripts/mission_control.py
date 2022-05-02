@@ -105,10 +105,12 @@ class MissionController():
 
     def _get_reliable_altitude_estimate(self):
         # Use EKF if altitude is above 1m
-        if self._prev_pos[2] > 1:
-            return self._prev_pos[2]
-        else:
-            return -self._prev_telemetry.relative_altitude # negative to get it in the BODY frame
+        # if self._prev_pos[2] > 2:
+        #     return self._prev_pos[2]
+        # else:
+        #     return -self._prev_telemetry.relative_altitude # negative to get it in the BODY frame
+        return self._prev_pos[2]
+
 
     def _get_action_function(self, action: str):
         if action == "Takeoff":
@@ -172,6 +174,7 @@ class MissionController():
             print("GPS not implemented")
         # use_gps_coordinates should only be set to true in the simulator and if used in real
         # life one must be very careful to actually select the correct GPS location.
+        self._wait_for_hovering()
 
     def track_helipad(self, action: str):
         rate = rospy.Rate(20)
@@ -203,7 +206,7 @@ class MissionController():
                 alt_error *= -1
 
                 pos_error = np.hstack((self._prev_pos[:2], alt_error))
-
+                print(f"Error{pos_error}, altitude: {alt}")
                 if np.abs(pos_error[2]) < 0.1:
                     break
             else:
