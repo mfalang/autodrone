@@ -47,6 +47,9 @@ class MissionController():
 
     def _generate_action_sequence(self):
         mission_number = rospy.get_param("~mission_number")
+        if mission_number == "test":
+            return ["Takeoff", "Trackheli", "Land"]
+
         rospack = rospkg.RosPack()
         graphplan_path = rospack.get_path("graphplan")
 
@@ -85,11 +88,17 @@ class MissionController():
 
     def _wait_for_hovering(self):
         rospy.loginfo("Waiting for drone to hover")
+        # Require 5 messages in a row with hovering
+        counter = 0
         while not rospy.is_shutdown():
             if self._new_telemetry_available:
                 flying_state = self._prev_telemetry.flying_state
                 if flying_state == "hovering":
-                    break
+                    counter += 1
+                    if counter >= 5:
+                        break
+                else:
+                    counter = 0
                 self._new_telemetry_available = False
             rospy.sleep(0.1)
         rospy.loginfo("Hovering")
@@ -97,10 +106,8 @@ class MissionController():
     def _get_reliable_altitude_estimate(self):
         # Use EKF if altitude is above 1m
         if self._prev_pos[2] > 1:
-            print("Using EKF")
             return self._prev_pos[2]
         else:
-            print("Using ultrasonic sensor")
             return -self._prev_telemetry.relative_altitude # negative to get it in the BODY frame
 
     def _get_action_function(self, action: str):
@@ -138,7 +145,7 @@ class MissionController():
 
     def takeoff(self, action: str):
         # Take off and wait for drone to be stable in the air
-        self._controller.takeoff()
+        self._controller.takeoff(require_confirmation=False)
         self._wait_for_hovering()
 
         # Move up to a total of 3m altitude
@@ -149,13 +156,18 @@ class MissionController():
     def land(self, action: str):
         # Assuming that the altitude above the helipad is about 0.5m (done by the tracking
         # helipad action) and therefore we can just execute the landing here.
-        self._controller.land()
+        self._controller.land(require_confirmation=False)
 
     def move(self, action: str):
         dest = int(action[-1])
 
         if self._locations_type == "relative":
-            self._controller.move_relative(*self._locations[dest])
+            if dest == 1:
+                origin = int(action[-2])
+                dxyz = - self._locations[origin - 1] # -1 as locations are labeled 1,2,3 and not 0,1,2
+            else:
+                dxyz = self._locations[dest - 1]
+            self._controller.move_relative(*dxyz, 0)
         else:
             print("GPS not implemented")
         # use_gps_coordinates should only be set to true in the simulator and if used in real
@@ -168,12 +180,12 @@ class MissionController():
 
         pos_error_threshold = 0.2 # m
 
-        control_util.await_user_confirmation("Move away from the helipad")
-        self._controller.move_relative(-1, -1, 0, 0)
-        control_util.await_user_confirmation("Start tracking")
+        # control_util.await_user_confirmation("Move away from the helipad")
+        # self._controller.move_relative(-1, -1, 0, 0)
+        # control_util.await_user_confirmation("Start tracking")
 
         # First align the drone with the helipad horizontally
-        rospy.loginfo("Aligning horizontally")
+        rospy.loginfo("Aligning horizontally, then descending")
         descending = False
         landing_position_ref = np.array([0, 0, 0.5]) # in body frame
         while not rospy.is_shutdown():
@@ -197,7 +209,7 @@ class MissionController():
             else:
                 pos_error = np.hstack((self._prev_pos[:2], 0))
 
-            v_ref = self._guidance_law.get_velocity_reference(pos_error, self._prev_pos_timestamp, debug=True)
+            v_ref = self._guidance_law.get_velocity_reference(pos_error, self._prev_pos_timestamp, debug=False)
             v_d = self._controller.get_smooth_reference(v_d, v_ref[:2], dt)
 
             prev_vel = np.array([

@@ -50,13 +50,15 @@ class Controller():
             self.config["reference_model"]["omegas"], self.config["reference_model"]["zetas"]
         )
 
-    def takeoff(self):
-        control_util.await_user_confirmation("takeoff")
+    def takeoff(self, require_confirmation=True):
+        if require_confirmation:
+            control_util.await_user_confirmation("takeoff")
         rospy.loginfo("Taking off")
         self._takeoff_publisher.publish(std_msgs.msg.Empty())
 
-    def land(self):
-        control_util.await_user_confirmation("land")
+    def land(self, require_confirmation=True):
+        if require_confirmation:
+            control_util.await_user_confirmation("land")
         rospy.loginfo("Landing")
         self._land_publisher.publish(std_msgs.msg.Empty())
 
