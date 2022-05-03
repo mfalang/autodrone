@@ -100,7 +100,7 @@ class PoseRecovery():
 
         t_body = rz @ t_camera
 
-        t_body += self.camera_offsets
+        t_body -= self.camera_offsets
 
         return R_body, t_body
 

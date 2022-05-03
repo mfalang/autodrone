@@ -204,6 +204,16 @@ class CoordinateTransform():
         elif self.environment == "real":
             euler[2] = (euler[2] + 180) % 360 - 180
 
+        # Apply attitude offsets
+        # TODO: Find out if these are needed in the simulation as well
+        roll_offset = rospy.get_param("/drone/attitude_offsets/roll")
+        pitch_offset = rospy.get_param("/drone/attitude_offsets/pitch")
+        yaw_offset = rospy.get_param("/drone/attitude_offsets/yaw")
+
+        euler[0] += roll_offset
+        euler[1] += pitch_offset
+        euler[2] += yaw_offset
+
         ret = np.array([
             pose.pose.position.x,
             pose.pose.position.y,

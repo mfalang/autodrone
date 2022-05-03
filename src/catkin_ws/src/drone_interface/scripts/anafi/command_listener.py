@@ -65,20 +65,20 @@ class CommandListener():
         self.drone(olympe_msgs.gimbal.set_target(
             gimbal_id=0,
             control_mode="position",
-            roll_frame_of_reference="relative",
+            roll_frame_of_reference="absolute",
             roll=0,
-            pitch_frame_of_reference="relative",
+            pitch_frame_of_reference="absolute",
             pitch=camera_angle,
-            yaw_frame_of_reference="relative",
+            yaw_frame_of_reference="none",
             yaw=0
         ))
 
         assert self.drone(olympe_msgs.gimbal.attitude(
             gimbal_id=0,
-            # roll_relative=0,
-            # roll_frame_of_reference="relative",
+            roll_relative=0,
+            roll_frame_of_reference="absolute",
             pitch_absolute=camera_angle, # TODO: This might have to be relative instead
-            pitch_frame_of_reference="relative",
+            pitch_frame_of_reference="absolute",
             yaw_relative=0,
             yaw_frame_of_reference="relative"
         )).wait(5).success(), "Failed to pitch camera"

@@ -121,9 +121,9 @@ class BoundingBoxPoseEstimator():
         # Given the axes definitions in the camera frame, the new axis will thus be
         # the following:
 
-        x_helipad = y_camera + self.camera_offsets[0]
-        y_helipad = x_camera + self.camera_offsets[1]
-        z_helipad = z_camera + self.camera_offsets[2]
+        x_helipad = y_camera - self.camera_offsets[0]
+        y_helipad = x_camera - self.camera_offsets[1]
+        z_helipad = z_camera - self.camera_offsets[2]
 
         return x_helipad, y_helipad, z_helipad
 

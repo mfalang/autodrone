@@ -157,33 +157,33 @@ def main():
     anafi_raw_data = np.loadtxt(f"{data_dir}/estimates/anafi_raw_data.txt", skiprows=1)
     tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
 
-    # Calculate accuracy of DNNCV
-    ts, dnncv_pos, gt_pos = plotter.match_two_dataseries_one_to_one(dnncv_data, gt_data)
-    plotter.calculate_rmse_and_plot(
-        ts,
-        dnncv_pos[:,:3],
-        gt_pos[:,:3],
-        suptitle="DNNCV pos estimate vs. ground truth",
-        data1_label="DNNCV",
-        data2_label="GT",
-        ylabels=["x[m]", "y[m]", "z[m]"],
-        xlabels=["t [sec]", "t [sec]", "t [sec]"]
-    )
+    # # Calculate accuracy of DNNCV
+    # ts, dnncv_pos, gt_pos = plotter.match_two_dataseries_one_to_one(dnncv_data, gt_data)
+    # plotter.calculate_rmse_and_plot(
+    #     ts,
+    #     dnncv_pos[:,:3],
+    #     gt_pos[:,:3],
+    #     suptitle="DNNCV pos estimate vs. ground truth",
+    #     data1_label="DNNCV",
+    #     data2_label="GT",
+    #     ylabels=["x[m]", "y[m]", "z[m]"],
+    #     xlabels=["t [sec]", "t [sec]", "t [sec]"]
+    # )
 
-    # Calculate accuracy of EKF
-    ts, ekf_pos, gt_pos = plotter.match_two_dataseries_one_to_one(ekfpos_data, gt_data)
-    plotter.calculate_rmse_and_plot(
-        ts,
-        ekf_pos[:,:3],
-        gt_pos[:,:3],
-        suptitle="EKF pos estimate vs. ground truth",
-        data1_label="EKF",
-        data2_label="GT",
-        ylabels=["x[m]", "y[m]", "z[m]"],
-        xlabels=["t [sec]", "t [sec]", "t [sec]"],
-        plot_std_devs=True,
-        std_devs = [np.sqrt(ekf_pos[:,3]), np.sqrt(ekf_pos[:,7]), np.sqrt(ekf_pos[:,11])]
-    )
+    # # Calculate accuracy of EKF
+    # ts, ekf_pos, gt_pos = plotter.match_two_dataseries_one_to_one(ekfpos_data, gt_data)
+    # plotter.calculate_rmse_and_plot(
+    #     ts,
+    #     ekf_pos[:,:3],
+    #     gt_pos[:,:3],
+    #     suptitle="EKF pos estimate vs. ground truth",
+    #     data1_label="EKF",
+    #     data2_label="GT",
+    #     ylabels=["x[m]", "y[m]", "z[m]"],
+    #     xlabels=["t [sec]", "t [sec]", "t [sec]"],
+    #     plot_std_devs=True,
+    #     std_devs = [np.sqrt(ekf_pos[:,3]), np.sqrt(ekf_pos[:,7]), np.sqrt(ekf_pos[:,11])]
+    # )
 
     # Compare DNNCV and EKF estimate to ground truth
     synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekfpos_data, dnncv_data, tcv_data])
@@ -194,15 +194,15 @@ def main():
     )
 
     # Plot heading angles
-    synched_heading_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data_drone_pose, anafi_raw_data])
+    # synched_heading_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data_drone_pose, anafi_raw_data])
 
-    plotter.plot_multiple_data_series(
-        [
-            np.array([synched_heading_data[0][:,0], synched_heading_data[0][:,6]]).T,
-            np.array([synched_heading_data[1][:,0], synched_heading_data[1][:,6]]).T
-        ],
-         1, "Heading - GT vs Anafi raw", ["GT", "raw"],  ["t [sec]"], ["heading [deg]"], [False, False]
-    )
+    # plotter.plot_multiple_data_series(
+    #     [
+    #         np.array([synched_heading_data[0][:,0], synched_heading_data[0][:,6]]).T,
+    #         np.array([synched_heading_data[1][:,0], synched_heading_data[1][:,6]]).T
+    #     ],
+    #      1, "Heading - GT vs Anafi raw", ["GT", "raw"],  ["t [sec]"], ["heading [deg]"], [False, False]
+    # )
 
     plt.show()
 

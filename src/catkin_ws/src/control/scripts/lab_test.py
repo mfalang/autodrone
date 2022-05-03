@@ -277,36 +277,36 @@ class NewSquare(Mission):
         self._get_keyboard_input("Ready to take off? (yes) ", "yes")
         self._takeoff()
 
-        self._get_keyboard_input("Go up 0.5m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(0, 0, -0.5, 0)
+        self._get_keyboard_input("Go up 2m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -2, 0)
         self.setpoint_publisher.publish(msg)
 
-        self._get_keyboard_input("Go right 0.3m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(0, 0.3, 0, 0)
+        self._get_keyboard_input("Go right 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0.5, 0, 0)
         self.setpoint_publisher.publish(msg)
 
-        self._get_keyboard_input("Go forward 0.3m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(0.3, 0, 0, 0)
+        self._get_keyboard_input("Go forward 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0.5, 0, 0, 0)
         self.setpoint_publisher.publish(msg)
 
-        self._get_keyboard_input("Go left 0.6m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(0, -0.6, 0, 0)
+        self._get_keyboard_input("Go left 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, -1, 0, 0)
         self.setpoint_publisher.publish(msg)
 
-        self._get_keyboard_input("Go backward 0.6m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(-0.6, 0, 0, 0)
+        self._get_keyboard_input("Go backward 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(-1, 0, 0, 0)
         self.setpoint_publisher.publish(msg)
 
-        self._get_keyboard_input("Go right 0.6m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(0, 0.6, 0, 0)
+        self._get_keyboard_input("Go right 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 1, 0, 0)
         self.setpoint_publisher.publish(msg)
 
-        self._get_keyboard_input("Go forward 0.3m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(0.3, 0, 0, 0)
+        self._get_keyboard_input("Go forward 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0.5, 0, 0, 0)
         self.setpoint_publisher.publish(msg)
 
-        self._get_keyboard_input("Go left 0.3m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(0, -0.3, 0, 0)
+        self._get_keyboard_input("Go left 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, -0.5, 0, 0)
         self.setpoint_publisher.publish(msg)
 
         self._get_keyboard_input("Land? (yes) ", "yes")
