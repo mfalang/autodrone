@@ -100,7 +100,12 @@ class PoseRecovery():
 
         t_body = rz @ t_camera
 
-        t_body -= self.camera_offsets
+        t_body += self.camera_offsets
+
+        # Manual offsets TODO: make find these using some least squares or something
+        t_body[0] -= 0.1
+        t_body[1] -= 0.2
+        t_body[2] -= 0.15
 
         return R_body, t_body
 

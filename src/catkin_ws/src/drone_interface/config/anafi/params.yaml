@@ -3,7 +3,7 @@ drone:
   camera:
     img_width: 1280
     img_height: 720
-    offset_x_mm: 90
+    offset_x_mm: 70
     offset_y_mm: 0
     offset_z_mm: 0
     camera_matrix: [9.412189028123261778e+02, 0.000000000000000000e+00, 5.806581517118189595e+02,
