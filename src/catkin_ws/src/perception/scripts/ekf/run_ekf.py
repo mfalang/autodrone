@@ -119,7 +119,13 @@ class EKFRosRunner():
                     self.config["measurements"]["drone_velocity"]["topic_name"],
                     drone_interface.msg.AnafiTelemetry, self._drone_velocity_cb
                 )
+            elif mm == "tcv_position":
+                rospy.Subscriber(
+                    self.config["measurements"]["tcv_position"]["topic_name"],
+                    perception.msg.EulerPose, self._tcv_position_cb
+                )
             else:
+                print(f"Measurement model: {mm} not implemented")
                 raise NotImplementedError
 
 
@@ -142,6 +148,11 @@ class EKFRosRunner():
         z = np.array([msg.point.x, msg.point.y, msg.point.z])
 
         self.ekf_estimate = self.filter.update(z, self.ekf_estimate, "dnn_cv_position")
+
+    def _tcv_position_cb(self, msg: perception.msg.EulerPose):
+        z = np.array([msg.x, msg.y, msg.z])
+
+        self.ekf_estimate = self.filter.update(z, self.ekf_estimate, "tcv_position")
 
     def _drone_velocity_cb(self, msg: drone_interface.msg.AnafiTelemetry):
         if not self.estimating:

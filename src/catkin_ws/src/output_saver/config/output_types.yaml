@@ -67,8 +67,8 @@ estimates:
     name: tcv_pose
     num_states: 6
     topic:
-      sim: /estimate/drone_pose/tcv
-      real: /estimate/drone_pose/tcv
+      sim: /estimate/tcv/pose
+      real: /estimate/tcv/pose
     file_header: "Format: timestamp[sec] [x[m], y[m], z[m], phi[deg] theta[deg] psi[deg]]\n"
     max_values_stored_in_buffer: 1
 

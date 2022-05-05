@@ -71,7 +71,7 @@ class TcvPoseEstimator():
         self.pose_recoverer = pose_recovery.PoseRecovery(self.K, self.camera_offsets)
 
         self.pose_estimate_publisher = rospy.Publisher(
-            "/estimate/drone_pose/tcv", perception.msg.EulerPose, queue_size=10
+            "/estimate/tcv/pose", perception.msg.EulerPose, queue_size=10
         )
 
         self.N_duration_entries = 1000
