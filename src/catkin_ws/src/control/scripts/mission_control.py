@@ -49,6 +49,8 @@ class MissionController():
         mission_number = rospy.get_param("~mission_number")
         if mission_number == "test":
             return ["Takeoff", "Trackheli", "Land"]
+        elif mission_number == "track":
+            return ["Takeoff", "Trackheli"]
 
         rospack = rospkg.RosPack()
         graphplan_path = rospack.get_path("graphplan")
@@ -142,8 +144,10 @@ class MissionController():
         for action in self._action_sequence:
             if not rospy.is_shutdown():
                 function = self._get_action_function(action)
-                control_util.await_user_confirmation(f"Start action {action}")
+                # control_util.await_user_confirmation(f"Start action {action}")
                 function(action)
+                rospy.loginfo(f"Finished action {action}")
+                rospy.sleep(1)
 
     def takeoff(self, action: str):
         # Take off and wait for drone to be stable in the air
@@ -190,7 +194,7 @@ class MissionController():
         # First align the drone with the helipad horizontally
         rospy.loginfo("Aligning horizontally, then descending")
         descending = False
-        landing_position_ref = np.array([0, 0, 0.5]) # in body frame
+        landing_position_ref = np.array([0, 0, 1]) # in body frame
         while not rospy.is_shutdown():
 
             if np.linalg.norm(self._prev_pos[:2]) < pos_error_threshold:
@@ -206,8 +210,8 @@ class MissionController():
                 alt_error *= -1
 
                 pos_error = np.hstack((self._prev_pos[:2], alt_error))
-                print(f"Error{pos_error}, altitude: {alt}")
-                if np.abs(pos_error[2]) < 0.1:
+                # print(f"Error{pos_error}, altitude: {alt}")
+                if np.abs(pos_error[2]) < 0.1 and np.all(pos_error[:2] < 0.2):
                     break
             else:
                 pos_error = np.hstack((self._prev_pos[:2], 0))

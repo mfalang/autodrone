@@ -4,7 +4,7 @@ ekf:
   input:
     topic_name: /drone/out/ekf_input
   dynamic_model: constant_velocity_no_attitude
-  measurement_models: [drone_velocity, dnn_cv_position]
+  measurement_models: [drone_velocity, dnn_cv_position, tcv_position]
   dt: 0.04
 
 dynamic_models:

@@ -1,6 +1,9 @@
 mission_test:
   loc_type: "relative"
 
+mission_track:
+  loc_type: "relative"
+
 mission_1:
   loc_type: "relative"
 
