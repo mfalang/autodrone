@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <launch>
+    <include file="$(find perception)/launch/dnnCV_real.launch"></include>
+    <include file="$(find perception)/launch/tcv_real.launch"></include>
     <node
         name="ekf"
         pkg="perception"

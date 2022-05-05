@@ -260,12 +260,21 @@ class FeatureDetector():
         h_top_right_coords = corners[h_top_right_idx]
 
         # Same procedure for top left
-        dist_lower_left_top_left_px = pixels_per_meter * cv.norm(
-            helipad_dists_metric[:3,0],
+        # dist_lower_left_top_left_px = pixels_per_meter * cv.norm(
+        #     helipad_dists_metric[:3,0],
+        #     helipad_dists_metric[:3,3]
+        # )
+        # h_top_left_idx = np.argmin(
+        #     np.abs(dists[h_bottom_left_idx] - dist_lower_left_top_left_px)
+        # )
+        # h_top_left_coords = corners[h_top_left_idx]
+
+        dist_lower_right_top_left_px = pixels_per_meter * cv.norm(
+            helipad_dists_metric[:3,1],
             helipad_dists_metric[:3,3]
         )
         h_top_left_idx = np.argmin(
-            np.abs(dists[h_bottom_left_idx] - dist_lower_left_top_left_px)
+            np.abs(dists[h_bottom_right_idx] - dist_lower_right_top_left_px)
         )
         h_top_left_coords = corners[h_top_left_idx]
 

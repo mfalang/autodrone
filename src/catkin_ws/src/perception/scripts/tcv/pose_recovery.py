@@ -37,9 +37,18 @@ class PoseRecovery():
         image_points = image_points.T
 
         _, R_vec, t_vec = cv.solvePnP(object_points, image_points, self.K, distortion_coeffs)
+
+        # Using solvePnPRansac did not make much of a difference, see 2022-5-5/18-8-48
+        # _, R_vec, t_vec, inliers = cv.solvePnPRansac(object_points, image_points, self.K, distortion_coeffs)
+        # if len(inliers) != 5:
+        #     print(f"Only found {len(inliers)} inliers")
+        # R_vec2, t_vec2 = cv.solvePnPRefineLM(object_points, image_points, self.K, distortion_coeffs, R_vec, t_vec)
+        # print(np.array_equal(t_vec, t_vec2))
         Rt, _ = cv.Rodrigues(R_vec)
 
+        # cameraPosition = -Rt.T @ t_vec
         R = Rt
+
         t = t_vec.reshape((3,))
 
         return R, t
@@ -96,16 +105,30 @@ class PoseRecovery():
         # camera offsets.
 
         rz = homography.rotate_z(np.pi/2)[:3, :3]
+
         R_body = rz @ R_camera
+
+
+        # angles = homography.rotation_matrix2euler_angles(R_body)
+        # print(angles*180/np.pi)
+        # rx = homography.rotate_x(angles[0])[:3, :3]
+        # ry = homography.rotate_y(angles[1])[:3, :3]
+
+        # R_correction = rx.T @ ry.T # not this see 2022-5-5/18-2-31
+        # R_correction = rx @ ry # not this see 2022-5-5/18-4-34
+        # R_correction = ry @ rx # not this see 2022-5-5/18-7-11
+        # R_correction = ry.T @ rx.T # this is ok, but not that good, see 2022-5-5/17-59-45
+        # R_correction = ry.T @ rx.T
+        # t_body = rz @ R_correction @ t_camera
 
         t_body = rz @ t_camera
 
         t_body += self.camera_offsets
 
         # Manual offsets TODO: make find these using some least squares or something
-        t_body[0] -= 0.1
-        t_body[1] -= 0.2
-        t_body[2] -= 0.15
+        # t_body[0] -= 0.1
+        # t_body[1] -= 0.2
+        # t_body[2] -= 0.15
 
         return R_body, t_body
 

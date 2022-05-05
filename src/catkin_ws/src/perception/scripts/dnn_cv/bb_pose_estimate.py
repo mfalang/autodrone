@@ -126,7 +126,7 @@ class BoundingBoxPoseEstimator():
         z_helipad = z_camera + self.camera_offsets[2]
 
         # Manual offsets TODO: Find these using least squares or something
-        z_helipad += 300
+        # z_helipad += 300
 
         return x_helipad, y_helipad, z_helipad
 

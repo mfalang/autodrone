@@ -322,12 +322,57 @@ class RotateMission2(Mission):
         self._get_keyboard_input("Ready to take off? (yes) ", "yes")
         self._takeoff()
 
-        self._get_keyboard_input("Go up 1m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(0, 0, -1, 0)
+        self._get_keyboard_input("Go up 2m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -2, 0)
         self.setpoint_publisher.publish(msg)
 
-        self._get_keyboard_input("Go backwards and right 1m? (yes/abort) ", "yes")
-        msg = self._create_setpoint_message(-1, 1, 0, 0)
+        self._get_keyboard_input("Go backwards and right 0.5m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(-0.5, 0.5, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate -90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, -90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Land? (yes) ", "yes")
+        self._land()
+
+class RotateMission3(Mission):
+
+    def __init__(self):
+        super().__init__()
+
+    def start(self):
+
+        self._get_keyboard_input("Ready to take off? (yes) ", "yes")
+        self._takeoff()
+
+        self._get_keyboard_input("Go up 2m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, -2, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go backwards and right 0.25m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(-0.25, 0.25, 0, 0)
         self.setpoint_publisher.publish(msg)
 
         self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
@@ -344,6 +389,10 @@ class RotateMission2(Mission):
 
         self._get_keyboard_input("Rotate 90 degrees? (yes/abort) ", "yes")
         msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go down 1m? (yes/abort) ", "yes")
+        msg = self._create_setpoint_message(0, 0, 1, 0)
         self.setpoint_publisher.publish(msg)
 
         self._get_keyboard_input("Rotate -90 degrees? (yes/abort) ", "yes")
@@ -399,7 +448,8 @@ def main():
         "(7 = takeoff - forward - backward - forward - right - left - landing)\n" \
         "(8 = takeoff - new square - landing)\n" \
         "(9 = takeoff - fly backwards and to the right 1m - perform rotate mission - landing)\n" \
-        "(10 = takeoff - up and down only)\n")
+        "(10 = takeoff - up and down only)\n" \
+        "(11 = takeoff - fly up 2m - fly 0.25m away from helipad - rotate - fly down 1m - rotate - landing)\n")
 
     if ans == "1":
         mission = TakeoffLand()
@@ -421,6 +471,8 @@ def main():
         mission = RotateMission2()
     elif ans == "10":
         mission = UpDownMission()
+    elif ans == "11":
+        mission = RotateMission3()
     else:
         print(f"Invalid choice {ans}")
         sys.exit(0)

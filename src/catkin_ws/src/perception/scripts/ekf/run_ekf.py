@@ -45,6 +45,9 @@ class EKFRosRunner():
             self.measurement_model_types, self.config["measurements"]
         )
 
+        rospy.loginfo(f"EKF dynamic model: {self.dynamic_model_type}")
+        rospy.loginfo(f"EKF measurement model(s): {self.measurement_model_types}")
+
         # Create estimate publisher based on the states used in the dynamic model
         self.output_states = self.config["dynamic_models"][self.dynamic_model_type]["output_states"]
         self.estimate_publisher = self._get_estimate_publisher(self.output_states)
