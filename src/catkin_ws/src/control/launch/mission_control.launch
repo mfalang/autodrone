@@ -2,6 +2,7 @@
     <arg name="att_controller" default="pid" />
     <arg name="guidance_law" default="pid" />
     <arg name="mission_number" default="1" />
+    <arg name="require_user_configmation" default="true" />
     <node
         name="mission_control"
         pkg="control"
@@ -12,5 +13,6 @@
         <param name="attitude_controller" value="$(arg att_controller)"/>
         <param name="guidance_law" value="$(arg guidance_law)"/>
         <param name="mission_number" value="$(arg mission_number)"/>
+        <param name="require_user_confirmation" value="$(arg require_user_confirmation)"/>
     </node>
 </launch>

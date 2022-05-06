@@ -39,6 +39,8 @@ class MissionController():
         self._prev_atttiude: np.ndarray = None # roll and pitch
         self._prev_velocity: np.ndarray = None # vx and vy
 
+        self._require_user_confirmation = rospy.get_param("~require_user_confirmation")
+
         self._prev_pos_timestamp: float = None
         self._prev_pos: np.ndarray = None
 
@@ -144,7 +146,8 @@ class MissionController():
         for action in self._action_sequence:
             if not rospy.is_shutdown():
                 function = self._get_action_function(action)
-                # control_util.await_user_confirmation(f"Start action {action}")
+                if self._require_user_confirmation:
+                    control_util.await_user_confirmation(f"Start action {action}")
                 function(action)
                 rospy.loginfo(f"Finished action {action}")
                 rospy.sleep(1)
@@ -195,6 +198,9 @@ class MissionController():
         rospy.loginfo("Aligning horizontally, then descending")
         descending = False
         landing_position_ref = np.array([0, 0, 1]) # in body frame
+
+        ready_to_land_counter = 0
+
         while not rospy.is_shutdown():
 
             if np.linalg.norm(self._prev_pos[:2]) < pos_error_threshold:
@@ -212,7 +218,11 @@ class MissionController():
                 pos_error = np.hstack((self._prev_pos[:2], alt_error))
                 # print(f"Error{pos_error}, altitude: {alt}")
                 if np.abs(pos_error[2]) < 0.1 and np.all(pos_error[:2] < 0.2):
-                    break
+                    ready_to_land_counter += 1
+                    if ready_to_land_counter >= 10:
+                        break
+                else:
+                    ready_to_land_counter = 0
             else:
                 pos_error = np.hstack((self._prev_pos[:2], 0))
 
