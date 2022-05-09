@@ -2,7 +2,7 @@
     <arg name="att_controller" default="pid" />
     <arg name="guidance_law" default="pid" />
     <arg name="mission_number" default="1" />
-    <arg name="require_user_configmation" default="true" />
+    <arg name="require_user_confirmation" default="true" />
     <node
         name="mission_control"
         pkg="control"
