@@ -204,7 +204,13 @@ class MissionController():
         while not rospy.is_shutdown():
 
             if np.linalg.norm(self._prev_pos[:2]) < pos_error_threshold:
+                if descending == False:
+                    print("Starting to descend")
                 descending = True
+            else:
+                if descending == True:
+                    print("Hovering")
+                descending = False
 
             if descending:
                 alt = self._get_reliable_altitude_estimate()
@@ -228,6 +234,7 @@ class MissionController():
 
             v_ref = self._guidance_law.get_velocity_reference(pos_error, self._prev_pos_timestamp, debug=False)
             v_d = self._controller.get_smooth_reference(v_d, v_ref[:2], dt)
+            print(v_d)
 
             prev_vel = np.array([
                 self._prev_telemetry.vx,

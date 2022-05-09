@@ -21,10 +21,10 @@ dynamic_models:
 measurements:
   dnn_cv_position:
     topic_name: /estimate/dnn_cv/position
-    sigmas: [1, 0.5, 1] # std. dev. in x,y,z (m)
+    sigmas: [0.5, 0.5, 1] # std. dev. in x,y,z (m)
   drone_velocity:
     topic_name: /drone/out/telemetry
-    sigmas: [0.2, 0.2, 0.2] # std. dev. in v_x, v_y, v_z (m/s)
+    sigmas: [0.4, 0.4, 0.4] # std. dev. in v_x, v_y, v_z (m/s)
   tcv_position:
     topic_name: /estimate/tcv/pose
     sigmas: [0.5, 0.5, 0.5] # std. dev. in x,y,z

@@ -8,11 +8,11 @@ guidance:
   pid:
     x_axis:
       kp: 0.5
-      ki: 0
+      ki: 0.05
       kd: 0
     y_axis:
       kp: 0.5
-      ki: 0
+      ki: 0.05
       kd: 0
     z_axis:
       kp: 0.5
