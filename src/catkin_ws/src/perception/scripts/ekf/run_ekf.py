@@ -127,6 +127,8 @@ class EKFRosRunner():
                     self.config["measurements"]["tcv_position"]["topic_name"],
                     perception.msg.EulerPose, self._tcv_position_cb
                 )
+            elif mm == "dnn_cv_position_xy":
+                pass # Uses same callback as dnn_cv_position
             else:
                 print(f"Measurement model: {mm} not implemented")
                 raise NotImplementedError
@@ -148,9 +150,13 @@ class EKFRosRunner():
         return msg
 
     def _dnn_cv_position_cb(self, msg: geometry_msgs.msg.PointStamped):
-        z = np.array([msg.point.x, msg.point.y, msg.point.z])
-
-        self.ekf_estimate = self.filter.update(z, self.ekf_estimate, "dnn_cv_position")
+        # Only use dnncv for altitude measurement if above certain altitude (not reliable below)
+        if self.ekf_estimate.mean[2] > 0.8:
+            z = np.array([msg.point.x, msg.point.y, msg.point.z])
+            self.ekf_estimate = self.filter.update(z, self.ekf_estimate, "dnn_cv_position")
+        else:
+            z = np.array([msg.point.x, msg.point.y])
+            self.ekf_estimate = self.filter.update(z, self.ekf_estimate, "dnn_cv_position_xy")
 
     def _tcv_position_cb(self, msg: perception.msg.EulerPose):
         z = np.array([msg.x, msg.y, msg.z])

@@ -7,11 +7,11 @@ guidance:
     kappa: 0.1
   pid:
     x_axis:
-      kp: 0.2
+      kp: 0.5
       ki: 0
       kd: 0
     y_axis:
-      kp: 0.2
+      kp: 0.5
       ki: 0
       kd: 0
     z_axis:

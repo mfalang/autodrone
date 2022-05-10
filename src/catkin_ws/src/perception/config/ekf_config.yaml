@@ -4,7 +4,7 @@ ekf:
   input:
     topic_name: /drone/out/ekf_input
   dynamic_model: constant_velocity_no_attitude
-  measurement_models: [drone_velocity, dnn_cv_position, tcv_position]
+  measurement_models: [drone_velocity, dnn_cv_position, tcv_position, dnn_cv_position_xy]
   dt: 0.04
 
 dynamic_models:
@@ -22,6 +22,9 @@ measurements:
   dnn_cv_position:
     topic_name: /estimate/dnn_cv/position
     sigmas: [0.5, 0.5, 1] # std. dev. in x,y,z (m)
+  dnn_cv_position_xy:
+    topic_name: /estimate/dnn_cv/position
+    sigmas: [0.5, 0.5] # std. dev. in x,y,z (m)
   drone_velocity:
     topic_name: /drone/out/telemetry
     sigmas: [0.4, 0.4, 0.4] # std. dev. in v_x, v_y, v_z (m/s)

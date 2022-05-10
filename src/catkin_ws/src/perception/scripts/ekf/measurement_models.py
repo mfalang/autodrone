@@ -9,6 +9,8 @@ def get_measurement_models_from_types(measurement_model_types: list, measurement
     for model_type in measurement_model_types:
         if model_type == "dnn_cv_position":
             measurement_model = DnnCvPosition
+        elif model_type == "dnn_cv_position_xy":
+            measurement_model = DnnCvPositionXY
         elif model_type == "drone_velocity":
             measurement_model = DroneVelocity
         elif model_type == "tcv_position":
@@ -59,6 +61,24 @@ class DnnCvPosition(MeasurementModel):
 
     def h(self, x):
         return x[:3]
+
+class DnnCvPositionXY(MeasurementModel):
+
+    def __init__(self, sigmas):
+        """
+        Measurement model for XY position measurements only coming from the DNN CV module
+
+        Frame of reference: All positions correspond to the helipad position
+        relative to the drone body frame
+        z = [x, y]
+
+        """
+        super().__init__(sigmas)
+
+        self._H = np.hstack((np.eye(2), np.zeros((2,4))))
+
+    def h(self, x):
+        return x[:2]
 
 class TCvPosition(MeasurementModel):
 

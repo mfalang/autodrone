@@ -197,7 +197,7 @@ class MissionController():
         # First align the drone with the helipad horizontally
         rospy.loginfo("Aligning horizontally, then descending")
         descending = False
-        landing_position_ref = np.array([0, 0, 1]) # in body frame
+        landing_position_ref = np.array([0, 0, 0.7]) # in body frame
 
         ready_to_land_counter = 0
 
@@ -223,7 +223,8 @@ class MissionController():
 
                 pos_error = np.hstack((self._prev_pos[:2], alt_error))
                 # print(f"Error{pos_error}, altitude: {alt}")
-                if np.abs(pos_error[2]) < 0.1 and np.all(pos_error[:2] < 0.2):
+                # if np.abs(pos_error[2]) < 0.2 and np.all(pos_error[:2] < 0.2):
+                if np.all(np.abs(pos_error) < 0.2):
                     ready_to_land_counter += 1
                     if ready_to_land_counter >= 10:
                         break
@@ -234,7 +235,6 @@ class MissionController():
 
             v_ref = self._guidance_law.get_velocity_reference(pos_error, self._prev_pos_timestamp, debug=False)
             v_d = self._controller.get_smooth_reference(v_d, v_ref[:2], dt)
-            print(v_d)
 
             prev_vel = np.array([
                 self._prev_telemetry.vx,
