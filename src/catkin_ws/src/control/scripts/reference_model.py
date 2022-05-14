@@ -33,8 +33,86 @@ class VelocityReferenceModel():
 
         return xd_next
 
+def plot_reference_model_comparison_example():
+    import control_util
+    import seaborn as sns
+    import matplotlib.pyplot as plt
 
-if __name__ == "__main__":
+    # LaTex must be installed for this to work
+    # sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super
+
+    plt.rcParams['text.usetex'] = True
+
+    # plt.rcParams.update({
+    #     'font.size' : 20,                   # Set font size to 20pt
+    #     'legend.fontsize': 20,              # -> legends
+    #     'font.family': 'lmodern',
+    #     'text.usetex': True,
+    #     'text.latex.preamble': (            # LaTeX preamble
+    #         r'\usepackage{lmodern}'
+    #         # ... more packages if needed
+    #     )
+    # })
+
+    omegas_1 = (2, 2)
+    zetas_1 = (1, 1)
+
+    ref_model_1 = VelocityReferenceModel(omegas_1, zetas_1)
+
+    omegas_2 = (4, 4)
+    zetas_2 = (1, 1)
+
+    ref_model_2 = VelocityReferenceModel(omegas_2, zetas_2)
+
+    v_ref = np.zeros((2, 200))
+    v_ref[0,:100] = 1
+    v_d_1 = np.zeros((4, v_ref.shape[1]))
+    xd_1 = np.zeros(4)
+    v_d_2 = np.zeros((4, v_ref.shape[1]))
+    xd_2 = np.zeros(4)
+
+    dt = 0.05
+
+    for i in range(v_ref.shape[1]):
+        xd_1 = ref_model_1.get_filtered_reference(xd_1, v_ref[:,i], dt)
+        v_d_1[:,i] = xd_1
+
+        xd_2 = ref_model_2.get_filtered_reference(xd_2, v_ref[:,i], dt)
+        v_d_2[:,i] = xd_2
+
+    time = np.linspace(0, int(v_ref.shape[1] * dt), v_ref.shape[1])
+
+    sns.set()
+    fig, ax = plt.subplots(2, 1, sharex=True)
+
+    # fig.suptitle("Raw and smoothed horizontal velocity references")
+
+    # Example 1
+    ax[0].plot(time, v_ref[0,:], label=r"$v_r$")
+    ax[0].plot(time, v_d_1[0,:], label=r"$v_d$")
+    ax[0].plot(time, v_d_1[2,:], label=r"$a_d$")
+    ax[0].legend()
+    # ax[0].set_title(f"$\omega_n = {omegas_1[0]}, \:\: \zeta = {zetas_1[0]}$")
+    ax[0].set_title(f"Natural frequency: $\omega_n = {omegas_1[0]}$, relative damping: $\zeta = {zetas_1[0]}$")
+    ax[0].set_yticklabels([])
+    ax[0].set_xticklabels([])
+    ax[0].set_ylim([-1.8, 1.8])
+
+
+    # Example 2
+    ax[1].plot(time, v_ref[0,:], label=r"$v_r$")
+    ax[1].plot(time, v_d_2[0,:], label=r"$v_d$")
+    ax[1].plot(time, v_d_2[2,:], label=r"$a_d$")
+    ax[1].legend()
+    ax[1].set_title(f"Natural frequency: $\omega_n = {omegas_2[0]}$, relative damping: $\zeta = {zetas_2[0]}$")
+    ax[1].set_yticklabels([])
+    ax[1].set_xticklabels([])
+    ax[1].set_ylim([-1.8, 1.8])
+
+    # fig.savefig("reference_model_example.png", format="png", dpi=300)
+    plt.show()
+
+def plot_reference_model_used_in_actual_system():
     import control_util
     import seaborn as sns
     import matplotlib.pyplot as plt
@@ -75,3 +153,7 @@ if __name__ == "__main__":
     # fig.savefig("test.png", format="png", dpi=300)
 
     plt.show()
+
+if __name__ == "__main__":
+    plot_reference_model_comparison_example()
+    plot_reference_model_used_in_actual_system()
