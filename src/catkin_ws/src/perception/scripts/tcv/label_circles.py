@@ -36,11 +36,11 @@ def draw_circle(event,x,y,flags,param):
 
         center = (ix,iy)
 
-        cv.circle(img_with_circle,center,radius, (127,255,127), thickness=2)
+        cv.circle(img_with_circle,center,radius, (127,255,127), thickness=3)
 
         text_face = cv.FONT_HERSHEY_DUPLEX
         text_scale = 1
-        text_thickness = 1
+        text_thickness = 2
         text = f"o: {center} r: {radius}"
         text_offset = 10
 
@@ -50,7 +50,7 @@ def draw_circle(event,x,y,flags,param):
             int(center[1] + text_size[1] / 2) - text_offset
         )
 
-        cv.putText(img_with_circle, text, text_origin, text_face, text_scale, (127,255,127), text_thickness, cv.LINE_AA)
+        cv.putText(img_with_circle, text, text_origin, text_face, text_scale, (0,0,255), text_thickness, cv.LINE_AA)
 
         cv.imshow("image", img_with_circle)
         drawing = False
