@@ -1,2 +1,2 @@
-Initial state: d1 landed batt buoy
+Initial state: d1 landed batt buoy nsearched2
 Goal: d1 landed searched2

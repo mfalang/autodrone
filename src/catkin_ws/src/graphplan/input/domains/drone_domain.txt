@@ -27,11 +27,11 @@ add: d2
 delete: d3
 ---
 Name: Search2
-pre: d2 batt buoy
+pre: d2 batt buoy nsearched2
 add: searched2
 delete: nsearched2
 Name: Search3
-pre: d3 batt buoy
+pre: d3 batt buoy nsearched3
 add: searched3
 delete: nsearched3
 ---
