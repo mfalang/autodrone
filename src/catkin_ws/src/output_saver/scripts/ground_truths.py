@@ -77,7 +77,7 @@ class DroneVelocityDataSaver(GenericOutputSaver):
         euler_angles[2] -= yaw_offset
 
         output = [
-            msg.header.stamp.to_sec(),
+            rospy.Time.now().to_sec(),
             velocity_body[0],
             velocity_body[1],
             velocity_body[2],

@@ -46,5 +46,6 @@ else
         /ground_truth/body_frame/helipad_pose \
         /qualisys/anafi/pose \
         /qualisys/helipad/pose \
+        /qualisys/anafi/odom \
         /darknet_ros/bounding_boxes
 fi

@@ -100,7 +100,7 @@ class TcvPoseEstimator():
         if self.calculate_run_times:
             start_time = time.time()
 
-        mask = self.corner_detector.create_helipad_mask(img, show_masked_img=self.view_camera_output)
+        mask = self.corner_detector.create_helipad_mask(img)
 
         if self.calculate_run_times:
             circle_detection_duration = time.time() - start_time
@@ -122,7 +122,7 @@ class TcvPoseEstimator():
             print(f"Used {corner_detection_duration:.4f} sec to detect corners")
 
         if self.view_camera_output:
-            self.corner_detector.show_corners_found(img, corners, color="red")
+            self.corner_detector.show_corners_found(img, corners, color="red", mask=mask)
             cv.waitKey(1)
 
         if len(corners) == 0:
@@ -144,7 +144,7 @@ class TcvPoseEstimator():
             return
 
         if self.view_camera_output:
-            self.corner_detector.show_known_points(img, features_image)
+            self.corner_detector.show_known_points(img, features_image, mask=mask)
             cv.waitKey(1)
 
         if self.calculate_run_times:

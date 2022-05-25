@@ -53,7 +53,7 @@ class Mission():
         sys.exit(0)
 
     def _get_keyboard_input(self, display_msg, expected_ans):
-        ans = ""
+        ans = "invalid"
         while ans != expected_ans:
             ans = input(f"{display_msg}").lower()
             if ans == "abort" or ans == "a":
@@ -437,6 +437,69 @@ class UpDownMission(Mission):
         self._get_keyboard_input("Land? (yes) ", "yes")
         self._land()
 
+class PoseEstimateEvaluate(Mission):
+    def __init__(self):
+        super().__init__()
+
+    def start(self):
+        self._get_keyboard_input("Ready to take off? (Enter) ", "")
+        self._takeoff()
+
+        self._get_keyboard_input("Go up 1m? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0, 0, -1, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go up 1m? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0, 0, -1, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go right 0.5m? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0, 0.5, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go forward 0.5m? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0.5, 0, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go left 1m? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0, -1, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go backward 1m? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(-1, 0, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go right 1m? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0, 1, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go forward 0.5m? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0.5, 0, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate 90 degrees? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0, 0, 0, 90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Rotate -90 degrees? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0, 0, 0, -90)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go left 0.5m? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0, -0.5, 0, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go down 1m? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0, 0, 1, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Go down 1m? (Enter/abort) ", "")
+        msg = self._create_setpoint_message(0, 0, 1, 0)
+        self.setpoint_publisher.publish(msg)
+
+        self._get_keyboard_input("Land? (Enter) ", "")
+        self._land()
+
 def main():
     ans = input("Choose mission\n" \
         "(1 = takeoff - landing)\n" \
@@ -449,7 +512,9 @@ def main():
         "(8 = takeoff - new square - landing)\n" \
         "(9 = takeoff - fly backwards and to the right 1m - perform rotate mission - landing)\n" \
         "(10 = takeoff - up and down only)\n" \
-        "(11 = takeoff - fly up 2m - fly 0.25m away from helipad - rotate - fly down 1m - rotate - landing)\n")
+        "(11 = takeoff - fly up 2m - fly 0.25m away from helipad - rotate - fly down 1m - rotate - landing)\n" \
+        "(12 = evaluate pose estimate)\n")
+
 
     if ans == "1":
         mission = TakeoffLand()
@@ -473,6 +538,8 @@ def main():
         mission = UpDownMission()
     elif ans == "11":
         mission = RotateMission3()
+    elif ans == "12":
+        mission = PoseEstimateEvaluate()
     else:
         print(f"Invalid choice {ans}")
         sys.exit(0)

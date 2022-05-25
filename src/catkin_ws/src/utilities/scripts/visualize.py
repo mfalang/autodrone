@@ -15,6 +15,10 @@ class Plotter():
 
     def __init__(self):
         sns.set_theme()
+        # LaTex must be installed for this to work
+        # sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super
+
+        plt.rcParams['text.usetex'] = True
 
     def match_two_dataseries_one_to_one(self, data1: np.ndarray, data2: np.ndarray):
 
@@ -101,17 +105,23 @@ class Plotter():
         fig.suptitle(suptitle)
 
         for i in range(ax.shape[0]):
+            if i == ax.shape[0] - 1:
+                ax[i].set_xlabel(xlabels[i])
+            else:
+                ax[i].set_xticklabels([])
+
+
             ax[i].set_ylabel(ylabels[i])
-            ax[i].set_xlabel(xlabels[i])
-            ax[i].plot(timestamps - timestamps[0], data1[:,i], label=data1_label)
-            ax[i].plot(timestamps - timestamps[0], data2[:,i], label=data2_label)
+            ax[i].plot(timestamps - timestamps[0], data1[:,i], label=data1_label, linewidth=2)
+            ax[i].plot(timestamps - timestamps[0], data2[:,i], label=data2_label, linewidth=2)
 
             if plot_std_devs:
-                ax[i].plot(timestamps - timestamps[0], data1[:,i] + std_devs[i], c="red", ls="--", label="std")
-                ax[i].plot(timestamps - timestamps[0], data1[:,i] - std_devs[i], c="red", ls="--", label="std")
+                ax[i].fill_between(timestamps - timestamps[0], y1=data1[:,i] - std_devs[i], y2=data1[:,i] + std_devs[i], alpha=.5, label=r"$1\sigma$")
                 # ax[i].plot(timestamps - timestamps[0], std_devs[i], c="red", label="std")
 
             ax[i].legend(loc="lower right")
+
+        plt.savefig("out_one_to_one", dpi=300)
 
     def plot_multiple_data_series(self, data: list, numplots: int, suptitle: str,
         legends: list, xlabels: list, ylabels: list, use_scatter: list
@@ -120,8 +130,11 @@ class Plotter():
         fig.suptitle(suptitle)
         try:
             for i in range(ax.shape[0]):
+                if i == ax.shape[0] - 1:
+                    ax[i].set_xlabel(xlabels[i])
+                else:
+                    ax[i].set_xticklabels([])
                 ax[i].set_ylabel(ylabels[i])
-                ax[i].set_xlabel(xlabels[i])
                 for j in range(len(data)):
                     if use_scatter[j]:
                         ax[i].plot(data[j][:,0] - data[j][0,0], data[j][:,i+1], marker=".", label=legends[j])
@@ -138,6 +151,8 @@ class Plotter():
                         ax.plot(data[j][:,0] - data[j][0,0], data[j][:,1], label=legends[j])
             ax.legend(loc="lower right")
 
+        plt.savefig("out", dpi=300)
+
 def main():
     parser = argparse.ArgumentParser(description="Visualize data.")
     parser.add_argument("data_dir", metavar="data_dir", type=str, help="Base directory of data")
@@ -150,12 +165,9 @@ def main():
     data_dir = f"{script_dir}/../../../../../out/{args.data_dir}"
 
     # Load data
-    dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
-    # gt_data = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
+    gt_data = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
     # gt_data_drone_pose = np.loadtxt(f"{data_dir}/ground_truths/drone_pose_helipad_frame.txt", skiprows=2)
-    ekfpos_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
     anafi_raw_data = np.loadtxt(f"{data_dir}/estimates/anafi_raw_data.txt", skiprows=1)
-    tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
 
     # # Calculate accuracy of DNNCV
     # ts, dnncv_pos, gt_pos = plotter.match_two_dataseries_one_to_one(dnncv_data, gt_data)
@@ -185,30 +197,134 @@ def main():
     #     std_devs = [np.sqrt(ekf_pos[:,3]), np.sqrt(ekf_pos[:,7]), np.sqrt(ekf_pos[:,11])]
     # )
 
-    # # Compare DNNCV and EKF estimate to ground truth
-    # synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekfpos_data, dnncv_data, tcv_data])
+    # synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([ekfpos_data, dnncv_data, tcv_data])
+    # plotter.plot_multiple_data_series(
+    #     synced_gt_dnncv_ekf_data, 3, "Position - EKF vs. DNNCV raw vs. TCV raw",
+    #     ["EKF", "DNNCV", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+    #     [True, True, True]
+    # )
+
+    # ###################
+    # # TCV
+    # ###################
+
+    tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
+
+    # Compare TCV estimate to ground truth
+    synced_gt_tcv_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, tcv_data])
+    plotter.plot_multiple_data_series(
+        synced_gt_tcv_data, 3, "Ground truth vs. TCV position",
+        ["GT", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+        [False, False]
+    )
+
+    # Calculate accuracy of TCV
+    ts, tcv_pos, gt_pos = plotter.match_two_dataseries_one_to_one(tcv_data, gt_data)
+    plotter.calculate_rmse_and_plot(
+        ts,
+        tcv_pos[:,:3],
+        gt_pos[:,:3],
+        suptitle="TCV pos estimate vs. ground truth",
+        data1_label="TCV",
+        data2_label="GT",
+        ylabels=["x[m]", "y[m]", "z[m]"],
+        xlabels=["t [sec]", "t [sec]", "t [sec]"],
+    )
+
+    # ###################
+    # # DNNCV
+    # ###################
+
+    # dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
+
+    # # Compare DNNCV estimate to ground truth
+    # synced_gt_dnncv_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, dnncv_data])
+    # plotter.plot_multiple_data_series(
+    #     synced_gt_dnncv_data, 3, "Position - GT vs. DNNCV raw",
+    #     ["GT", "DNNCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+    #     [False, False]
+    # )
+
+    # # Calculate accuracy of DNNCV
+    # ts, dnncv_pos, gt_pos = plotter.match_two_dataseries_one_to_one(dnncv_data, gt_data)
+    # plotter.calculate_rmse_and_plot(
+    #     ts,
+    #     dnncv_pos[:,:3],
+    #     gt_pos[:,:3],
+    #     suptitle="DNNCV pos estimate vs. ground truth",
+    #     data1_label="DNNCV",
+    #     data2_label="GT",
+    #     ylabels=["x[m]", "y[m]", "z[m]"],
+    #     xlabels=["t [sec]", "t [sec]", "t [sec]"],
+    # )
+
+    # ###################
+    # # EKF
+    # ###################
+
+    # ekf_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
+
+    # # Compare EKF estimate to ground truth
+    # synced_gt_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekf_data])
+    # plotter.plot_multiple_data_series(
+    #     synced_gt_ekf_data, 3, "Position - GT vs. EKF (all measurements)",
+    #     ["GT", "EKF"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+    #     [False, False]
+    # )
+
+    # # Calculate accuracy of EKF
+    # ts, ekf_pos, gt_pos = plotter.match_two_dataseries_one_to_one(ekf_data, gt_data)
+    # plotter.calculate_rmse_and_plot(
+    #     ts,
+    #     ekf_pos[:,:3],
+    #     gt_pos[:,:3],
+    #     suptitle="Position - GT vs. EKF (all measurements)",
+    #     data1_label="EKF",
+    #     data2_label="GT",
+    #     ylabels=["x[m]", "y[m]", "z[m]"],
+    #     xlabels=["t [sec]", "t [sec]", "t [sec]"],
+    #     plot_std_devs=True,
+    #     std_devs = [np.sqrt(ekf_pos[:,3]), np.sqrt(ekf_pos[:,7]), np.sqrt(ekf_pos[:,11])]
+    # )
+
+    # # ###################
+    # # # GT, EKF, DNNCV and TCV all in one
+    # # ###################
+
+    # tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
+    # dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
+
+    # # # Compare DNNCV and EKF estimate to ground truth
+    # synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekf_data, dnncv_data, tcv_data])
     # plotter.plot_multiple_data_series(
     #     synced_gt_dnncv_ekf_data, 3, "Position - GT vs. EKF vs. DNNCV raw vs. TCV raw",
     #     ["GT", "EKF", "DNNCV", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-    #     [False, True, True, True]
+    #     [False, False, False, False]
     # )
 
-    synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([ekfpos_data, dnncv_data, tcv_data])
-    plotter.plot_multiple_data_series(
-        synced_gt_dnncv_ekf_data, 3, "Position - EKF vs. DNNCV raw vs. TCV raw",
-        ["EKF", "DNNCV", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-        [True, True, True]
-    )
+    # ###################
+    # # GT vs. measured velocity
+    # ###################
+    # anafi_raw_data = np.loadtxt(f"{data_dir}/estimates/anafi_raw_data.txt", skiprows=1)
+    # gt_odom_data = np.loadtxt(f"{data_dir}/ground_truths/drone_velocity_body_frame_and_attitude.txt", skiprows=2)
+
+
+    # synced_gt_telemetry_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_odom_data, anafi_raw_data])
+    # plotter.plot_multiple_data_series(
+    #     synced_gt_telemetry_data, 3, "GT vs. telemetry velocity",
+    #     ["GT", "TEL"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+    #     [False, False]
+    # )
 
     # Plot heading angles
     # synched_heading_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data_drone_pose, anafi_raw_data])
 
     # plotter.plot_multiple_data_series(
     #     [
-    #         np.array([synched_heading_data[0][:,0], synched_heading_data[0][:,6]]).T,
-    #         np.array([synched_heading_data[1][:,0], synched_heading_data[1][:,6]]).T
+    #         np.array([synced_gt_tcv_data[0][:,0], synced_gt_tcv_data[0][:,6]]).T,
+    #         np.array([synced_gt_tcv_data[1][:,0], synced_gt_tcv_data[1][:,6]]).T
     #     ],
-    #      1, "Heading - GT vs Anafi raw", ["GT", "raw"],  ["t [sec]"], ["heading [deg]"], [False, False]
+    #      1, "Heading - GT vs TCV", ["GT", "tcv"],  ["t [sec]"], ["heading [deg]"], [False, False]
     # )
 
     plt.show()
