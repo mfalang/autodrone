@@ -302,9 +302,11 @@ class FeatureDetector():
             image = cv.bitwise_and(image, image, mask=mask)
 
         text_face = cv.FONT_HERSHEY_DUPLEX
+        # text_scale = 0.7
         text_scale = 0.5
         text_thickness = 1
         text_offset = 10
+        # text_offset = 20
         texts = ["Lower left", "Lower right", "Top right", "Top left", "Arrow"]
 
         for (point, text) in zip(features.T, texts):
@@ -316,6 +318,8 @@ class FeatureDetector():
             )
 
             cv.circle(image, center, 4, (0,0,255), cv.FILLED)
+            # cv.circle(image, center, 8, (0,0,255), cv.FILLED)
+            # cv.putText(image, text, text_origin, text_face, text_scale, (0,0,0), text_thickness*3, cv.LINE_AA)
             cv.putText(image, text, text_origin, text_face, text_scale, (127,255,127), text_thickness, cv.LINE_AA)
 
         cv.imshow("Detected features", image)
@@ -335,9 +339,11 @@ class FeatureDetector():
             center = (int(corners[i,0]), int(corners[i,1]))
 
             text_face = cv.FONT_HERSHEY_DUPLEX
+            # text_scale = 0.7
             text_scale = 0.5
             text_thickness = 1
             text = f"{i}"
+            # text_offset = 20
             text_offset = 10
 
             text_size, _ = cv.getTextSize(text, text_face, text_scale, text_thickness)
@@ -346,6 +352,7 @@ class FeatureDetector():
                 int(center[1] + text_size[1] / 2) - text_offset
             )
 
+            # cv.circle(image, center, 8, c, cv.FILLED)
             cv.circle(image, center, 4, c, cv.FILLED)
             cv.putText(image, text, text_origin, text_face, text_scale, (127,255,127), text_thickness, cv.LINE_AA)
 
@@ -392,7 +399,6 @@ def main():
     #     'test_images/real/frame0258.jpg'
     # ]
     # images = [(cv.imread(file), file) for file in sorted(misdetected_images)]
-
 
     features_metric = np.loadtxt("../../data/helipad_dists_origin_center_enu_metric.txt")
 

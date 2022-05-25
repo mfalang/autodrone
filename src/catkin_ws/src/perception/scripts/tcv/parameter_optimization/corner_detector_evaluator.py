@@ -89,6 +89,7 @@ def show_corners_found(img, corners, color, mask=None):
 
             text_face = cv.FONT_HERSHEY_DUPLEX
             text_scale = 0.5
+            # text_scale = 0.7
             text_thickness = 1
             text = f"{i}"
             text_offset = 10
@@ -99,6 +100,7 @@ def show_corners_found(img, corners, color, mask=None):
                 int(center[1] + text_size[1] / 2) - text_offset
             )
 
+            # cv.circle(image, center, 6, c, cv.FILLED)
             cv.circle(image, center, 4, c, cv.FILLED)
             cv.putText(image, text, text_origin, text_face, text_scale, (127,255,127), text_thickness, cv.LINE_AA)
 
