@@ -128,6 +128,9 @@ def create_XY():
     return X, y
 
 if __name__ == "__main__":
+
+    import time
+
     X, y = create_XY()
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size = 0.30, random_state = 101
@@ -163,13 +166,15 @@ if __name__ == "__main__":
 
     scorer_function = make_scorer(CircleDetector().prediction_error, greater_is_better=False)
     grid = GridSearchCV(CircleDetector(), param_grid, scoring=scorer_function, verbose=10, n_jobs=10)
+    start_time = time.time()
     grid.fit(X_train, y_train)
+    print(f"Grid search used {time.time() - start_time:.1f} seconds")
     results = pd.DataFrame(grid.cv_results_)
     results.to_csv("results/circle_params_grid_search_results.csv")
     params = grid.best_params_.copy()
     params["best_index"] = int(grid.best_index_)
-    with open("results/circle_params.yaml", "w+") as f:
-        yaml.dump(params, f, default_flow_style=False)
+    # with open("results/circle_params.yaml", "w+") as f:
+    #     yaml.dump(params, f, default_flow_style=False)
     print(f"Best parameters: {grid.best_params_}")
     print(f"Score: {grid.best_score_}")
     print(f"Best index: {grid.best_index_}")

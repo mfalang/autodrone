@@ -17,7 +17,8 @@ def corner_estimation_error(pred: np.ndarray, gt: np.ndarray, verbose=False):
     gt_ind = knn.predict(gt)
 
     if len(np.unique(gt_ind)) != len(gt):
-        print("Could not match prediction and ground truth points one to one")
+        # print("Could not match prediction and ground truth points one to one")
+        return None
 
     gt_sorted = gt[np.argsort(gt_ind)]
     pred_sorted = pred
@@ -30,6 +31,9 @@ def corner_estimation_error(pred: np.ndarray, gt: np.ndarray, verbose=False):
             print(f"{pred_coord} <-> {gt_coord} error: {error:.3f}")
 
     mean_error = np.mean(errors)
+
+    if mean_error >= 5:
+        return None
 
     return mean_error
 
@@ -174,9 +178,9 @@ def find_corners_shi_tomasi(img, mask):
         gradientSize=gradient_size, useHarrisDetector=use_harris_detector, k=k
     )
 
-    print(f"Shi-Tomasi corner detector used {time.time() - start_time:.3f} sec")
+    # print(f"Shi-Tomasi corner detector used {time.time() - start_time:.3f} sec")
 
-    if corners is not None:
+    if corners is not None and corners.shape[0] == 13:
         return corners.reshape(corners.shape[0], 2)
     else:
         return np.array([])
@@ -404,23 +408,51 @@ def get_circle_labels_from_csv(filename: str, frame_id: str):
 def evaluate_corner_detector():
     # Evaluate corner detector
     # Load images
+
     images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]
 
+    images = [(cv.imread("test_images/real/frame0153.jpg"), "test_images/real/frame0153.jpg")]
+
     errors = []
+    misdetections = 0
+    misdetected_images = []
+
+    # For testing only the ones where it is misdetected
+    # misdetected_images = ['test_images/real/frame0004.jpg', 'test_images/real/frame0025.jpg', 'test_images/real/frame0028.jpg',
+    #     'test_images/real/frame0073.jpg', 'test_images/real/frame0121.jpg', 'test_images/real/frame0132.jpg',
+    #     'test_images/real/frame0145.jpg', 'test_images/real/frame0148.jpg', 'test_images/real/frame0205.jpg',
+    #     'test_images/real/frame0225.jpg', 'test_images/real/frame0228.jpg', 'test_images/real/frame0229.jpg',
+    #     'test_images/real/frame0231.jpg', 'test_images/real/frame0249.jpg', 'test_images/real/frame0258.jpg'
+    # ]
+    # images = [(cv.imread(file), file) for file in sorted(misdetected_images)]
+
+
     for (img, filename) in images:
 
         frame_id = os.path.basename(filename)
-        if frame_id == "frame0004.jpg":
-            continue
+        # if frame_id == "frame0004.jpg":
+        #     continue
 
         gt_labels = get_corner_labels_from_csv(f"{filename[:-13]}/corner_labels.csv", frame_id)
         corners = run_pipeline_single_image(img, show_corners=True)
-        error = corner_estimation_error(corners, gt_labels, verbose=False)
-        print(f"Mean prediction error: {error}")
-        errors.append(error)
+        if corners.size != 0:
+            error = corner_estimation_error(corners, gt_labels, verbose=False)
+        else:
+            error = None
+
+        if error is None:
+            print(f"Could not find correct corners in image: {filename}")
+            misdetections += 1
+            misdetected_images.append(filename)
+        else:
+                errors.append(error)
+
+        # print(f"Mean prediction error: {error}")
         cv.waitKey(0)
 
-    print(f"Mean prediction error (all images): {np.mean(errors)}")
+    print(f"Misdetected images: {misdetections}/{len(images)}")
+    print(misdetected_images)
+    print(f"Mean prediction error (all images where found): {np.mean(errors)}")
 
 def evaluate_circle_detector():
     # Load images

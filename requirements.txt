@@ -4,3 +4,4 @@ rospkg
 matplotlib
 seaborn
 scikit-learn
+tqdm

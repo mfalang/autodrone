@@ -45,6 +45,8 @@ class CornerDetector(sklearn.base.BaseEstimator):
             img = X_i[:self.IMAGE_NUM_ELEMENTS].reshape((720, 1280, 3))
             mask = X_i[self.IMAGE_NUM_ELEMENTS:].reshape((720, 1280))
 
+            img = cv.GaussianBlur(img,(5,5),0)
+
             img_gray = cv.cvtColor(img.copy(), cv.COLOR_BGR2GRAY)
 
             corners = cv.goodFeaturesToTrack(img_gray, self.max_corners, self.quality_level,
@@ -205,8 +207,8 @@ if __name__ == "__main__":
     results.to_csv("results/corner_params_grid_search_results.csv")
     params = grid.best_params_.copy()
     params["best_index"] = int(grid.best_index_)
-    with open("results/corner_params.yaml", "w+") as f:
-        yaml.dump(params, f, default_flow_style=False)
+    # with open("results/corner_params.yaml", "w+") as f:
+    #     yaml.dump(params, f, default_flow_style=False)
     print(f"Best parameters: {grid.best_params_}")
     print(f"Score: {grid.best_score_}")
     print(f"Best index: {grid.best_index_}")

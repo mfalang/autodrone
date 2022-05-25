@@ -52,7 +52,7 @@ class FeatureDetector():
 
     def create_helipad_mask(self, img, show_masked_img=False):
 
-        xyr = self._circle_detector.predict([img.flatten()])[0]
+        xyr = self._circle_detector.predict([img.copy().flatten()])[0]
 
         circle_mask = np.zeros((720,1280), np.uint8)
         if np.count_nonzero(xyr) != 0:
@@ -137,7 +137,7 @@ class FeatureDetector():
 
     def find_corners_shi_tomasi(self, img, mask):
 
-        corners = self._corner_detector.predict([np.hstack((img.flatten(), mask.flatten()))])[0]
+        corners = self._corner_detector.predict([np.hstack((img.copy().flatten(), mask.flatten()))])[0]
 
         if np.count_nonzero(corners) != 0:
             return corners
@@ -295,8 +295,12 @@ class FeatureDetector():
 
         return ret
 
-    def show_known_points(self, img, features):
+    def show_known_points(self, img, features, mask=None):
         image = np.copy(img)
+
+        if mask is not None:
+            image = cv.bitwise_and(image, image, mask=mask)
+
         text_face = cv.FONT_HERSHEY_DUPLEX
         text_scale = 0.5
         text_thickness = 1
@@ -316,8 +320,11 @@ class FeatureDetector():
 
         cv.imshow("Detected features", image)
 
-    def show_corners_found(self, img, corners, color):
+    def show_corners_found(self, img, corners, color, window_name="Detected corners", mask=None):
         image = np.copy(img)
+
+        if mask is not None:
+            image = cv.bitwise_and(image, image, mask=mask)
 
         if color == "red":
             c = (0,0,255)
@@ -342,7 +349,7 @@ class FeatureDetector():
             cv.circle(image, center, 4, c, cv.FILLED)
             cv.putText(image, text, text_origin, text_face, text_scale, (127,255,127), text_thickness, cv.LINE_AA)
 
-        cv.imshow("Detected corners", image)
+        cv.imshow(window_name, image)
 
 def main():
     shi_tomasi_config = {
@@ -374,20 +381,79 @@ def main():
     corner_detector = FeatureDetector(shi_tomasi_config, hough_circle_config)
 
     img = cv.imread("test_images/real/frame0001.jpg")
-    # img = cv.imread("../../data/test_images_real/real_test_2.png")
-    # img_gray = corner_detector.preprocess_image(img)
-    cv.imshow("test", img)
-    # corners = corner_detector.find_corners_harris(img_gray)
-    # corner_detector.show_corners_found(img, corners)
-    mask = corner_detector.create_helipad_mask(img, show_masked_img=True)
-    corners = corner_detector.find_corners_shi_tomasi(img, mask)
-    corner_detector.show_corners_found(img, corners, color="red")
+
+    import glob
+    images = [(cv.imread(file), file) for file in sorted(glob.glob("test_images/real/*.jpg"))]
+
+    # Use this to only test the images where the correct corners are not found
+    # misdetected_images = [
+    #     'test_images/real/frame0121.jpg', 'test_images/real/frame0132.jpg', 'test_images/real/frame0203.jpg',
+    #     'test_images/real/frame0228.jpg', 'test_images/real/frame0229.jpg', 'test_images/real/frame0231.jpg',
+    #     'test_images/real/frame0258.jpg'
+    # ]
+    # images = [(cv.imread(file), file) for file in sorted(misdetected_images)]
+
 
     features_metric = np.loadtxt("../../data/helipad_dists_origin_center_enu_metric.txt")
 
-    features = corner_detector.find_arrow_and_H(corners, features_metric)
-    corner_detector.show_known_points(img, features)
-    cv.waitKey()
+    misdetections = []
+
+    import time
+
+    mask_durations = []
+    corners_durations = []
+    features_durations = []
+
+
+    for (img, filename) in images:
+        # print(filename, end=" ")
+        mask_start_time = time.time()
+        mask = corner_detector.create_helipad_mask(img, show_masked_img=False)
+        mask_duration = time.time() - mask_start_time
+        mask_durations.append(mask_duration)
+
+        corners_start_time = time.time()
+        corners = corner_detector.find_corners_shi_tomasi(img, mask)
+        corners_duration = time.time() - corners_start_time
+        corners_durations.append(corners_duration)
+
+        features_start_time = time.time()
+        features = corner_detector.find_arrow_and_H(corners, features_metric)
+        features_duration = time.time() - features_start_time
+        features_durations.append(features_duration)
+
+        # if mask_duration >= 0.25:
+        print(f"{filename} Mask time: {mask_duration:.3f} sec Corners time: {corners_duration:.3f} sec Features time: {features_duration:.3f} sec")
+
+        if features is None:
+            misdetections.append(filename)
+            corner_detector.show_corners_found(img, corners, "red", window_name="Detected features", mask=mask)
+            cv.waitKey()
+        else:
+            corner_detector.show_known_points(img, features, mask=mask)
+            cv.waitKey()
+
+    print(f"Mask time: Average: {np.mean(mask_durations):.4f} Median: {np.median(mask_durations):.4f} Max: {np.max(mask_durations):.4f}")
+    print(f"Corners time: Average: {np.mean(corners_durations):.4f} Median: {np.median(corners_durations):.4f} Max: {np.max(corners_durations):.4f}")
+    print(f"Features time: Average: {np.mean(features_durations):.4f} Median: {np.median(features_durations):.4f} Max: {np.max(features_durations):.2f}")
+
+    print(f"Unable to identify features in {len(misdetections)}/{len(images)} images ({100*(len(images) - len(misdetections))/len(images):.1f}% success)")
+    print(misdetections)
+
+    # img = cv.imread("../../data/test_images_real/real_test_2.png")
+    # img_gray = corner_detector.preprocess_image(img)
+    # cv.imshow("test", img)
+    # corners = corner_detector.find_corners_harris(img_gray)
+    # corner_detector.show_corners_found(img, corners)
+    # mask = corner_detector.create_helipad_mask(img, show_masked_img=False)
+    # corners = corner_detector.find_corners_shi_tomasi(img, mask)
+    # corner_detector.show_corners_found(img, corners, color="red")
+
+    # features_metric = np.loadtxt("../../data/helipad_dists_origin_center_enu_metric.txt")
+
+    # features = corner_detector.find_arrow_and_H(corners, features_metric)
+    # corner_detector.show_known_points(img, features)
+    # cv.waitKey()
 
 if __name__ == "__main__":
     main()
