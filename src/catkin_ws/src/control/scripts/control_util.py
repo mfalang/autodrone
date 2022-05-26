@@ -148,7 +148,9 @@ def await_user_confirmation(msg: str):
 
 def plot_drone_velocity_vs_reference_trajectory(
     v_ref: np.ndarray, v_d: np.ndarray, ts_refs: np.ndarray,
-    v: np.ndarray, ts_meas: np.ndarray, start_time_from_0=False, show_plot=False
+    v: np.ndarray, ts_meas: np.ndarray,
+    plot_title="Velocity vs. reference trajectory", start_time_from_0=False,
+    show_plot=False, save_fig=False
 ):
     """Plot a veloctiy reference trajectory vs. the actual measured velocity.
 
@@ -172,34 +174,44 @@ def plot_drone_velocity_vs_reference_trajectory(
         Set to true to run plt.show() to show the plot. This will block, by default False
     """
     sns.set()
+
+    # LaTex must be installed for this to work
+    # sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super
+    plt.rcParams['text.usetex'] = True
+
     fig, ax = plt.subplots(2, 1, sharex=True)
 
-    fig.suptitle("Reference vs. measured horizontal velocities")
+    fig.suptitle(plot_title)
 
     if start_time_from_0:
         ts_refs -= ts_refs[0]
         ts_meas -= ts_meas[0]
 
     # Vx
-    ax[0].plot(ts_refs, v_ref[0,:], label="vx_ref")
-    ax[0].plot(ts_refs, v_d[0,:], label="vd_x")
-    ax[0].plot(ts_meas, v[0,:], label="vx")
-    ax[0].legend()
-    ax[0].set_title("X-axis")
+    ax[0].plot(ts_refs, v_ref[0,:], label=r"$v_{r,x}$")
+    ax[0].plot(ts_refs, v_d[0,:], label=r"$v_{d,x}$")
+    ax[0].plot(ts_meas, v[0,:], label=r"$v_x$")
+    ax[0].legend(loc="upper right")
+    ax[0].set_ylabel(r"X-axis velocity [m/s]")
 
     # Vy
-    ax[1].plot(ts_refs, v_ref[1,:], label="vy_ref")
-    ax[1].plot(ts_refs, v_d[1,:], label="vd_y")
-    ax[1].plot(ts_meas, v[1,:], label="vy")
-    ax[1].legend()
-    ax[1].set_title("Y-axis")
+    ax[1].plot(ts_refs, v_ref[1,:], label=r"$v_{r,y}$")
+    ax[1].plot(ts_refs, v_d[1,:], label=r"$v_{d,y}$")
+    ax[1].plot(ts_meas, v[1,:], label=r"$v_y$")
+    ax[1].legend(loc="upper right")
+    ax[1].set_ylabel(r"Y-axis velocity [m/s]")
+    ax[1].set_xlabel(r"Time [sec]")
+
+    if save_fig:
+        plt.savefig("veloctiy_vs_reference_trajectory.png", dpi=300)
 
     if show_plot:
         plt.show()
 
 def plot_drone_attitude_vs_reference(
     att_ref: np.ndarray, ts_refs: np.ndarray,
-    att_meas: np.ndarray, ts_meas: np.ndarray, start_time_from_0=False, show_plot=False
+    att_meas: np.ndarray, ts_meas: np.ndarray, plot_title="Reference vs. measured roll and pitch angles",
+    start_time_from_0=False, show_plot=False, save_fig=False
 ):
     """Plot a roll and pitch reference angles vs. the measured angles.
 
@@ -221,25 +233,34 @@ def plot_drone_attitude_vs_reference(
         Set to true to run plt.show() to show the plot. This will block, by default False
     """
     sns.set()
+
+    # LaTex must be installed for this to work
+    # sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super
+    plt.rcParams['text.usetex'] = True
+
     fig, ax = plt.subplots(2, 1, sharex=True)
 
-    fig.suptitle("Reference vs. measured roll and pitch angles")
+    fig.suptitle(plot_title)
 
     if start_time_from_0:
         ts_refs -= ts_refs[0]
         ts_meas -= ts_meas[0]
 
     # Pitch
-    ax[0].plot(ts_refs, att_ref[1,:], label="pitch_ref")
-    ax[0].plot(ts_meas, att_meas[1,:], label="pitch")
+    ax[0].plot(ts_refs, att_ref[1,:], label=r"$\theta_r$")
+    ax[0].plot(ts_meas, att_meas[1,:], label=r"$\theta$")
+    ax[0].set_ylabel(r"Pitch angle [deg]")
     ax[0].legend()
-    ax[0].set_title("Pitch")
 
     # Roll
-    ax[1].plot(ts_refs, att_ref[0,:], label="roll_ref")
-    ax[1].plot(ts_meas, att_meas[0,:], label="roll")
+    ax[1].plot(ts_refs, att_ref[0,:], label=r"$\phi_r$")
+    ax[1].plot(ts_meas, att_meas[0,:], label=r"$\phi$")
+    ax[1].set_ylabel(r"Roll angle [deg]")
+    ax[1].set_xlabel(r"Time [sec]")
     ax[1].legend()
-    ax[1].set_title("Roll")
+
+    if save_fig:
+        plt.savefig("attitude_vs_reference.png", dpi=300)
 
     if show_plot:
         plt.show()

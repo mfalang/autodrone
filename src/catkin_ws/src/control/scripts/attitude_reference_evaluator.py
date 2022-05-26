@@ -15,55 +15,6 @@ import drone_interface.msg
 import control
 import control_util
 
-def visualize():
-    # Load velocity data to be used as reference and attitude data used for evaluation
-    data_folder = "2022-3-10/17-52-44"
-
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-    gt_filename = f"{script_dir}/../../../../../out/{data_folder}/ground_truths/drone_velocity_body_frame_and_attitude.txt"
-    gt_data = np.loadtxt(gt_filename, skiprows=1)
-
-    telemetry_filename = f"{script_dir}/../../../../../out/{data_folder}/estimates/anafi_raw_data.txt"
-    telemetry_data = np.loadtxt(telemetry_filename, skiprows=1)
-
-
-    gt_df = pd.read_csv(gt_filename, sep=" ", skiprows=1)
-    gt_df.columns = ["timestamp", "vx", "vy", "vz", "roll", "pitch", "yaw"]
-    gt_df["time"] = gt_df["timestamp"] - gt_df["timestamp"][0]
-
-    telemetry_df = pd.read_csv(telemetry_filename, sep=" ", skiprows=1)
-    telemetry_df.columns = ["timestamp", "vx", "vy", "vz", "roll", "pitch", "yaw"]
-    telemetry_df["time"] = telemetry_df["timestamp"] - telemetry_df["timestamp"][0]
-
-    ## Plotting
-    sns.set()
-
-    # Plot ground truth and drone telemetry velocity and attitude
-    fig, ax = plt.subplots(2, 3, sharex=True)
-    sns.lineplot(ax=ax[0,0], data=gt_df, x="time", y="vx", label="gt")
-    sns.lineplot(ax=ax[1,0], data=gt_df, x="time", y="pitch", label="gt")
-    sns.lineplot(ax=ax[0,1], data=gt_df, x="time", y="vy", label="gt")
-    sns.lineplot(ax=ax[1,1], data=gt_df, x="time", y="roll", label="gt")
-    sns.lineplot(ax=ax[0,2], data=gt_df, x="time", y="vz", label="gt")
-    sns.lineplot(ax=ax[1,2], data=gt_df, x="time", y="yaw", label="gt")
-
-    sns.lineplot(ax=ax[0,0], data=telemetry_df, x="time", y="vx", label="telemetry")
-    sns.lineplot(ax=ax[1,0], data=telemetry_df, x="time", y="pitch", label="telemetry")
-    sns.lineplot(ax=ax[0,1], data=telemetry_df, x="time", y="vy", label="telemetry")
-    sns.lineplot(ax=ax[1,1], data=telemetry_df, x="time", y="roll", label="telemetry")
-    sns.lineplot(ax=ax[0,2], data=telemetry_df, x="time", y="vz", label="telemetry")
-    sns.lineplot(ax=ax[1,2], data=telemetry_df, x="time", y="yaw", label="telemetry")
-
-    ax[0,0].legend()
-    ax[1,0].legend()
-    ax[0,1].legend()
-    ax[1,1].legend()
-    ax[0,2].legend()
-    ax[1,2].legend()
-    fig.suptitle("Ground truth and telemetry data")
-
-    plt.show()
-
 class AttitudeReferenceEvaluator():
 
     def __init__(self):
@@ -150,9 +101,48 @@ class AttitudeReferenceEvaluator():
             att_ref, time_refs, att_actual, time_meas, show_plot=True
         )
 
-def main():
-    evaluator = AttitudeReferenceEvaluator()
-    evaluator.evaluate_method()
+def visualize():
+
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    base_dir = f"{script_dir}/../../../../../out/controller_results/velocity_control_results"
+    env = "sim"
+    data_folder = "model_based/test_2"
+    data_dir = f"{base_dir}/{env}/{data_folder}"
+
+    v_ref = np.loadtxt(f"{data_dir}/v_ref.txt")
+    v_d = np.loadtxt(f"{data_dir}/v_d.txt")
+    time_refs = np.loadtxt(f"{data_dir}/time_refs.txt")
+    v_actual = np.loadtxt(f"{data_dir}/v_actual.txt")
+    time_meas = np.loadtxt(f"{data_dir}/time_meas.txt")
+    att_ref = np.loadtxt(f"{data_dir}/att_ref.txt")
+    att_actual = np.loadtxt(f"{data_dir}/att_actual.txt")
+
+
+    if "model" in data_folder:
+        vel_controller = "Linear drag model"
+    else:
+        vel_controller = "PID"
+
+    velocity_title = f"Reference vs. measured horizontal velocities\nEnvironment: {env.upper()} - Velocity controller: {vel_controller}"
+    attitude_title = f"Reference vs. measured roll and pitch angles\nEnvironment: {env.upper()} - Velocity controller: {vel_controller}"
+
+    control_util.plot_drone_velocity_vs_reference_trajectory(
+        v_ref, v_d, time_refs, v_actual, time_meas, plot_title=velocity_title,
+        start_time_from_0=True, show_plot=False, save_fig=False
+    )
+    control_util.plot_drone_attitude_vs_reference(
+        att_ref, time_refs, att_actual, time_meas, plot_title=attitude_title,
+        start_time_from_0=True, show_plot=True, save_fig=False
+    )
+
+
+
+
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if len(sys.argv) == 2 and sys.argv[1] == "plot":
+        visualize()
+    else:
+        evaluator = AttitudeReferenceEvaluator()
+        evaluator.evaluate_method()
