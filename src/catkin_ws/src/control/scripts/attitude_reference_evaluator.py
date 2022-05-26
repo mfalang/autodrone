@@ -130,6 +130,18 @@ class AttitudeReferenceEvaluator():
 
         self._controller.land()
 
+        import os
+
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+
+        np.savetxt(f"{script_dir}/v_ref.txt", v_ref)
+        np.savetxt(f"{script_dir}/v_d.txt", v_d)
+        np.savetxt(f"{script_dir}/time_refs.txt", time_refs)
+        np.savetxt(f"{script_dir}/v_actual.txt", v_actual)
+        np.savetxt(f"{script_dir}/time_meas.txt", time_meas)
+        np.savetxt(f"{script_dir}/att_ref.txt", att_ref)
+        np.savetxt(f"{script_dir}/att_actual.txt", att_actual)
+
         control_util.plot_drone_velocity_vs_reference_trajectory(
             v_ref, v_d, time_refs, v_actual, time_meas
         )

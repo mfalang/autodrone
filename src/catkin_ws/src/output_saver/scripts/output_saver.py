@@ -72,9 +72,13 @@ class OutputSaver():
                 "ground_truths", "drone_velocity_body_frame_and_attitude", self.environment
             )
 
-        # ground_truth.HelipadPoseDataSaver(self.config, self.output_base_dir,
-        #     "ground_truths", "helipad_pose", self.environment
-        # )
+        ground_truths.HelipadPoseDataSaver(self.config, self.output_base_dir,
+            "ground_truths", "helipad_pose", self.environment
+        )
+
+        ground_truths.DronePoseNEDDataSaver(self.config, self.output_base_dir,
+            "ground_truths", "drone_pose_ned", self.environment
+        )
 
         rospy.on_shutdown(self._on_shutdown)
         rospy.spin()

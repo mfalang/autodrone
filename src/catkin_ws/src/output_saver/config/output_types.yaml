@@ -22,7 +22,16 @@ ground_truths:
     num_states: 6
     topic:
       sim: /ground_truth/ned_frame/helipad_pose
-      real: /ground_truth/ned_frame/helipad_pose
+      real: /qualisys/helipad/pose
+    file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
+    max_values_stored_in_buffer: 10
+
+  drone_pose_ned:
+    name: drone_pose_ned
+    num_states: 6
+    topic:
+      sim: /ground_truth/ned_frame/drone_pose
+      real: /qualisys/anafi/pose
     file_header: "Format: timestamp[sec] x[m], y[m], z[m], phi[deg], theta[deg], psi[deg]]\n"
     max_values_stored_in_buffer: 10
 

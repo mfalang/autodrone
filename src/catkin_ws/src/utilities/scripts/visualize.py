@@ -208,28 +208,28 @@ def main():
     # # TCV
     # ###################
 
-    tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
+    # tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
 
-    # Compare TCV estimate to ground truth
-    synced_gt_tcv_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, tcv_data])
-    plotter.plot_multiple_data_series(
-        synced_gt_tcv_data, 3, "Ground truth vs. TCV position",
-        ["GT", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-        [False, False]
-    )
+    # # Compare TCV estimate to ground truth
+    # synced_gt_tcv_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, tcv_data])
+    # plotter.plot_multiple_data_series(
+    #     synced_gt_tcv_data, 3, "Ground truth vs. TCV position",
+    #     ["GT", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+    #     [False, False]
+    # )
 
-    # Calculate accuracy of TCV
-    ts, tcv_pos, gt_pos = plotter.match_two_dataseries_one_to_one(tcv_data, gt_data)
-    plotter.calculate_rmse_and_plot(
-        ts,
-        tcv_pos[:,:3],
-        gt_pos[:,:3],
-        suptitle="TCV pos estimate vs. ground truth",
-        data1_label="TCV",
-        data2_label="GT",
-        ylabels=["x[m]", "y[m]", "z[m]"],
-        xlabels=["t [sec]", "t [sec]", "t [sec]"],
-    )
+    # # Calculate accuracy of TCV
+    # ts, tcv_pos, gt_pos = plotter.match_two_dataseries_one_to_one(tcv_data, gt_data)
+    # plotter.calculate_rmse_and_plot(
+    #     ts,
+    #     tcv_pos[:,:3],
+    #     gt_pos[:,:3],
+    #     suptitle="TCV pos estimate vs. ground truth",
+    #     data1_label="TCV",
+    #     data2_label="GT",
+    #     ylabels=["x[m]", "y[m]", "z[m]"],
+    #     xlabels=["t [sec]", "t [sec]", "t [sec]"],
+    # )
 
     # ###################
     # # DNNCV
@@ -287,34 +287,35 @@ def main():
     #     std_devs = [np.sqrt(ekf_pos[:,3]), np.sqrt(ekf_pos[:,7]), np.sqrt(ekf_pos[:,11])]
     # )
 
-    # # ###################
-    # # # GT, EKF, DNNCV and TCV all in one
-    # # ###################
-
-    # tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
-    # dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
-
-    # # # Compare DNNCV and EKF estimate to ground truth
-    # synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekf_data, dnncv_data, tcv_data])
-    # plotter.plot_multiple_data_series(
-    #     synced_gt_dnncv_ekf_data, 3, "Position - GT vs. EKF vs. DNNCV raw vs. TCV raw",
-    #     ["GT", "EKF", "DNNCV", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-    #     [False, False, False, False]
-    # )
-
     # ###################
-    # # GT vs. measured velocity
+    # # GT, EKF, DNNCV and TCV all in one
     # ###################
-    # anafi_raw_data = np.loadtxt(f"{data_dir}/estimates/anafi_raw_data.txt", skiprows=1)
-    # gt_odom_data = np.loadtxt(f"{data_dir}/ground_truths/drone_velocity_body_frame_and_attitude.txt", skiprows=2)
+
+    tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
+    dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
+    ekf_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
+
+    # # Compare DNNCV and EKF estimate to ground truth
+    synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekf_data, dnncv_data, tcv_data])
+    plotter.plot_multiple_data_series(
+        synced_gt_dnncv_ekf_data, 3, "Position - GT vs. EKF vs. DNNCV raw vs. TCV raw",
+        ["GT", "EKF", "DNNCV", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+        [False, False, False, False]
+    )
+
+    ###################
+    # GT vs. measured velocity
+    ###################
+    anafi_raw_data = np.loadtxt(f"{data_dir}/estimates/anafi_raw_data.txt", skiprows=1)
+    gt_odom_data = np.loadtxt(f"{data_dir}/ground_truths/drone_velocity_body_frame_and_attitude.txt", skiprows=2)
 
 
-    # synced_gt_telemetry_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_odom_data, anafi_raw_data])
-    # plotter.plot_multiple_data_series(
-    #     synced_gt_telemetry_data, 3, "GT vs. telemetry velocity",
-    #     ["GT", "TEL"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-    #     [False, False]
-    # )
+    synced_gt_telemetry_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_odom_data, anafi_raw_data])
+    plotter.plot_multiple_data_series(
+        synced_gt_telemetry_data, 3, "GT vs. telemetry velocity",
+        ["GT", "TEL"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+        [False, False]
+    )
 
     # Plot heading angles
     # synched_heading_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data_drone_pose, anafi_raw_data])

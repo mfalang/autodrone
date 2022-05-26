@@ -1,5 +1,6 @@
 
 import rospy
+import geometry_msgs.msg
 import ground_truth.msg
 import nav_msgs.msg
 
@@ -244,3 +245,61 @@ class DroneVelocityDataSaver(GenericOutputSaver):
 #         # self._print_output(output, "helipad")
 
 #         self._save_output(output)
+
+class HelipadPoseDataSaver(GenericOutputSaver):
+
+    def __init__(self, config, base_dir, output_category, output_type, environment):
+        super().__init__(config, base_dir, output_category, output_type, environment)
+
+        rospy.Subscriber(self.topic_name, geometry_msgs.msg.PoseStamped, self._helipad_gt_pose_cb)
+
+    def _helipad_gt_pose_cb(self, msg: geometry_msgs.msg.PoseStamped):
+
+        quat = [
+            msg.pose.orientation.x,
+            msg.pose.orientation.y,
+            msg.pose.orientation.z,
+            msg.pose.orientation.w
+        ]
+        euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
+
+        output = np.array([
+            msg.header.stamp.to_sec(),
+            msg.pose.position.x,
+            msg.pose.position.y,
+            msg.pose.position.z,
+            euler[0],
+            euler[1],
+            euler[2]
+        ])
+
+        self._save_output(output)
+
+class DronePoseNEDDataSaver(GenericOutputSaver):
+
+    def __init__(self, config, base_dir, output_category, output_type, environment):
+        super().__init__(config, base_dir, output_category, output_type, environment)
+
+        rospy.Subscriber(self.topic_name, geometry_msgs.msg.PoseStamped, self._drone_gt_pose_cb)
+
+    def _drone_gt_pose_cb(self, msg: geometry_msgs.msg.PoseStamped):
+
+        quat = [
+            msg.pose.orientation.x,
+            msg.pose.orientation.y,
+            msg.pose.orientation.z,
+            msg.pose.orientation.w
+        ]
+        euler = Rotation.from_quat(quat).as_euler("xyz", degrees=True)
+
+        output = np.array([
+            msg.header.stamp.to_sec(),
+            msg.pose.position.x,
+            msg.pose.position.y,
+            msg.pose.position.z,
+            euler[0],
+            euler[1],
+            euler[2]
+        ])
+
+        self._save_output(output)

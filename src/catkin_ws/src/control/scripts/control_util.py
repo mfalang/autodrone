@@ -244,6 +244,150 @@ def plot_drone_attitude_vs_reference(
     if show_plot:
         plt.show()
 
+def plot_drone_position_vs_reference(
+    pos_ref: np.ndarray, ts_refs: np.ndarray,
+    pos_meas: np.ndarray, ts_meas: np.ndarray, start_time_from_0=False, show_plot=False
+):
+    """Plot a position reference vs. the measured position.
+
+    Parameters
+    ----------
+    pos_ref : np.ndarray
+        Reference position. Format (body frame): [x, y] or [x, y, z]
+    ts_refs : np.ndarray
+        ROS timestamps for pos_ref
+    pos_meas : np.ndarray
+        Measured position. Format (body frame): [x, y] or [x, y, z]
+    ts_meas : np.ndarray
+        ROS timestamps for pos_meas
+    start_time_from_0 : bool, optional
+        Set to true to show seconds on the x-axis and not the actual timestamps.
+        This could mess up the scales since the refs and measurements use different
+        time series. By default False
+    show_plot : bool, optional
+        Set to true to run plt.show() to show the plot. This will block, by default False
+    """
+    sns.set()
+
+    if start_time_from_0:
+        ts_refs -= ts_refs[0]
+        ts_meas -= ts_meas[0]
+
+    if pos_ref.shape[0] == 2:
+        fig, ax = plt.subplots(2, 1, sharex=True)
+
+        fig.suptitle("Reference vs. measured horizontal position")
+
+        # x-axis
+        ax[0].plot(ts_refs, pos_ref[0,:], label="x_ref")
+        ax[0].plot(ts_meas, pos_meas[0,:], label="x")
+        ax[0].legend()
+        ax[0].set_title("X")
+
+        # y-axis
+        ax[1].plot(ts_refs, pos_ref[1,:], label="y_ref")
+        ax[1].plot(ts_meas, pos_meas[1,:], label="y")
+        ax[1].legend()
+        ax[1].set_title("Y")
+
+    else:
+        fig, ax = plt.subplots(3, 1, sharex=True)
+
+        fig.suptitle("Reference vs. measured position")
+
+        # x-axis
+        ax[0].plot(ts_refs, pos_ref[0,:], label="x_ref")
+        ax[0].plot(ts_meas, pos_meas[0,:], label="x")
+        ax[0].legend()
+        ax[0].set_title("X")
+
+        # y-axis
+        ax[1].plot(ts_refs, pos_ref[1,:], label="y_ref")
+        ax[1].plot(ts_meas, pos_meas[1,:], label="y")
+        ax[1].legend()
+        ax[1].set_title("Y")
+
+        # z-axis
+        ax[1].plot(ts_refs, pos_ref[2,:], label="z_ref")
+        ax[1].plot(ts_meas, pos_meas[2,:], label="z")
+        ax[1].legend()
+        ax[1].set_title("Z")
+
+    if show_plot:
+        plt.show()
+
+def plot_drone_position_error_vs_gt(
+    pos_error: np.ndarray, ts_pos_error: np.ndarray, gt_pos_error: np.ndarray, ts_gt_pos_error: np.ndarray,
+    start_time_from_0=False, show_plot=False
+):
+    """Plot a position error.
+
+    Parameters
+    ----------
+    pos_error : np.ndarray
+        Position error. Format (body frame): [x, y] or [x, y, z]
+    ts_error : np.ndarray
+        ROS timestamps for pos_error
+    gt_pos_error : np.ndarray
+        GT position error. Format (body frame): [x, y] or [x, y, z]
+    ts_gt : np.ndarray
+        ROS timestamps for gt_pos_error
+    start_time_from_0 : bool, optional
+        Set to true to show seconds on the x-axis and not the actual timestamps.
+        This could mess up the scales since the refs and measurements use different
+        time series. By default False
+    show_plot : bool, optional
+        Set to true to run plt.show() to show the plot. This will block, by default False
+    """
+    sns.set()
+
+    if start_time_from_0:
+        ts_pos_error -= ts_pos_error[0]
+        ts_gt_pos_error -= ts_gt_pos_error[0]
+
+    if pos_error.shape[0] == 2:
+        fig, ax = plt.subplots(2, 1, sharex=True)
+
+        fig.suptitle("Reference vs. measured horizontal position")
+
+        # x-axis
+        ax[0].plot(ts_pos_error, pos_error[0,:], label="e_x")
+        ax[0].plot(ts_gt_pos_error, gt_pos_error[0,:], label="gt_e_x")
+        ax[0].legend()
+        ax[0].set_title("X")
+
+        # y-axis
+        ax[1].plot(ts_pos_error, pos_error[1,:], label="e_y")
+        ax[1].plot(ts_gt_pos_error, gt_pos_error[1,:], label="gt_e_y")
+        ax[1].legend()
+        ax[1].set_title("Y")
+
+    else:
+        fig, ax = plt.subplots(3, 1, sharex=True)
+
+        fig.suptitle("Reference vs. measured position")
+
+        # x-axis
+        ax[0].plot(ts_pos_error, pos_error[0,:], label="gt_e_x")
+        ax[0].plot(ts_gt_pos_error, gt_pos_error[0,:], label="gt_e_x")
+        ax[0].legend()
+        ax[0].set_title("X")
+
+        # y-axis
+        ax[1].plot(ts_pos_error, pos_error[1,:], label="gt_e_y")
+        ax[1].plot(ts_gt_pos_error, gt_pos_error[1,:], label="gt_e_y")
+        ax[1].legend()
+        ax[1].set_title("Y")
+
+        # z-axis
+        ax[1].plot(ts_pos_error, pos_error[2,:], label="gt_e_z")
+        ax[1].plot(ts_gt_pos_error, gt_pos_error[2,:], label="gt_e_z")
+        ax[1].legend()
+        ax[1].set_title("Z")
+
+    if show_plot:
+        plt.show()
+
 
 def load_control_params_config(node_name: str) -> dict:
     """Load the control parameters when the controller is run from an arbitrary node.

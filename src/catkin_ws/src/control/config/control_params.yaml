@@ -4,7 +4,7 @@ guidance:
     vy: [-0.3, 0.3]
     vz: [-0.1, 0.1]
   pp:
-    kappa: 0.1
+    kappa: 0.2
   pid:
     x_axis:
       kp: 0.5
