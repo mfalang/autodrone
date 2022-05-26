@@ -329,17 +329,18 @@ def plot_drone_position_vs_reference(
         ax[1].set_title("Y")
 
         # z-axis
-        ax[1].plot(ts_refs, pos_ref[2,:], label="z_ref")
-        ax[1].plot(ts_meas, pos_meas[2,:], label="z")
-        ax[1].legend()
-        ax[1].set_title("Z")
+        ax[2].plot(ts_refs, pos_ref[2,:], label="z_ref")
+        ax[2].plot(ts_meas, pos_meas[2,:], label="z")
+        ax[2].legend()
+        ax[2].set_title("Z")
 
     if show_plot:
         plt.show()
 
 def plot_drone_position_error_vs_gt(
-    pos_error: np.ndarray, ts_pos_error: np.ndarray, gt_pos_error: np.ndarray, ts_gt_pos_error: np.ndarray,
-    start_time_from_0=False, show_plot=False
+    pos_error: np.ndarray, ts_pos_error: np.ndarray, gt_pos_error: np.ndarray,
+    ts_gt_pos_error: np.ndarray, plot_title="Reference vs. measured horizontal position",
+    start_time_from_0=False, show_plot=False, save_fig=False
 ):
     """Plot a position error.
 
@@ -362,49 +363,62 @@ def plot_drone_position_error_vs_gt(
     """
     sns.set()
 
+    # LaTex must be installed for this to work
+    # sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super
+    plt.rcParams['text.usetex'] = True
+
     if start_time_from_0:
         ts_pos_error -= ts_pos_error[0]
         ts_gt_pos_error -= ts_gt_pos_error[0]
 
+    zero = np.zeros_like(ts_pos_error)
+
     if pos_error.shape[0] == 2:
         fig, ax = plt.subplots(2, 1, sharex=True)
 
-        fig.suptitle("Reference vs. measured horizontal position")
+        fig.suptitle(plot_title)
 
         # x-axis
-        ax[0].plot(ts_pos_error, pos_error[0,:], label="e_x")
-        ax[0].plot(ts_gt_pos_error, gt_pos_error[0,:], label="gt_e_x")
+        ax[0].plot(ts_pos_error, zero, linestyle="--", label=r"$e_{r,x}$")
+        ax[0].plot(ts_gt_pos_error, gt_pos_error[0,:], label=r"$e_x$")
+        ax[0].plot(ts_pos_error, pos_error[0,:], label=r"$\hat e_x$")
+        ax[0].set_ylabel(r"X-axis position [m]")
         ax[0].legend()
-        ax[0].set_title("X")
 
         # y-axis
-        ax[1].plot(ts_pos_error, pos_error[1,:], label="e_y")
-        ax[1].plot(ts_gt_pos_error, gt_pos_error[1,:], label="gt_e_y")
+        ax[1].plot(ts_pos_error, zero, linestyle="--", label=r"$e_{r,y}$")
+        ax[1].plot(ts_gt_pos_error, gt_pos_error[1,:], label=r"$e_y$")
+        ax[1].plot(ts_pos_error, pos_error[1,:], label=r"$\hat e_y$")
+        ax[1].set_ylabel(r"Y-axis position [m]")
+        ax[1].set_xlabel(r"Time [sec]")
         ax[1].legend()
-        ax[1].set_title("Y")
 
     else:
         fig, ax = plt.subplots(3, 1, sharex=True)
 
-        fig.suptitle("Reference vs. measured position")
+        fig.suptitle(plot_title)
 
         # x-axis
-        ax[0].plot(ts_pos_error, pos_error[0,:], label="gt_e_x")
-        ax[0].plot(ts_gt_pos_error, gt_pos_error[0,:], label="gt_e_x")
+        ax[0].plot(ts_gt_pos_error, gt_pos_error[0,:], label=r"$e_x$")
+        ax[0].plot(ts_pos_error, pos_error[0,:], label=r"$\hat e_x$")
+        ax[0].set_ylabel(r"X-axis position [m]")
         ax[0].legend()
-        ax[0].set_title("X")
 
         # y-axis
-        ax[1].plot(ts_pos_error, pos_error[1,:], label="gt_e_y")
-        ax[1].plot(ts_gt_pos_error, gt_pos_error[1,:], label="gt_e_y")
+        ax[1].plot(ts_gt_pos_error, gt_pos_error[1,:], label=r"$e_y$")
+        ax[1].plot(ts_pos_error, pos_error[1,:], label=r"$\hat e_y$")
+        ax[1].set_ylabel(r"Y-axis position [m]")
         ax[1].legend()
-        ax[1].set_title("Y")
 
         # z-axis
-        ax[1].plot(ts_pos_error, pos_error[2,:], label="gt_e_z")
-        ax[1].plot(ts_gt_pos_error, gt_pos_error[2,:], label="gt_e_z")
-        ax[1].legend()
-        ax[1].set_title("Z")
+        ax[2].plot(ts_gt_pos_error, gt_pos_error[2,:], label=r"$e_z$")
+        ax[2].plot(ts_pos_error, pos_error[2,:], label=r"$\hat e_z$")
+        ax[2].set_ylabel(r"Z-axis position [m]")
+        ax[2].set_xlabel(r"Time [sec]")
+        ax[2].legend()
+
+    if save_fig:
+        plt.savefig("pos_error_gt_vs_est.png", dpi=300)
 
     if show_plot:
         plt.show()

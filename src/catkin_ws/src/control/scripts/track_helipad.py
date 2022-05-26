@@ -198,35 +198,56 @@ class Tracker():
         np.savetxt(f"{output_dir}/time_gt.txt", self._time_gt[:self._counter])
         np.savetxt(f"{output_dir}/gt_pos.txt", self._gt_pos[:, :self._counter])
 
-    def _plot_output(self):
-        output_dir = "/home/martin/code/autodrone/out/temp_guidance_ouput"
-        v_ref = np.loadtxt(f"{output_dir}/vrefs.txt")
-        v_d = np.loadtxt(f"{output_dir}/vds.txt")
-        v_meas = np.loadtxt(f"{output_dir}/v_meas.txt")
-        t_refs = np.loadtxt(f"{output_dir}/time_refs.txt")
-        t_meas = np.loadtxt(f"{output_dir}/time_meas.txt")
-        att_refs = np.loadtxt(f"{output_dir}/att_refs.txt")
-        att_meas = np.loadtxt(f"{output_dir}/att_meas.txt")
-        pos_errors = np.loadtxt(f"{output_dir}/pos_errors.txt")
-        gt_pos = np.loadtxt(f"{output_dir}/gt_pos.txt")
-        t_gt = np.loadtxt(f"{output_dir}/time_gt.txt")
+def plot_output():
 
-        control_util.plot_drone_velocity_vs_reference_trajectory(
-            v_ref, v_d, t_refs, v_meas, t_meas, start_time_from_0=True
-        )
+    import os
 
-        control_util.plot_drone_attitude_vs_reference(
-            att_refs, t_refs, att_meas, t_meas, start_time_from_0=True
-        )
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    base_dir = f"{script_dir}/../../../../../out/controller_results/guidance_results"
+    env = "real"
+    data_folder = "track_helipad_2D/pid/test_3"
+    data_dir = f"{base_dir}/{env}/{data_folder}"
 
-        control_util.plot_drone_position_error_vs_gt(
-            pos_errors[:, 1:], t_refs[1:], gt_pos[:, 1:], t_gt[1:], start_time_from_0=True, show_plot=True
-        )
+    v_ref = np.loadtxt(f"{data_dir}/vrefs.txt")
+    v_d = np.loadtxt(f"{data_dir}/vds.txt")
+    v_meas = np.loadtxt(f"{data_dir}/v_meas.txt")
+    t_refs = np.loadtxt(f"{data_dir}/time_refs.txt")
+    t_meas = np.loadtxt(f"{data_dir}/time_meas.txt")
+    att_refs = np.loadtxt(f"{data_dir}/att_refs.txt")
+    att_meas = np.loadtxt(f"{data_dir}/att_meas.txt")
+    pos_errors = np.loadtxt(f"{data_dir}/pos_errors.txt")
+    gt_pos = np.loadtxt(f"{data_dir}/gt_pos.txt")
+    t_gt = np.loadtxt(f"{data_dir}/time_gt.txt")
 
-def main():
-    tracker = Tracker()
-    tracker.start(debug=False)
-    # tracker._plot_output()
+    if "pp" in data_folder:
+        guidance_law = "Pure pursuit"
+    else:
+        guidance_law = "PID"
+
+    velocity_title = f"Reference vs. measured horizontal velocities\nEnvironment: {env.upper()} - Guidance law: {guidance_law}"
+    attitude_title = f"Reference vs. measured roll and pitch angles\nEnvironment: {env.upper()} - Guidance law: {guidance_law}"
+    pos_error_title = f"Ground truth vs. estimated horizontal position error\nEnvironment: {env.upper()} - Guidance law: {guidance_law}"
+
+    control_util.plot_drone_velocity_vs_reference_trajectory(
+        v_ref, v_d, t_refs, v_meas, t_meas, plot_title=velocity_title,
+        start_time_from_0=True, save_fig=True
+    )
+
+    control_util.plot_drone_attitude_vs_reference(
+        att_refs, t_refs, att_meas, t_meas, plot_title=attitude_title,
+        start_time_from_0=True, save_fig=True
+    )
+
+    control_util.plot_drone_position_error_vs_gt(
+        pos_errors[:, 1:], t_refs[1:], gt_pos[:, 1:], t_gt[1:], plot_title=pos_error_title,
+        start_time_from_0=True, save_fig=True, show_plot=True
+    )
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if len(sys.argv) == 2 and sys.argv[1] == "plot":
+        plot_output()
+    else:
+        tracker = Tracker()
+        tracker.start(debug=False)
