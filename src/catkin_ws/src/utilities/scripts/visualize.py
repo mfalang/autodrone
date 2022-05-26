@@ -153,6 +153,19 @@ class Plotter():
 
         plt.savefig("out", dpi=300)
 
+    def plot_ned_positions_3d(self, data: list):
+        fig = plt.figure()
+        ax = plt.axes(projection='3d')
+        # ax.set_xlabel("x [m]")
+        # ax.set_ylabel("y [m]")
+        # ax.set_zlabel("z [m]")
+        # ax.set_xlim(-2, 2)
+        # ax.set_ylim(-2, 2)
+
+        for i in range(len(data)):
+            ax.plot3D(data[i][:,1], data[i][:,2], data[i][:,3])
+
+
 def main():
     parser = argparse.ArgumentParser(description="Visualize data.")
     parser.add_argument("data_dir", metavar="data_dir", type=str, help="Base directory of data")
@@ -287,35 +300,35 @@ def main():
     #     std_devs = [np.sqrt(ekf_pos[:,3]), np.sqrt(ekf_pos[:,7]), np.sqrt(ekf_pos[:,11])]
     # )
 
-    # ###################
-    # # GT, EKF, DNNCV and TCV all in one
-    # ###################
+    # # ###################
+    # # # GT, EKF, DNNCV and TCV all in one
+    # # ###################
 
-    tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
-    dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
-    ekf_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
+    # tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
+    # dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
+    # ekf_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
 
-    # # Compare DNNCV and EKF estimate to ground truth
-    synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekf_data, dnncv_data, tcv_data])
-    plotter.plot_multiple_data_series(
-        synced_gt_dnncv_ekf_data, 3, "Position - GT vs. EKF vs. DNNCV raw vs. TCV raw",
-        ["GT", "EKF", "DNNCV", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-        [False, False, False, False]
-    )
+    # # # Compare DNNCV and EKF estimate to ground truth
+    # synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekf_data, dnncv_data, tcv_data])
+    # plotter.plot_multiple_data_series(
+    #     synced_gt_dnncv_ekf_data, 3, "Position - GT vs. EKF vs. DNNCV raw vs. TCV raw",
+    #     ["GT", "EKF", "DNNCV", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+    #     [False, False, False, False]
+    # )
 
-    ###################
-    # GT vs. measured velocity
-    ###################
-    anafi_raw_data = np.loadtxt(f"{data_dir}/estimates/anafi_raw_data.txt", skiprows=1)
-    gt_odom_data = np.loadtxt(f"{data_dir}/ground_truths/drone_velocity_body_frame_and_attitude.txt", skiprows=2)
+    # # ###################
+    # # # GT vs. measured velocity
+    # # ###################
+    # anafi_raw_data = np.loadtxt(f"{data_dir}/estimates/anafi_raw_data.txt", skiprows=1)
+    # gt_odom_data = np.loadtxt(f"{data_dir}/ground_truths/drone_velocity_body_frame_and_attitude.txt", skiprows=2)
 
 
-    synced_gt_telemetry_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_odom_data, anafi_raw_data])
-    plotter.plot_multiple_data_series(
-        synced_gt_telemetry_data, 3, "GT vs. telemetry velocity",
-        ["GT", "TEL"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-        [False, False]
-    )
+    # synced_gt_telemetry_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_odom_data, anafi_raw_data])
+    # plotter.plot_multiple_data_series(
+    #     synced_gt_telemetry_data, 3, "GT vs. telemetry velocity",
+    #     ["GT", "TEL"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+    #     [False, False]
+    # )
 
     # Plot heading angles
     # synched_heading_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data_drone_pose, anafi_raw_data])
@@ -327,6 +340,15 @@ def main():
     #     ],
     #      1, "Heading - GT vs TCV", ["GT", "tcv"],  ["t [sec]"], ["heading [deg]"], [False, False]
     # )
+
+    ###################
+    # 3D NED position
+    ###################
+    drone_pose_ned_gt = np.loadtxt(f"{data_dir}/ground_truths/drone_pose_ned.txt", skiprows=2)
+    helipad_pose_ned_gt = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose.txt", skiprows=2)
+
+    synced_ned_positions = plotter.sync_multiple_data_series_based_on_timestamps([drone_pose_ned_gt, helipad_pose_ned_gt])
+    plotter.plot_ned_positions_3d(synced_ned_positions)
 
     plt.show()
 
