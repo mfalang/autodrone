@@ -155,6 +155,7 @@ class Plotter():
                         ax.plot(data[j][:,0] - data[j][0,0], data[j][:,1], label=legends[j])
             ax.legend(loc="upper right", prop={'size': 10})
         fig.align_ylabels(ax)
+        # plt.subplots_adjust(top=0.8)
         plt.savefig(f"multipe_data_series.png", dpi=300)
 
     def plot_ned_positions_3d(self, drone_pos:np.ndarray, helipad_pos: np.ndarray, plot_title="", orientation: tuple=None):
@@ -332,31 +333,48 @@ def main():
     #     std_devs = [np.sqrt(ekf_pos[:,3]), np.sqrt(ekf_pos[:,7]), np.sqrt(ekf_pos[:,11])]
     # )
 
+    # # ###################
+    # # # GT, EKF, DNNCV and TCV all in one
+    # # ###################
+
+    # tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
+    # dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
+    # ekf_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
+
+    # if args.data_dir == "2022-5-26/13-49-36":
+    #     title = "Perception output - Drone landing on discretely moving platform\nEnvironment: REAL - Guidance law: PID"
+    # elif args.data_dir == "2022-5-26/13-55-56":
+    #     title = "Perception output - Drone landing on continuously moving platform\nEnvironment: REAL - Guidance law: PID"
+    # elif args.data_dir == "2022-5-25/23-48-35":
+    #     title = r"Complete KF estimate vs. ground truth position $\bm p_h^b$" "\n" "Flight pattern: Square with yaw rotation at $\sim$60 sec"
+    # else:
+    #     title = "Position - GT vs. EKF vs. DNNCV raw vs. TCV raw"
+
+    # # # Compare DNNCV and EKF estimate to ground truth
+    # synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekf_data, dnncv_data, tcv_data])
+    # legend = ["GT", "KF", "DNNCV", "TCV"]
+    # plotter.plot_multiple_data_series(
+    #     synced_gt_dnncv_ekf_data, 3, title,
+    #     legend, ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+    #     [False, False, False, False], legend_size=8
+    # )
+
     # ###################
-    # # GT, EKF, DNNCV and TCV all in one
+    # # GT only
     # ###################
 
-    tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
-    dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
-    ekf_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
-
-    if args.data_dir == "2022-5-26/13-49-36":
-        title = "Perception output - Drone landing on discretely moving platform\nEnvironment: REAL - Guidance law: PID"
-    elif args.data_dir == "2022-5-26/13-55-56":
-        title = "Perception output - Drone landing on continuously moving platform\nEnvironment: REAL - Guidance law: PID"
-    elif args.data_dir == "2022-5-25/23-48-35":
-        title = r"Complete KF estimate vs. ground truth position $\bm p_h^b$" "\n" "Flight pattern: Square with yaw rotation at $\sim$60 sec"
-    else:
-        title = "Position - GT vs. EKF vs. DNNCV raw vs. TCV raw"
+    # title = "Flight patthern used to evaluate perception systems" "\n" r"Ground truth position $\bm p_h^b$"
+    title = ""
 
     # # Compare DNNCV and EKF estimate to ground truth
-    synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekf_data, dnncv_data, tcv_data])
-    legend = ["GT", "KF", "DNNCV", "TCV"]
+    legend = ["GT"]
     plotter.plot_multiple_data_series(
-        synced_gt_dnncv_ekf_data, 3, title,
+        [gt_data], 3, title,
         legend, ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-        [False, False, False, False], legend_size=8
+        [False]
     )
+
+    plt.subplots_adjust(top=0.8)
 
     # # ###################
     # # # GT vs. measured velocity
