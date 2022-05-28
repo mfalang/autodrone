@@ -55,7 +55,7 @@ add: tracking
 delete: ntracking
 ---
 Name: Takeoff
-pre: d1 landed batt buoy
+pre: d1 batt buoy
 add: nlanded ntracking
 delete: landed
 ---

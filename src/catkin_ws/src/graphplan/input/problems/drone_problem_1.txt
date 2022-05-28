@@ -1,2 +1,2 @@
-Initial state: d1 landed batt buoy
-Goal: d1 tracking
+Initial state: d1 batt buoy
+Goal: d1 landed
