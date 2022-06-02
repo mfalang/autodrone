@@ -203,7 +203,7 @@ def plot_drone_velocity_vs_reference_trajectory(
     ax[1].set_xlabel(r"Time [sec]")
 
     if save_fig:
-        plt.savefig("veloctiy_vs_reference_trajectory.png", dpi=300)
+        plt.savefig("veloctiy_vs_reference_trajectory.png", dpi=300, bbox_inches="tight", pad_inches=0)
 
     if show_plot:
         plt.show()
@@ -260,7 +260,7 @@ def plot_drone_attitude_vs_reference(
     ax[1].legend()
 
     if save_fig:
-        plt.savefig("attitude_vs_reference.png", dpi=300)
+        plt.savefig("attitude_vs_reference.png", dpi=300, bbox_inches="tight", pad_inches=0)
 
     if show_plot:
         plt.show()
@@ -418,7 +418,7 @@ def plot_drone_position_error_vs_gt(
         ax[2].legend()
 
     if save_fig:
-        plt.savefig("pos_error_gt_vs_est.png", dpi=300)
+        plt.savefig("pos_error_gt_vs_est.png", dpi=300, bbox_inches="tight", pad_inches=0)
 
     if show_plot:
         plt.show()

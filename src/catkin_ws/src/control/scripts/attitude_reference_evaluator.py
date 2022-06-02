@@ -105,8 +105,8 @@ def visualize():
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
     base_dir = f"{script_dir}/../../../../../out/controller_results/velocity_control_results"
-    env = "sim"
-    data_folder = "model_based/test_2"
+    env = "real"
+    data_folder = "model_based/test_1"
     data_dir = f"{base_dir}/{env}/{data_folder}"
 
     v_ref = np.loadtxt(f"{data_dir}/v_ref.txt")
@@ -124,15 +124,17 @@ def visualize():
         vel_controller = "PID"
 
     velocity_title = f"Reference vs. measured horizontal velocities\nEnvironment: {env.upper()} - Velocity controller: {vel_controller}"
+    velocity_title = ""
     attitude_title = f"Reference vs. measured roll and pitch angles\nEnvironment: {env.upper()} - Velocity controller: {vel_controller}"
+    attitude_title = ""
 
     control_util.plot_drone_velocity_vs_reference_trajectory(
         v_ref, v_d, time_refs, v_actual, time_meas, plot_title=velocity_title,
-        start_time_from_0=True, show_plot=False, save_fig=False
+        start_time_from_0=True, show_plot=False, save_fig=True
     )
     control_util.plot_drone_attitude_vs_reference(
         att_ref, time_refs, att_actual, time_meas, plot_title=attitude_title,
-        start_time_from_0=True, show_plot=True, save_fig=False
+        start_time_from_0=True, show_plot=True, save_fig=True
     )
 
 

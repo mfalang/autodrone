@@ -204,8 +204,8 @@ def plot_output():
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
     base_dir = f"{script_dir}/../../../../../out/controller_results/guidance_results"
-    env = "real"
-    data_folder = "track_helipad_2D/pid/test_3"
+    env = "sim"
+    data_folder = "track_helipad_2D/pp/kappa_0.2"
     data_dir = f"{base_dir}/{env}/{data_folder}"
 
     v_ref = np.loadtxt(f"{data_dir}/vrefs.txt")
@@ -225,8 +225,11 @@ def plot_output():
         guidance_law = "PID"
 
     velocity_title = f"Reference vs. measured horizontal velocities\nEnvironment: {env.upper()} - Guidance law: {guidance_law}"
+    velocity_title = ""
     attitude_title = f"Reference vs. measured roll and pitch angles\nEnvironment: {env.upper()} - Guidance law: {guidance_law}"
+    attitude_title = ""
     pos_error_title = f"Ground truth vs. estimated horizontal position error\nEnvironment: {env.upper()} - Guidance law: {guidance_law}"
+    pos_error_title = ""
 
     control_util.plot_drone_velocity_vs_reference_trajectory(
         v_ref, v_d, t_refs, v_meas, t_meas, plot_title=velocity_title,

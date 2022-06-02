@@ -161,7 +161,7 @@ class Plotter():
         plt.savefig(f"multipe_data_series.png", dpi=300, bbox_inches="tight", pad_inches=0)
 
     def plot_ned_positions_3d(self, drone_pos:np.ndarray, helipad_pos: np.ndarray, plot_title="", orientation: tuple=None):
-        fig = plt.figure(figsize=(6.4, 4.8))
+        fig = plt.figure()
         ax = plt.axes(projection='3d')
         ax.set_xlabel("x [m]")
         ax.set_ylabel("y [m]")
