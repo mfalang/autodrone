@@ -89,7 +89,7 @@ class Plotter():
         return data_out
 
     def calculate_rmse_and_plot(self, timestamps, data1, data2, suptitle="", data1_label="", data2_label="",
-        xlabels=[], ylabels=[], plot_std_devs=False, std_devs=[]
+        xlabels=[], ylabels=[], plot_std_devs=False, std_devs=[], legend_size=10
     ):
         if data1.shape == data2.shape:
             rmse_all = np.sqrt(np.mean((data1 - data2)**2))
@@ -121,9 +121,10 @@ class Plotter():
                 # ax[i].plot(timestamps - timestamps[0], std_devs[i], c="red", label="std")
 
             if i == ax.shape[0] - 1: # only print legend on last figure
-                ax[i].legend(loc="lower center", prop={'size': 10})
+                ax[i].legend(loc="lower center", prop={'size': legend_size})
 
-        plt.savefig("matched_data.png", dpi=300)
+        fig.align_ylabels(ax)
+        plt.savefig("matched_data.png", dpi=300, bbox_inches="tight", pad_inches=0)
 
     def plot_multiple_data_series(self, data: list, numplots: int, suptitle: str,
         legends: list, xlabels: list, ylabels: list, use_scatter: list, legend_size=10
@@ -156,10 +157,11 @@ class Plotter():
             ax.legend(loc="upper right", prop={'size': 10})
         fig.align_ylabels(ax)
         # plt.subplots_adjust(top=0.8)
-        plt.savefig(f"multipe_data_series.png", dpi=300)
+        print(fig.get_size_inches())
+        plt.savefig(f"multipe_data_series.png", dpi=300, bbox_inches="tight", pad_inches=0)
 
     def plot_ned_positions_3d(self, drone_pos:np.ndarray, helipad_pos: np.ndarray, plot_title="", orientation: tuple=None):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(6.4, 4.8))
         ax = plt.axes(projection='3d')
         ax.set_xlabel("x [m]")
         ax.set_ylabel("y [m]")
@@ -175,7 +177,7 @@ class Plotter():
 
         ax.legend()
         ax.set_title(plot_title)
-        plt.savefig("3d_plot.png", dpi=300)
+        plt.savefig("3d_plot.png", dpi=300, bbox_inches="tight", pad_inches=0)
 
 
 def main():
@@ -190,7 +192,7 @@ def main():
     data_dir = f"{script_dir}/../../../../../out/{args.data_dir}"
 
     # Load data
-    gt_data = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
+    # gt_data = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
     # gt_data_drone_pose = np.loadtxt(f"{data_dir}/ground_truths/drone_pose_helipad_frame.txt", skiprows=2)
     anafi_raw_data = np.loadtxt(f"{data_dir}/estimates/anafi_raw_data.txt", skiprows=1)
 
@@ -222,11 +224,21 @@ def main():
     #     std_devs = [np.sqrt(ekf_pos[:,3]), np.sqrt(ekf_pos[:,7]), np.sqrt(ekf_pos[:,11])]
     # )
 
-    # synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([ekfpos_data, dnncv_data, tcv_data])
+    # ###################
+    # # Only estimates (EKF, DNNCV, TCV)
+    # ###################
+
+    # tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
+    # dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
+    # ekf_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
+
+    # title = ""
+
+    # synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([ekf_data, dnncv_data, tcv_data])
     # plotter.plot_multiple_data_series(
-    #     synced_gt_dnncv_ekf_data, 3, "Position - EKF vs. DNNCV raw vs. TCV raw",
-    #     ["EKF", "DNNCV", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-    #     [True, True, True]
+    #     synced_gt_dnncv_ekf_data, 3, title,
+    #     ["KF", "DNNCV", "TCV"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+    #     [False, False, True]
     # )
 
     # ###################
@@ -234,9 +246,11 @@ def main():
     # ###################
 
     # tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
+    # gt_data = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
 
     # if args.data_dir == "2022-5-25/22-58-16":
     #     title = r"TCV estimate vs. ground truth position $\bm p_h^b$" "\n" "Flight pattern: Square with yaw rotation at $\sim$60 sec"
+    #     title = ""
     # else:
     #     title = "Ground truth vs. TCV position"
 
@@ -266,9 +280,11 @@ def main():
     # ###################
 
     # dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
+    # gt_data = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
 
     # if args.data_dir == "2022-5-25/23-6-43":
     #     title = r"DNNCV estimate vs. ground truth position $\bm p_h^b$" "\n" "Flight pattern: Square with yaw rotation at $\sim$60 sec"
+    #     title = ""
     # else:
     #     title = "Ground truth vs. DNNCV position"
 
@@ -298,6 +314,7 @@ def main():
     # ###################
 
     # ekf_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
+    # gt_data = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
 
     # if args.data_dir == "2022-5-26/13-49-36":
     #     title = "Perception output - Drone landing on discretely moving platform\nEnvironment: REAL - Guidance law: PID"
@@ -305,8 +322,10 @@ def main():
     #     title = "Perception output - Drone landing on continuously moving platform\nEnvironment: REAL - Guidance law: PID"
     # elif args.data_dir == "2022-5-25/23-16-1":
     #     title = r"CV model KF estimate vs. ground truth position $\bm p_h^b$" "\n" "Flight pattern: Square with yaw rotation at $\sim$60 sec"
+    #     title = ""
     # elif args.data_dir == "2022-5-25/23-48-35":
     #     title = r"Complete KF estimate vs. ground truth position $\bm p_h^b$" "\n" "Flight pattern: Square with yaw rotation at $\sim$60 sec"
+    #     title = ""
     # else:
     #     title = "Position - GT vs. KF (all measurements)"
 
@@ -315,7 +334,7 @@ def main():
     # plotter.plot_multiple_data_series(
     #     synced_gt_ekf_data, 3, title,
     #     ["GT", "KF"], ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-    #     [False, False]
+    #     [False, False], legend_size=10
     # )
 
     # # Calculate accuracy of EKF
@@ -330,51 +349,57 @@ def main():
     #     ylabels=["x[m]", "y[m]", "z[m]"],
     #     xlabels=["t [sec]", "t [sec]", "t [sec]"],
     #     plot_std_devs=True,
-    #     std_devs = [np.sqrt(ekf_pos[:,3]), np.sqrt(ekf_pos[:,7]), np.sqrt(ekf_pos[:,11])]
+    #     std_devs = [np.sqrt(ekf_pos[:,3]), np.sqrt(ekf_pos[:,7]), np.sqrt(ekf_pos[:,11])],
+    #     legend_size=10
     # )
 
     # # ###################
     # # # GT, EKF, DNNCV and TCV all in one
     # # ###################
 
-    # tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
-    # dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
-    # ekf_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
+    tcv_data = np.loadtxt(f"{data_dir}/estimates/tcv_pose.txt", skiprows=1)
+    dnncv_data = np.loadtxt(f"{data_dir}/estimates/dnn_cv_position.txt", skiprows=1)
+    ekf_data = np.loadtxt(f"{data_dir}/estimates/ekf_position.txt", skiprows=1)
+    gt_data = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
 
-    # if args.data_dir == "2022-5-26/13-49-36":
-    #     title = "Perception output - Drone landing on discretely moving platform\nEnvironment: REAL - Guidance law: PID"
-    # elif args.data_dir == "2022-5-26/13-55-56":
-    #     title = "Perception output - Drone landing on continuously moving platform\nEnvironment: REAL - Guidance law: PID"
-    # elif args.data_dir == "2022-5-25/23-48-35":
-    #     title = r"Complete KF estimate vs. ground truth position $\bm p_h^b$" "\n" "Flight pattern: Square with yaw rotation at $\sim$60 sec"
-    # else:
-    #     title = "Position - GT vs. EKF vs. DNNCV raw vs. TCV raw"
+    if args.data_dir == "2022-5-26/13-49-36":
+        title = "Perception output - Drone landing on discretely moving platform\nEnvironment: REAL - Guidance law: PID"
+        title = ""
+    elif args.data_dir == "2022-5-26/13-55-56":
+        title = "Perception output - Drone landing on continuously moving platform\nEnvironment: REAL - Guidance law: PID"
+        title = ""
+    elif args.data_dir == "2022-5-25/23-48-35":
+        title = r"Complete KF estimate vs. ground truth position $\bm p_h^b$" "\n" "Flight pattern: Square with yaw rotation at $\sim$60 sec"
+    else:
+        title = "Position - GT vs. EKF vs. DNNCV raw vs. TCV raw"
 
-    # # # Compare DNNCV and EKF estimate to ground truth
-    # synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekf_data, dnncv_data, tcv_data])
-    # legend = ["GT", "KF", "DNNCV", "TCV"]
-    # plotter.plot_multiple_data_series(
-    #     synced_gt_dnncv_ekf_data, 3, title,
-    #     legend, ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-    #     [False, False, False, False], legend_size=8
-    # )
+    # # Compare DNNCV and EKF estimate to ground truth
+    synced_gt_dnncv_ekf_data = plotter.sync_multiple_data_series_based_on_timestamps([gt_data, ekf_data, dnncv_data, tcv_data])
+    legend = ["GT", "KF", "DNNCV", "TCV"]
+    plotter.plot_multiple_data_series(
+        synced_gt_dnncv_ekf_data, 3, title,
+        legend, ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+        [False, False, False, False], legend_size=8
+    )
 
     # ###################
     # # GT only
     # ###################
 
-    # title = "Flight patthern used to evaluate perception systems" "\n" r"Ground truth position $\bm p_h^b$"
-    title = ""
+    # gt_data = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose_body_frame.txt", skiprows=2)
 
-    # # Compare DNNCV and EKF estimate to ground truth
-    legend = ["GT"]
-    plotter.plot_multiple_data_series(
-        [gt_data], 3, title,
-        legend, ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
-        [False]
-    )
+    # # title = "Flight patthern used to evaluate perception systems" "\n" r"Ground truth position $\bm p_h^b$"
+    # title = ""
 
-    plt.subplots_adjust(top=0.8)
+    # # # Compare DNNCV and EKF estimate to ground truth
+    # legend = ["GT"]
+    # plotter.plot_multiple_data_series(
+    #     [gt_data], 3, title,
+    #     legend, ["t [sec]", "t [sec]", "t [sec]"], ["x[m]", "y[m]", "z[m]"],
+    #     [False]
+    # )
+
+    # plt.subplots_adjust(top=0.8)
 
     # # ###################
     # # # GT vs. measured velocity
@@ -404,20 +429,22 @@ def main():
     # ###################
     # # 3D NED position
     # ###################
-    # drone_pose_ned_gt = np.loadtxt(f"{data_dir}/ground_truths/drone_pose_ned.txt", skiprows=2)
-    # helipad_pose_ned_gt = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose.txt", skiprows=2)
+    drone_pose_ned_gt = np.loadtxt(f"{data_dir}/ground_truths/drone_pose_ned.txt", skiprows=2)
+    helipad_pose_ned_gt = np.loadtxt(f"{data_dir}/ground_truths/helipad_pose.txt", skiprows=2)
 
-    # if args.data_dir == "2022-5-26/13-49-36":
-    #     title = "3D view - Drone landing on discretely moving platform\nEnvironment: REAL - Guidance law: PID"
-    #     orientation = (12, -127)
-    # elif args.data_dir == "2022-5-26/13-55-56":
-    #     title = "3D view - Drone landing on continuously moving platform\nEnvironment: REAL - Guidance law: PID"
-    #     orientation = (11, -110)
-    # else:
-    #     title = "Add title here"
-    #     orientation = None
+    if args.data_dir == "2022-5-26/13-49-36":
+        title = "3D view - Drone landing on discretely moving platform\nEnvironment: REAL - Guidance law: PID"
+        title = ""
+        orientation = (12, -127)
+    elif args.data_dir == "2022-5-26/13-55-56":
+        title = "3D view - Drone landing on continuously moving platform\nEnvironment: REAL - Guidance law: PID"
+        title = ""
+        orientation = (11, -110)
+    else:
+        title = "Add title here"
+        orientation = None
 
-    # plotter.plot_ned_positions_3d(drone_pose_ned_gt, helipad_pose_ned_gt, plot_title=title, orientation=orientation)
+    plotter.plot_ned_positions_3d(drone_pose_ned_gt, helipad_pose_ned_gt, plot_title=title, orientation=orientation)
 
     plt.show()
 
