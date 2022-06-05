@@ -117,6 +117,10 @@ def plot_reference_model_used_in_actual_system():
     import seaborn as sns
     import matplotlib.pyplot as plt
 
+    # LaTex must be installed for this to work
+    # sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super
+    plt.rcParams['text.usetex'] = True
+
     omegas = (10, 10)
     zetas = (1, 1)
 
@@ -136,24 +140,28 @@ def plot_reference_model_used_in_actual_system():
     sns.set()
     fig, ax = plt.subplots(2, 1, sharex=True)
 
-    fig.suptitle("Raw and smoothed horizontal velocity references")
+    # fig.suptitle("Raw and smoothed horizontal velocity references")
 
     # Vx
-    ax[0].plot(time, v_ref[0,:], label="vx_ref")
-    ax[0].plot(time, v_d[0,:], label="vx_d")
+    ax[0].plot(time, v_ref[0,:], label="$v_{r,x}$")
+    ax[0].plot(time, v_d[0,:], label="$v_{d,x}$")
     ax[0].legend()
-    ax[0].set_title("X-axis")
+    ax[0].set_ylabel(r"X-axis velocity [m/s]")
+    # ax[0].set_title("X-axis")
 
     # Vy
-    ax[1].plot(time, v_ref[1,:], label="vy_ref")
-    ax[1].plot(time, v_d[1,:], label="vy_d")
+    ax[1].plot(time, v_ref[1,:], label="$v_{r,y}$")
+    ax[1].plot(time, v_d[1,:], label="$v_{d,y}$")
     ax[1].legend()
-    ax[1].set_title("Y-axis")
+    # ax[1].set_title("Y-axis")
+    ax[1].set_xlabel(r"Time [sec]")
+    ax[1].set_ylabel(r"Y-axis velocity [m/s]")
 
-    # fig.savefig("test.png", format="png", dpi=300)
+
+    fig.savefig("vel_refs_for_vel_controller_evaluation.png", format="png", dpi=300, bbox_inches="tight", pad_inches=0)
 
     plt.show()
 
 if __name__ == "__main__":
-    plot_reference_model_comparison_example()
+    # plot_reference_model_comparison_example()
     plot_reference_model_used_in_actual_system()
